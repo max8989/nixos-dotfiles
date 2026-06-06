@@ -5,9 +5,13 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (Catppuccin **Mocha**), for host `x1carbon` (ThinkPad X1 Carbon 7th Gen).
-Migrated from an Arch/Hyprland dotfiles repo and rewritten as pure Nix. See
-`README.md` for install steps and the full module map.
+desktop (Catppuccin **Mocha**). Two hosts, both ThinkPad X1 Carbons:
+`thinkpad-x1-carbon-g7` (7th Gen) and `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
+Intel Core Ultra 5 125U / Meteor Lake, btrfs root). They share one system module
+(`hosts/common.nix`) and the same Home Manager config; each host dir only adds its
+generated `hardware-configuration.nix` (plus the Gen 12's Meteor Lake iGPU video
+stack). Migrated from an Arch/Hyprland dotfiles repo and rewritten as pure Nix.
+See `README.md` for install steps and the full module map.
 
 ## Hard rule — verify library/option specifics before stating them
 
@@ -26,24 +30,36 @@ have drifted. Always `nix flake check` after changes (see below). The README's
 ## Layout & conventions
 
 ```
-flake.nix                         # inputs + per-user vars + nixosConfigurations.<hostname>
-hosts/<hostname>/configuration.nix         # NixOS system options
+flake.nix                         # inputs + per-user vars + `hosts` list → nixosConfigurations (genAttrs)
+hosts/common.nix                  # shared NixOS system options (imported by every host)
+hosts/<hostname>/configuration.nix         # imports ../common.nix + hardware + host-specific overrides
 hosts/<hostname>/hardware-configuration.nix # PLACEHOLDER — regenerate on the machine, never hand-edit to "fix"
 home/*.nix                        # Home Manager modules (imported by home.nix)
 home/starship.toml                # imported via lib.importTOML
 home/files/                       # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
 ```
 
-**Identity is parameterized.** `username`, `fullName`, and `hostname` are defined
-once in the `let` block of `flake.nix` and threaded down via `specialArgs` /
-`extraSpecialArgs`. Nothing else hard-codes the user, `/home/<user>`, or the
-machine name — `home.homeDirectory` is `"/home/${username}"`, the NixOS account is
-`users.users.${username}`, and the flake reads `./hosts/${hostname}/`. To re-home
-the config: change those three values **and** rename the `hosts/<hostname>/`
-directory to match. Do not reintroduce a literal `maxime` / `/home/maxime` / host
-name anywhere else — derive from the args (`username` is passed to
-`home/home.nix` and `configuration.nix`; runtime paths use `~` or
-`config.home.homeDirectory`).
+**Identity is parameterized.** `username` and `fullName` are defined once in the
+`let` block of `flake.nix`; hosts are a `hosts` list there, and `mkHost` builds one
+`nixosConfigurations.<name>` per entry via `lib.genAttrs`, threading `hostname`
+(the list entry) down via `specialArgs` / `extraSpecialArgs`. Nothing else
+hard-codes the user, `/home/<user>`, or the machine name — `home.homeDirectory` is
+`"/home/${username}"`, the NixOS account is `users.users.${username}`,
+`networking.hostName = hostname` (in `common.nix`), and the flake reads
+`./hosts/${hostname}/`. To add a machine: add its name to `hosts`, create a
+matching `hosts/<name>/` dir (copy an existing one), and regenerate its
+`hardware-configuration.nix` on the box. To re-home entirely: change `username` /
+`fullName` and rename the host entries + dirs. Do not reintroduce a literal
+`maxime` / `/home/maxime` / host name anywhere else — derive from the args
+(`username` is passed to `home/home.nix`, `common.nix`, and each
+`configuration.nix`; runtime paths use `~` or `config.home.homeDirectory`).
+
+**Shared vs. host-specific system config.** Anything host-agnostic goes in
+`hosts/common.nix`. Genuinely per-machine bits (filesystems, kernel modules,
+microcode, GPU driver packages) go in the host's `hardware-configuration.nix`
+(regenerated) or its `configuration.nix` (for things that must survive a
+`nixos-generate-config` regen, e.g. the Gen 12's `hardware.graphics.extraPackages`
+= `intel-media-driver` + `vpl-gpu-rt` and `LIBVA_DRIVER_NAME = "iHD"`).
 
 **Two-tier rule for configs:**
 1. **Structured config → native Nix attribute sets.** Hyprland binds, Waybar
@@ -82,10 +98,10 @@ flakes only see git-tracked files inside the flake root.
 ## Build / test / commit
 
 ```sh
-nix flake check                                   # always run after edits
-sudo nixos-rebuild switch --flake .#x1carbon      # apply on the machine
-nix build .#nixosConfigurations.x1carbon.config.system.build.vm  # optional VM test
-nix fmt   # or: nixfmt **/*.nix                   # formatting (RFC-style, 2-space)
+nix flake check                                   # always run after edits (checks both hosts)
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # apply on the machine (or -g7)
+nix build .#nixosConfigurations.thinkpad-x1-carbon-g12.config.system.build.vm  # optional VM test
+nixfmt **/*.nix                                   # formatting (RFC-style, 2-space; flake has no `formatter` output)
 ```
 
 - Keep `system.stateVersion` / `home.stateVersion` in sync and **never bump them

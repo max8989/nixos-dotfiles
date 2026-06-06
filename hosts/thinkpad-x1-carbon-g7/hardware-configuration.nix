@@ -4,7 +4,7 @@
 # This file MUST be regenerated on the real machine with:
 #
 #     sudo nixos-generate-config --show-hardware-config \
-#       > hosts/x1carbon/hardware-configuration.nix
+#       > hosts/thinkpad-x1-carbon-g7/hardware-configuration.nix
 #
 # It will contain the actual filesystems, LUKS devices, kernel modules and
 # CPU/GPU details for the ThinkPad X1 Carbon 7th Gen. The values below are only

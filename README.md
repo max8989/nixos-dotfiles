@@ -4,13 +4,20 @@ Fully declarative **NixOS + Home Manager** configuration for a Hyprland desktop,
 themed **Catppuccin Mocha**. Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
-**Host:** `x1carbon` — ThinkPad X1 Carbon (7th Gen).
+**Hosts:**
+- `thinkpad-x1-carbon-g7` — ThinkPad X1 Carbon (7th Gen).
+- `thinkpad-x1-carbon-g12` — ThinkPad X1 Carbon (Gen 12, 21KC; Intel Core Ultra 5
+  125U / Meteor Lake, btrfs root).
+
+Both hosts share one system module (`hosts/common.nix`) and the same Home Manager
+config; each only adds its own generated `hardware-configuration.nix` (plus, for
+the Gen 12, the Meteor Lake iGPU video stack).
 
 ## What's inside
 
 | Area | Module | Approach |
 |------|--------|----------|
-| System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/x1carbon/configuration.nix` | NixOS options |
+| System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/common.nix` (shared) + `hosts/<host>/configuration.nix` | NixOS options |
 | Compositor + keybindings | `home/hyprland.nix` | `wayland.windowManager.hyprland.settings` (all binds inlined) |
 | Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
 | Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
@@ -27,10 +34,15 @@ Nix (`readFile` / `.source` / `importTOML`). That keeps the repo self-contained
 and the deployment fully declarative.
 
 ```
-flake.nix                      # inputs + per-user vars (username/fullName/hostname)
-hosts/<hostname>/
-  configuration.nix
-  hardware-configuration.nix   # PLACEHOLDER — regenerate on the machine
+flake.nix                      # inputs + per-user vars + `hosts` list → one config each
+hosts/
+  common.nix                   # shared system config (imported by every host)
+  thinkpad-x1-carbon-g7/
+    configuration.nix          # imports ../common.nix + hardware
+    hardware-configuration.nix # PLACEHOLDER — regenerate on the machine
+  thinkpad-x1-carbon-g12/
+    configuration.nix          # ../common.nix + Meteor Lake iGPU video stack
+    hardware-configuration.nix # PLACEHOLDER — regenerate on the machine
 home/
   home.nix  hyprland.nix  waybar.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
@@ -41,43 +53,59 @@ home/
 ## Make it your own
 
 The config is parameterized — to adopt it you don't need to find-and-replace a
-username. Edit the three values at the top of the `let` block in `flake.nix`:
+username. Edit the two per-user values at the top of the `let` block in
+`flake.nix`, then add (or rename) a host in the `hosts` list:
 
 ```nix
 username = "maxime";       # your login name → home dir becomes /home/<username>
 fullName = "Maxime Gagne"; # account description
-hostname = "x1carbon";     # must match the hosts/<hostname>/ directory
+
+hosts = [
+  "thinkpad-x1-carbon-g7"
+  "thinkpad-x1-carbon-g12"
+  # "<your-hostname>"      # ← add yours; create a matching hosts/<your-hostname>/
+];
 ```
 
-Then rename the host directory to match (`git mv hosts/x1carbon hosts/<your-hostname>`)
-and follow the install steps below. `home.homeDirectory`, the NixOS user
-(`users.users.${username}`), `networking.hostName`, and the flake's host path all
-derive from those variables; runtime config paths use `~`, so they need no edits.
+Each entry builds `nixosConfigurations.<name>` (via `lib.genAttrs`), sets
+`networking.hostName`, and reads `hosts/<name>/`. To add a machine, copy an
+existing host dir (e.g. `cp -r hosts/thinkpad-x1-carbon-g7 hosts/<name>`), add the
+name to the list, and regenerate its `hardware-configuration.nix` on the box.
+`home.homeDirectory`, the NixOS user (`users.users.${username}`), and the flake's
+host path all derive from the variables; runtime config paths use `~`, so they
+need no edits.
 
-## Install (ThinkPad X1 Carbon 7th Gen)
+## Install
+
+Pick your host name below — `thinkpad-x1-carbon-g12` for the Gen 12, or
+`thinkpad-x1-carbon-g7` for the 7th Gen. The placeholder
+`hardware-configuration.nix` files are **not bootable**; they only let
+`nix flake check` evaluate until you regenerate them on the real machine.
 
 1. **Boot the NixOS ISO**, partition/format, and mount the target on `/mnt`
-   (and the ESP on `/mnt/boot`).
+   (and the ESP on `/mnt/boot`). The Gen 12 here uses a **btrfs** root.
 
-2. **Clone this repo** and generate real hardware config:
+2. **Clone this repo** and generate real hardware config (substitute your host):
    ```sh
+   HOST=thinkpad-x1-carbon-g12
    nix-shell -p git
    git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
    cd /mnt/etc/nixos/nixos-dotfiles
    nixos-generate-config --root /mnt --show-hardware-config \
-     > hosts/x1carbon/hardware-configuration.nix
+     > hosts/$HOST/hardware-configuration.nix
    ```
-   > Flakes only see git-tracked files — `git add hosts/x1carbon/hardware-configuration.nix`
+   > Flakes only see git-tracked files — `git add hosts/$HOST/hardware-configuration.nix`
    > after generating it.
 
 3. **Review before building** (a few values are intentionally TODO):
-   - `system.stateVersion` / `home.stateVersion` → set to the installer's release.
+   - `system.stateVersion` (`hosts/common.nix`) / `home.stateVersion` → set to the
+     installer's release.
    - `time.timeZone` (currently `America/Toronto`).
    - Disk labels in `hardware-configuration.nix` (replaced by the generated file).
 
 4. **Install:**
    ```sh
-   nixos-install --flake .#x1carbon
+   nixos-install --flake .#$HOST
    reboot
    ```
 
@@ -87,21 +115,22 @@ derive from those variables; runtime config paths use `~`, so they need no edits
 ### Rebuild after changes
 
 ```sh
-sudo nixos-rebuild switch --flake ~/path/to/nixos-dotfiles#x1carbon
+sudo nixos-rebuild switch --flake ~/path/to/nixos-dotfiles#thinkpad-x1-carbon-g12
 ```
 
 ### (Optional) test in a VM first
 
 ```sh
-nix build .#nixosConfigurations.x1carbon.config.system.build.vm
-./result/bin/run-x1carbon-vm
+nix build .#nixosConfigurations.thinkpad-x1-carbon-g12.config.system.build.vm
+./result/bin/run-thinkpad-x1-carbon-g12-vm
 ```
 
 ## Verify on first build
 
-This config was authored without a Nix evaluator on hand, so confirm these
-attribute/option names against your pinned `nixpkgs`/`home-manager` and fix any
-that have moved (run `nix flake check` first):
+`nix flake check` now passes clean on both hosts against the pinned `flake.lock`,
+so the attribute/option names below are confirmed present there. They're kept as
+a checklist for when you bump `nixpkgs`/`home-manager` (re-run `nix flake check`
+after any input update and fix anything that has since moved):
 
 - `pkgs.catppuccin-gtk` — recent nixpkgs may expose it as `pkgs.catppuccin.gtkTheme`.
 - `pkgs.figtree` — may live under `google-fonts`.

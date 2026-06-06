@@ -1,3 +1,10 @@
+###############################################################################
+# Shared system configuration imported by every host's configuration.nix.
+#
+# Everything here is host-agnostic. Per-machine bits (filesystems, kernel
+# modules, microcode, GPU driver packages) live in each host's own
+# hardware-configuration.nix / configuration.nix — NOT here.
+###############################################################################
 {
   inputs,
   pkgs,
@@ -8,10 +15,6 @@
   ...
 }:
 {
-  imports = [
-    ./hardware-configuration.nix
-  ];
-
   ##########################################################################
   ## Boot / kernel
   ##########################################################################
@@ -61,7 +64,8 @@
   programs.hyprland = {
     enable = true;
     package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-    portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+    portalPackage =
+      inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
   # Portals + screen sharing.
@@ -77,7 +81,7 @@
   services.greetd = {
     enable = true;
     settings.default_session = {
-      command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
       user = "greeter";
     };
   };
@@ -105,7 +109,7 @@
   ##########################################################################
   security.polkit.enable = true;
   services.dbus.enable = true;
-  # ThinkPad fingerprint reader (7th gen). Enroll with `fprintd-enroll`.
+  # ThinkPad fingerprint reader. Enroll with `fprintd-enroll`.
   services.fprintd.enable = true;
   # Power profile switcher — backs waybar's `power-profiles-daemon` module.
   services.power-profiles-daemon.enable = true;
