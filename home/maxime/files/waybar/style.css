@@ -1,0 +1,188 @@
+/* i3bar-like styling for Waybar */
+
+* {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 16px;
+  font-weight: normal;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+
+/* Main bar background */
+window#waybar {
+  background: #222222;
+  color: #ffffff;
+}
+
+window#waybar > box {
+  background: #222222;
+  margin: 0;
+}
+
+/* Workspace buttons - i3 style */
+#workspaces button {
+  background: #222222;
+  color: #888888;
+  padding: 0 10px;
+  margin: 0;
+  border: none;
+  border-top: 2px solid #222222;
+  border-bottom: 2px solid #222222;
+  min-width: 30px;
+}
+
+#workspaces button:hover {
+  background: #333333;
+  color: #ffffff;
+  border-top: 2px solid #333333;
+  border-bottom: 2px solid #333333;
+}
+
+#workspaces button.active {
+  background: #285577;
+  color: #ffffff;
+  border-top: 2px solid #4c7899;
+  border-bottom: 2px solid #4c7899;
+}
+
+#workspaces button.urgent {
+  background: #900000;
+  color: #ffffff;
+  border-top: 2px solid #dc322f;
+  border-bottom: 2px solid #dc322f;
+}
+
+/* Window title */
+#window {
+  padding: 0 10px;
+  color: #ffffff;
+}
+
+/* All modules - consistent styling */
+#cpu,
+#memory,
+#custom-cpu,
+#custom-memory,
+#network,
+#battery,
+#pulseaudio,
+#clock,
+#tray,
+#language,
+#custom-mic,
+#custom-notification,
+#custom-power,
+#power-profiles-daemon,
+#idle_inhibitor {
+  padding: 0 10px;
+  color: #ffffff;
+  background: #222222;
+  border-left: 1px solid #333333;
+}
+
+/* Clock in center */
+#clock {
+  background: #222222;
+  color: #ffffff;
+  border: none;
+}
+
+/* Battery states */
+#battery.warning {
+  background: #f0c674;
+  color: #000000;
+}
+
+#battery.critical {
+  background: #dc322f;
+  color: #ffffff;
+}
+
+#battery.charging {
+  color: #26c933;
+}
+
+/* Pulseaudio */
+#pulseaudio.muted {
+  background: #333333;
+  color: #888888;
+}
+
+/* Network */
+#network.disconnected {
+  color: #888888;
+}
+
+/* Tray */
+#tray {
+  background: #222222;
+}
+
+#tray > .passive {
+  -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+  background-color: #eb4d4b;
+}
+
+/* Remove all fancy effects */
+tooltip {
+  background: #222222;
+  border: 1px solid #285577;
+  border-radius: 0;
+}
+
+tooltip label {
+  color: #ffffff;
+  padding: 5px;
+}
+
+/* Idle inhibitor (presentation mode) */
+#idle_inhibitor.activated {
+  background: #285577;
+  color: #ffffff;
+}
+
+/* Power menu button */
+#custom-power {
+  color: #dc322f;
+  font-weight: bold;
+}
+
+#custom-power:hover {
+  background: #333333;
+}
+
+/* Reminders module (next to clock in center) */
+#custom-reminders {
+  padding: 0 10px;
+  color: #888888;
+  background: #222222;
+  border: none;
+}
+
+#custom-reminders.overdue {
+  color: #f38ba8;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+#custom-reminders.today {
+  color: #f9e2af;
+}
+
+#custom-reminders.upcoming {
+  color: #a6e3a1;
+}
+
+#custom-reminders.none {
+  color: #888888;
+}
+
+@keyframes pulse {
+  from { opacity: 1; }
+  to { opacity: 0.6; }
+}

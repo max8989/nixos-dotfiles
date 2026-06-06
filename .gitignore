@@ -1,0 +1,12 @@
+# Nix build artifacts
+result
+result-*
+
+# Editor / OS cruft
+.direnv/
+*.swp
+.DS_Store
+
+# Local secrets / per-machine overrides (never commit)
+*.secret
+secrets.nix

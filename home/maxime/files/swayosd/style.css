@@ -1,0 +1,71 @@
+/* SwayOSD Style - Catppuccin Mocha Theme */
+
+window {
+  background: rgba(30, 30, 46, 0.95); /* Catppuccin base */
+  border-radius: 12px;
+  border: 2px solid rgba(137, 180, 250, 0.8); /* Catppuccin blue */
+  margin: 20px;
+  padding: 20px;
+}
+
+#container {
+  margin: 16px;
+  padding: 0px;
+}
+
+#image {
+  margin-right: 16px;
+  color: rgba(137, 180, 250, 1.0); /* Catppuccin blue */
+}
+
+#label {
+  font-size: 18px;
+  font-weight: bold;
+  color: rgba(205, 214, 244, 1.0); /* Catppuccin text */
+  margin: 8px 0px;
+}
+
+#progress {
+  min-height: 10px;
+  border-radius: 999px;
+  background: rgba(69, 71, 90, 1.0); /* Catppuccin surface0 */
+  margin: 8px 0px;
+}
+
+#progress trough {
+  min-height: 10px;
+  border-radius: 999px;
+  background: rgba(69, 71, 90, 1.0); /* Catppuccin surface0 */
+}
+
+#progress progress {
+  min-height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, 
+    rgba(166, 227, 161, 1.0) 0%,    /* Catppuccin green */
+    rgba(249, 226, 175, 1.0) 50%,   /* Catppuccin yellow */
+    rgba(243, 139, 168, 1.0) 100%   /* Catppuccin pink */
+  );
+}
+
+/* Volume specific styling */
+window.output-volume #progress progress,
+window.input-volume #progress progress {
+  background: linear-gradient(90deg, 
+    rgba(137, 180, 250, 1.0) 0%,    /* Catppuccin blue */
+    rgba(203, 166, 247, 1.0) 100%   /* Catppuccin mauve */
+  );
+}
+
+/* Brightness specific styling */
+window.brightness #progress progress {
+  background: linear-gradient(90deg, 
+    rgba(249, 226, 175, 1.0) 0%,    /* Catppuccin yellow */
+    rgba(250, 179, 135, 1.0) 100%   /* Catppuccin peach */
+  );
+}
+
+/* Caps Lock styling */
+window.caps-lock #label {
+  color: rgba(243, 139, 168, 1.0); /* Catppuccin pink */
+}

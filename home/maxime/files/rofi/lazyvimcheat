@@ -1,0 +1,201 @@
+# LazyVim Cheat Sheet
+# Leader key: <space>
+# Local leader: \
+
+## Navigation
+h                         # move cursor left
+j                         # move cursor down
+k                         # move cursor up
+l                         # move cursor right
+<C-h>                     # go to left window
+<C-j>                     # go to lower window
+<C-k>                     # go to upper window
+<C-l>                     # go to right window
+<A-j>                     # move down (normal, insert, visual)
+<A-k>                     # move up (normal, insert, visual)
+
+## Window Management
+<C-Up>                    # increase window height
+<C-Down>                  # decrease window height
+<C-Left>                  # decrease window width
+<C-Right>                 # increase window width
+
+## Buffer Management
+<S-h>                     # previous buffer
+<S-l>                     # next buffer
+[b                        # previous buffer
+]b                        # next buffer
+<leader>bb                # switch to other buffer
+<leader>`                 # switch to other buffer
+<leader>bd                # delete buffer
+<leader>bo                # delete other buffers
+<leader>bD                # delete buffer and window
+
+## Search and Replace
+*                         # search word under cursor
+n                         # next search result
+N                         # previous search result
+<leader>ur                # redraw / clear hlsearch / diff update
+<leader>K                 # keywordprg
+
+## Comments
+gco                       # add comment below
+gcO                       # add comment above
+
+## File Management
+<leader>fn                # new file
+<leader>l                 # lazy (plugin manager)
+<C-s>                     # save file (insert, visual, normal, select)
+
+## Lists and Diagnostics
+<leader>xl                # location list
+<leader>xq                # quickfix list
+[q                        # previous quickfix
+]q                        # next quickfix
+<leader>cd                # line diagnostics
+]d                        # next diagnostic
+[d                        # previous diagnostic
+]e                        # next error
+[e                        # previous error
+]w                        # next warning
+[w                        # previous warning
+
+## Formatting and Code
+<leader>cf                # format (normal, visual)
+<leader>uf                # toggle auto format (global)
+<leader>uF                # toggle auto format (buffer)
+
+## UI Toggles
+<leader>us                # toggle spelling
+<leader>uw                # toggle wrap
+<leader>uL                # toggle relative number
+<leader>ud                # toggle diagnostics
+<leader>ul                # toggle line numbers
+<leader>uc                # toggle conceal level
+<leader>uA                # toggle tabline
+<leader>uT                # toggle treesitter highlight
+<leader>ub                # toggle dark background
+<leader>uD                # toggle dimming
+<leader>ua                # toggle animations
+<leader>ug                # toggle indent guides
+<leader>uS                # toggle smooth scroll
+<leader>uh                # toggle inlay hints
+
+## Profiling and Debug
+<leader>dpp               # toggle profiler
+<leader>dph               # toggle profiler highlights
+<leader>ui                # inspect pos
+<leader>uI                # inspect tree
+
+## Terminal
+<leader>fT                # terminal (cwd)
+<leader>ft                # terminal (root dir)
+<C-/>                     # terminal (root dir) / hide terminal
+<C-_>                     # which_key_ignore
+
+## Git
+<leader>gb                # git blame line
+<leader>gB                # git browse (open)
+<leader>gY                # git browse (copy)
+
+## Quit and Exit
+<leader>qq                # quit all
+<esc>                     # escape and clear hlsearch
+
+## LazyVim Specific
+<leader>L                 # LazyVim changelog
+
+## Search and Find
+<leader>s/                # search history
+<leader>sa                # autocmds
+<leader>sb                # buffer lines
+<leader>sB                # grep open buffers
+<leader>sc                # command history
+<leader>sC                # commands
+<leader>sd                # diagnostics
+<leader>sD                # buffer diagnostics
+<leader>sg                # grep (root dir)
+<leader>sG                # grep (cwd)
+<leader>sh                # help pages
+<leader>sH                # highlights
+<leader>si                # icons
+<leader>sj                # jumps
+<leader>sk                # keymaps
+<leader>sl                # location list
+<leader>sm                # marks
+<leader>sM                # man pages
+<leader>sp                # search for plugin spec
+<leader>sq                # quickfix list
+<leader>sR                # resume
+<leader>su                # undotree
+<leader>sw                # visual selection or word (root dir)
+<leader>sW                # visual selection or word (cwd)
+<leader>uC                # colorschemes
+
+## Todo Comments
+<leader>st                # todo
+<leader>sT                # todo/fix/fixme
+
+## Markdown
+<leader>cp                # markdown preview
+
+## Python Debug
+<leader>dPc               # debug class
+<leader>dPt               # debug method
+
+## Database
+<leader>D                 # toggle DBUI
+
+## LaTeX
+\<l                       # vimtex
+
+## Testing
+<leader>t                 # test
+<leader>tl                # run last (neotest)
+<leader>to                # show output (neotest)
+<leader>tO                # toggle output panel (neotest)
+<leader>tr                # run nearest (neotest)
+<leader>ts                # toggle summary (neotest)
+<leader>tS                # stop (neotest)
+<leader>tt                # run file (neotest)
+<leader>tT                # run all test files (neotest)
+<leader>tw                # toggle watch (neotest)
+<leader>td                # debug nearest
+
+## UI Extensions
+<leader>ue                # edgy toggle
+<leader>uE                # edgy select window
+
+## Utilities
+<leader>sz                # chezmoi
+<leader>gg                # GitUi (root dir)
+<leader>gG                # GitUi (cwd)
+
+## GitHub (Octo)
+<leader>gi                # list issues (octo)
+<leader>gI                # search issues (octo)
+<leader>gp                # list PRs (octo)
+<leader>gP                # search PRs (octo)
+<leader>gr                # list repos (octo)
+<leader>gS                # search (octo)
+
+## Projects
+<leader>fp                # projects
+
+## REST Client
+<leader>R                 # rest
+<leader>Rb                # open scratchpad
+<leader>Rc                # copy as cURL
+<leader>RC                # paste from curl
+<leader>Rg                # download GraphQL schema
+<leader>Ri                # inspect current request
+<leader>Rn                # jump to next request
+<leader>Rp                # jump to previous request
+<leader>Rq                # close window
+<leader>Rr                # replay the last request
+<leader>Rs                # send the request
+<leader>RS                # show stats
+<leader>Rt                # toggle headers/body
+
+## Ansible
+<leader>ta                # ansible run playbook/role

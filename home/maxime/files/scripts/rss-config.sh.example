@@ -1,0 +1,13 @@
+#!/bin/bash
+# RSS Feed Configuration for Hyprlock
+# Copy this file to ~/.config/hypr/rss-config.sh and add your API key
+# The actual config file is gitignored for security
+
+# OpenAI API Key (required for AI summaries)
+export OPENAI_API_KEY="sk-your-api-key-here"
+
+# Cache duration in seconds (default: 3600 = 1 hour)
+export RSS_CACHE_DURATION=3600
+
+# OpenAI model (gpt-4o-mini recommended for cost efficiency ~$0.11/month)
+export OPENAI_MODEL="gpt-4o-mini"
