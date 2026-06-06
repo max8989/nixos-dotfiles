@@ -2,6 +2,7 @@
   inputs,
   pkgs,
   lib,
+  username,
   ...
 }:
 let
@@ -18,8 +19,8 @@ in
     ./theming.nix
   ];
 
-  home.username = "maxime";
-  home.homeDirectory = "/home/maxime";
+  home.username = username;
+  home.homeDirectory = "/home/${username}";
   home.stateVersion = "25.11"; # match system.stateVersion
 
   # Let Home Manager manage itself.

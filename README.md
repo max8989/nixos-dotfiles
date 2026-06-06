@@ -11,32 +11,48 @@ rewritten as pure Nix (no live-symlinked dotfile tree).
 | Area | Module | Approach |
 |------|--------|----------|
 | System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/x1carbon/configuration.nix` | NixOS options |
-| Compositor + keybindings | `home/maxime/hyprland.nix` | `wayland.windowManager.hyprland.settings` (all binds inlined) |
-| Status bar | `home/maxime/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
-| Lock / idle / wallpaper | `home/maxime/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
-| Launcher / menus / OSD | `home/maxime/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
-| Terminal | `home/maxime/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
-| Shell / prompt | `home/maxime/shell.nix` | bash + `programs.starship` |
-| Scripts + timers | `home/maxime/scripts.nix` | in-repo scripts + systemd user timers |
-| Cursor / GTK / icons / Qt | `home/maxime/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
+| Compositor + keybindings | `home/hyprland.nix` | `wayland.windowManager.hyprland.settings` (all binds inlined) |
+| Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
+| Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
+| Launcher / menus / OSD | `home/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
+| Terminal | `home/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
+| Shell / prompt | `home/shell.nix` | bash + `programs.starship` |
+| Scripts + timers | `home/scripts.nix` | in-repo scripts + systemd user timers |
+| Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
 Structured configs are converted to native Nix attribute sets. Opaque blobs that
 have no attribute-set form — CSS, rofi `.rasi`, kanata `.kbd`, the starship TOML,
-shell scripts, images — live under `home/maxime/files/` and are referenced from
+shell scripts, images — live under `home/files/` and are referenced from
 Nix (`readFile` / `.source` / `importTOML`). That keeps the repo self-contained
 and the deployment fully declarative.
 
 ```
-flake.nix
-hosts/x1carbon/
+flake.nix                      # inputs + per-user vars (username/fullName/hostname)
+hosts/<hostname>/
   configuration.nix
   hardware-configuration.nix   # PLACEHOLDER — regenerate on the machine
-home/maxime/
+home/
   home.nix  hyprland.nix  waybar.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
   starship.toml
   files/                       # CSS, rasi, scripts, icons, backgrounds, …
 ```
+
+## Make it your own
+
+The config is parameterized — to adopt it you don't need to find-and-replace a
+username. Edit the three values at the top of the `let` block in `flake.nix`:
+
+```nix
+username = "maxime";       # your login name → home dir becomes /home/<username>
+fullName = "Maxime Gagne"; # account description
+hostname = "x1carbon";     # must match the hosts/<hostname>/ directory
+```
+
+Then rename the host directory to match (`git mv hosts/x1carbon hosts/<your-hostname>`)
+and follow the install steps below. `home.homeDirectory`, the NixOS user
+(`users.users.${username}`), `networking.hostName`, and the flake's host path all
+derive from those variables; runtime config paths use `~`, so they need no edits.
 
 ## Install (ThinkPad X1 Carbon 7th Gen)
 
@@ -65,7 +81,7 @@ home/maxime/
    reboot
    ```
 
-5. **First login:** set a password (`passwd maxime`), then after reboot log in via
+5. **First login:** set a password (`passwd <username>`), then after reboot log in via
    tuigreet → Hyprland. Enroll the fingerprint with `fprintd-enroll`.
 
 ### Rebuild after changes

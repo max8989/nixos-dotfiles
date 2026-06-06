@@ -2,6 +2,9 @@
   inputs,
   pkgs,
   lib,
+  username,
+  fullName,
+  hostname,
   ...
 }:
 {
@@ -34,7 +37,7 @@
   ##########################################################################
   ## Networking / locale / time
   ##########################################################################
-  networking.hostName = "x1carbon";
+  networking.hostName = hostname;
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Toronto"; # TODO: confirm timezone
@@ -129,9 +132,9 @@
   ##########################################################################
   ## User
   ##########################################################################
-  users.users.maxime = {
+  users.users.${username} = {
     isNormalUser = true;
-    description = "Maxime Gagne";
+    description = fullName;
     extraGroups = [
       "wheel"
       "networkmanager"

@@ -1,5 +1,5 @@
 {
-  description = "Maxime's NixOS + Home Manager config — Hyprland desktop (Catppuccin Mocha), fully declarative";
+  description = "Declarative NixOS + Home Manager config — Hyprland desktop (Catppuccin Mocha)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -32,21 +32,30 @@
     }@inputs:
     let
       system = "x86_64-linux";
+
+      # ──────────────────────────────────────────────────────────────────
+      # Make this config your own: change these three values, rename the
+      # hosts/<hostname> directory to match, then build. Nothing else in the
+      # tree hard-codes the user, home directory, or machine name.
+      # ──────────────────────────────────────────────────────────────────
+      username = "maxime"; # login name; home dir becomes /home/<username>
+      fullName = "Maxime Gagne"; # GECOS / account description
+      hostname = "x1carbon"; # must match the hosts/<hostname>/ directory
     in
     {
-      nixosConfigurations.x1carbon = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
         inherit system;
-        # Pass flake inputs down to modules (Hyprland / zen-browser packages).
-        specialArgs = { inherit inputs; };
+        # Thread the per-user settings down to the system + HM modules.
+        specialArgs = { inherit inputs username fullName hostname; };
         modules = [
-          ./hosts/x1carbon/configuration.nix
+          ./hosts/${hostname}/configuration.nix
 
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit inputs; };
-            home-manager.users.maxime = import ./home/maxime/home.nix;
+            home-manager.extraSpecialArgs = { inherit inputs username; };
+            home-manager.users.${username} = import ./home/home.nix;
           }
         ];
       };

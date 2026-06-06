@@ -26,20 +26,31 @@ have drifted. Always `nix flake check` after changes (see below). The README's
 ## Layout & conventions
 
 ```
-flake.nix                         # inputs + nixosConfigurations.x1carbon (HM as a module)
-hosts/x1carbon/configuration.nix  # NixOS system options
-hosts/x1carbon/hardware-configuration.nix  # PLACEHOLDER — regenerate on the machine, never hand-edit to "fix"
-home/maxime/*.nix                 # Home Manager modules (imported by home.nix)
-home/maxime/starship.toml         # imported via lib.importTOML
-home/maxime/files/                # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
+flake.nix                         # inputs + per-user vars + nixosConfigurations.<hostname>
+hosts/<hostname>/configuration.nix         # NixOS system options
+hosts/<hostname>/hardware-configuration.nix # PLACEHOLDER — regenerate on the machine, never hand-edit to "fix"
+home/*.nix                        # Home Manager modules (imported by home.nix)
+home/starship.toml                # imported via lib.importTOML
+home/files/                       # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
 ```
+
+**Identity is parameterized.** `username`, `fullName`, and `hostname` are defined
+once in the `let` block of `flake.nix` and threaded down via `specialArgs` /
+`extraSpecialArgs`. Nothing else hard-codes the user, `/home/<user>`, or the
+machine name — `home.homeDirectory` is `"/home/${username}"`, the NixOS account is
+`users.users.${username}`, and the flake reads `./hosts/${hostname}/`. To re-home
+the config: change those three values **and** rename the `hosts/<hostname>/`
+directory to match. Do not reintroduce a literal `maxime` / `/home/maxime` / host
+name anywhere else — derive from the args (`username` is passed to
+`home/home.nix` and `configuration.nix`; runtime paths use `~` or
+`config.home.homeDirectory`).
 
 **Two-tier rule for configs:**
 1. **Structured config → native Nix attribute sets.** Hyprland binds, Waybar
    modules, hyprlock/hypridle/hyprpaper, wofi, kitty, starship all live as
    `settings = { … }` / list-of-attrs in the `.nix` files. New config of this
    kind goes here, not into a raw file.
-2. **Opaque blobs → `home/maxime/files/`,** referenced from Nix via
+2. **Opaque blobs → `home/files/`,** referenced from Nix via
    `builtins.readFile` / `.source` / `lib.importTOML`. CSS, rofi `.rasi`,
    kanata `.kbd`, shell scripts, and images have no meaningful attribute-set
    form — keep them as real files (still pure: they're inside the flake).
@@ -55,7 +66,7 @@ flakes only see git-tracked files inside the flake root.
 - **Daemon autostart is split:** `hyprpaper` / `hypridle` / `waybar` run as HM
   systemd user services (`graphical-session.target`); `swaync` /
   `swayosd-server` / `kanata` / cliphist / the polkit agent are launched from
-  Hyprland `exec-once` in `home/maxime/hyprland.nix`. Don't launch the
+  Hyprland `exec-once` in `home/hyprland.nix`. Don't launch the
   systemd-managed ones from `exec-once` too (double instances).
 - **`hyprwat` (SUPER+F12, waybar audio click) is dead** — not in nixpkgs. Left
   as-is intentionally; `pavucontrol`/`wpctl` cover it.
