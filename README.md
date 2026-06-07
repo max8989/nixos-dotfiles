@@ -77,40 +77,115 @@ need no edits.
 
 ## Install
 
-Pick your host name below — `thinkpad-x1-carbon-g12` for the Gen 12, or
-`thinkpad-x1-carbon-g7` for the 7th Gen. The placeholder
-`hardware-configuration.nix` files are **not bootable**; they only let
-`nix flake check` evaluate until you regenerate them on the real machine.
+A from-scratch walkthrough — from NixOS install media to this flake running on the
+machine. Commands assume the **Gen 12** (`thinkpad-x1-carbon-g12`: UEFI, NVMe,
+btrfs root); set `HOST=thinkpad-x1-carbon-g7` for the 7th Gen. The committed
+`hardware-configuration.nix` files are placeholders (**not bootable**) that exist
+only so `nix flake check` evaluates — you regenerate the real one in step 5.
 
-1. **Boot the NixOS ISO**, partition/format, and mount the target on `/mnt`
-   (and the ESP on `/mnt/boot`). The Gen 12 here uses a **btrfs** root.
+> ⚠️ **Step 3 erases the target disk.** Confirm the device name with `lsblk`
+> before running any `parted`/`mkfs` command. Official manual:
+> <https://nixos.org/manual/nixos/stable/#sec-installation>.
 
-2. **Clone this repo** and generate real hardware config (substitute your host):
-   ```sh
-   HOST=thinkpad-x1-carbon-g12
-   nix-shell -p git
-   git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
-   cd /mnt/etc/nixos/nixos-dotfiles
-   nixos-generate-config --root /mnt --show-hardware-config \
-     > hosts/$HOST/hardware-configuration.nix
-   ```
-   > Flakes only see git-tracked files — `git add hosts/$HOST/hardware-configuration.nix`
-   > after generating it.
+### 0. Make NixOS install media
 
-3. **Review before building** (a few values are intentionally TODO):
-   - `system.stateVersion` (`hosts/common.nix`) / `home.stateVersion` → set to the
-     installer's release.
-   - `time.timeZone` (currently `America/Toronto`).
-   - Disk labels in `hardware-configuration.nix` (replaced by the generated file).
+Download the **Minimal ISO** (x86_64) from <https://nixos.org/download/> — direct
+link `https://channels.nixos.org/nixos-26.05/latest-nixos-minimal-x86_64-linux.iso`
+(the Graphical ISO works too). Verify the SHA-256 shown on the download page, then
+write it to a USB stick — replace `/dev/sdX` with the **stick's** device (not a
+partition, and not your internal disk):
 
-4. **Install:**
-   ```sh
-   nixos-install --flake .#$HOST
-   reboot
-   ```
+```sh
+sudo dd if=nixos-minimal-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
+```
 
-5. **First login:** set a password (`passwd <username>`), then after reboot log in via
-   tuigreet → Hyprland. Enroll the fingerprint with `fprintd-enroll`.
+Reboot, tap **F12** for the ThinkPad boot menu (or **F1** for firmware), and boot
+the USB. If it refuses, disable **Secure Boot** in firmware first.
+
+### 1. Get online (in the installer)
+
+NetworkManager is running; connect Wi-Fi from the console with `nmtui` (works in a
+non-graphical session):
+
+```sh
+sudo nmtui            # Activate a connection → choose your SSID → enter password
+ping -c1 nixos.org    # confirm connectivity
+```
+
+### 2. Enable flakes for this installer session
+
+`nixos-install --flake` needs the flakes feature turned on:
+
+```sh
+export NIX_CONFIG="experimental-features = nix-command flakes"
+```
+
+### 3. Partition + format (UEFI / GPT, btrfs root)
+
+Identify the disk with `lsblk` — the X1's NVMe is usually `/dev/nvme0n1`, whose
+partitions are suffixed `p1`, `p2`, …. Set `DISK` to match, then:
+
+```sh
+DISK=/dev/nvme0n1
+
+parted $DISK -- mklabel gpt
+parted $DISK -- mkpart ESP fat32 1MB 1GB      # EFI system partition
+parted $DISK -- set 1 esp on
+parted $DISK -- mkpart nixos 1GB 100%         # root fills the rest
+
+mkfs.fat -F 32 -n boot ${DISK}p1
+mkfs.btrfs -L nixos ${DISK}p2
+```
+
+Create a btrfs `@` subvolume (matches the `subvol=@` in the host's hardware
+placeholder) and mount everything under `/mnt`:
+
+```sh
+mount ${DISK}p2 /mnt
+btrfs subvolume create /mnt/@
+umount /mnt
+
+mount -o subvol=@,compress=zstd,noatime ${DISK}p2 /mnt
+mkdir -p /mnt/boot
+mount -o umask=077 ${DISK}p1 /mnt/boot
+```
+
+> Optional swap: add a `@swap` subvolume + swapfile (or a swap partition) and
+> `swapon` it — `nixos-generate-config` records whatever it finds.
+
+### 4. Clone this repo + generate real hardware config
+
+```sh
+HOST=thinkpad-x1-carbon-g12        # or: thinkpad-x1-carbon-g7
+nix-shell -p git
+git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
+cd /mnt/etc/nixos/nixos-dotfiles
+nixos-generate-config --root /mnt --show-hardware-config \
+  > hosts/$HOST/hardware-configuration.nix
+git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked files
+```
+
+### 5. Review before building (a few values are intentionally TODO)
+
+- `system.stateVersion` (`hosts/common.nix`) **and** `home.stateVersion`
+  (`home/home.nix`) → set both to the ISO's release (e.g. `25.11`). Never bump
+  after install.
+- `time.timeZone` (currently `America/Toronto`) and `i18n.defaultLocale`.
+- Confirm the generated `hardware-configuration.nix` shows your real filesystems.
+
+### 6. Install + set passwords
+
+```sh
+nixos-install --flake .#$HOST                  # prompts for the root password at the end
+nixos-enter --root /mnt -c 'passwd <username>' # set your login user's password
+reboot
+```
+
+### 7. First boot
+
+Remove the USB and boot. Log in at **tuigreet → Hyprland** as your user, then
+enroll the fingerprint reader with `fprintd-enroll`. From here on, apply changes
+with the rebuild command below.
 
 ### Rebuild after changes
 
