@@ -68,6 +68,56 @@ in
       pavucontrol
       (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
       curl
+
+      # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
+      firefox
+      google-chrome
+      libreoffice-fresh
+      vlc
+      discord
+      slack
+      spotify
+      bitwarden-desktop
+      obsidian
+      qbittorrent
+      localsend
+      solaar # Logitech device manager
+      blueman # bluetooth GUI (service enabled in common.nix)
+      nwg-look # GTK theme settings
+
+      # --- CLI tools ---
+      htop
+      wget
+      fd
+      ripgrep
+      fastfetch
+      yazi
+      neovim
+      bun
+      lazygit
+      dnsutils # dig / nslookup (was `bind`)
+      alsa-utils # alsamixer / aplay (was `alsa-utils`)
+      zip
+
+      # --- dev block ---
+      docker-compose
+      lazydocker
+      awscli2
+      azure-cli
+      uv
+      (
+        with dotnetCorePackages;
+        combinePackages [
+          sdk_9_0
+          aspnetcore_9_0
+        ]
+      )
+      supabase-cli
+      vscode
+      insomnia
+      claude-code
+      jetbrains.rider
+      jetbrains.datagrip
     ]
     ++ [
       # Zen Browser from its flake (no nixpkgs package).

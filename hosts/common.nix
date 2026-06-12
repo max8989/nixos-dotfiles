@@ -36,14 +36,29 @@
     "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
   ];
   nixpkgs.config.allowUnfree = true;
+  # bitwarden-desktop currently bundles an EOL Electron that nixpkgs flags as
+  # insecure. Permit just that version; drop this once bitwarden bumps Electron.
+  nixpkgs.config.permittedInsecurePackages = [ "electron-39.8.10" ];
 
   ##########################################################################
   ## Networking / locale / time
   ##########################################################################
   networking.hostName = hostname;
   networking.networkmanager.enable = true;
+  # NetworkManager OpenVPN plugin — import/use .ovpn configs from the applet.
+  networking.networkmanager.plugins = [ pkgs.networkmanager-openvpn ];
 
-  time.timeZone = "America/Toronto"; # TODO: confirm timezone
+  # Firewall (mirrors the old Arch ufw setup: deny incoming, allow SSH/HTTP/HTTPS).
+  networking.firewall = {
+    enable = true;
+    allowedTCPPorts = [
+      22
+      80
+      443
+    ];
+  };
+
+  time.timeZone = "America/Toronto";
   i18n.defaultLocale = "en_CA.UTF-8";
 
   # Chinese input — fcitx5. The us/ca layout toggle (Ctrl+Space) and the fcitx5
@@ -117,6 +132,17 @@
   services.udev.packages = [ pkgs.brightnessctl ];
   # Bluetooth (waybar bluetooth-menu.sh / bluetoothctl).
   hardware.bluetooth.enable = true;
+  services.blueman.enable = true; # GUI bluetooth manager
+  # Flatpak (for apps not packaged in nixpkgs). Add remotes manually post-install,
+  # e.g. `flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo`.
+  services.flatpak.enable = true;
+  # earlyoom — kill memory hogs before the system locks up under OOM.
+  services.earlyoom.enable = true;
+
+  ##########################################################################
+  ## Virtualisation — Docker (dev block). User added to the docker group below.
+  ##########################################################################
+  virtualisation.docker.enable = true;
 
   ##########################################################################
   ## Fonts
@@ -127,9 +153,12 @@
       nerd-fonts.caskaydia-cove # kitty (CaskaydiaCove Nerd Font Mono)
       nerd-fonts.jetbrains-mono # waybar style.css (JetBrainsMono Nerd Font)
       figtree # rofi (Figtree)
+      font-awesome # icon glyphs (waybar / general)
       # CJK — hyprlock phrases_zh.txt + fcitx5 Chinese input candidates.
       noto-fonts-cjk-sans
       noto-fonts-cjk-serif
+      source-han-sans # Adobe CJK sans (was adobe-source-han-sans-otc)
+      source-han-serif # Adobe CJK serif (was adobe-source-han-serif-otc)
     ];
   };
 
@@ -145,6 +174,7 @@
       "video"
       "input"
       "uinput"
+      "docker"
     ];
     shell = pkgs.bash;
   };
