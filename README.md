@@ -87,6 +87,12 @@ only so `nix flake check` evaluates — you regenerate the real one in step 5.
 > before running any `parted`/`mkfs` command. Official manual:
 > <https://nixos.org/manual/nixos/stable/#sec-installation>.
 
+> The installer logs you in as the unprivileged `nixos` user, so every command
+> that touches the disk, `/mnt`, or the system is prefixed with `sudo` below.
+> Prefer this over `sudo -i` so your `DISK`/`HOST` shell vars stay set. One catch:
+> a `>` redirect runs as `nixos` (not root) and fails on root-owned paths, so the
+> hardware-config step pipes to `sudo tee` instead (step 4).
+
 ### 0. Make NixOS install media
 
 Download the **Minimal ISO** (x86_64) from <https://nixos.org/download/> — direct
@@ -145,26 +151,26 @@ partitions are suffixed `p1`, `p2`, …. Set `DISK` to match, then:
 ```sh
 DISK=/dev/nvme0n1
 
-parted $DISK -- mklabel gpt
-parted $DISK -- mkpart ESP fat32 1MB 1GB      # EFI system partition
-parted $DISK -- set 1 esp on
-parted $DISK -- mkpart nixos 1GB 100%         # root fills the rest
+sudo parted $DISK -- mklabel gpt
+sudo parted $DISK -- mkpart ESP fat32 1MB 1GB      # EFI system partition
+sudo parted $DISK -- set 1 esp on
+sudo parted $DISK -- mkpart nixos 1GB 100%         # root fills the rest
 
-mkfs.fat -F 32 -n boot ${DISK}p1
-mkfs.btrfs -L nixos ${DISK}p2
+sudo mkfs.fat -F 32 -n boot ${DISK}p1
+sudo mkfs.btrfs -L nixos ${DISK}p2
 ```
 
 Create a btrfs `@` subvolume (matches the `subvol=@` in the host's hardware
 placeholder) and mount everything under `/mnt`:
 
 ```sh
-mount ${DISK}p2 /mnt
-btrfs subvolume create /mnt/@
-umount /mnt
+sudo mount ${DISK}p2 /mnt
+sudo btrfs subvolume create /mnt/@
+sudo umount /mnt
 
-mount -o subvol=@,compress=zstd,noatime ${DISK}p2 /mnt
-mkdir -p /mnt/boot
-mount -o umask=077 ${DISK}p1 /mnt/boot
+sudo mount -o subvol=@,compress=zstd,noatime ${DISK}p2 /mnt
+sudo mkdir -p /mnt/boot
+sudo mount -o umask=077 ${DISK}p1 /mnt/boot
 ```
 
 > Optional swap: add a `@swap` subvolume + swapfile (or a swap partition) and
@@ -175,11 +181,29 @@ mount -o umask=077 ${DISK}p1 /mnt/boot
 ```sh
 HOST=thinkpad-x1-carbon-g12        # or: thinkpad-x1-carbon-g7
 nix-shell -p git
-git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
+sudo git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
 cd /mnt/etc/nixos/nixos-dotfiles
-nixos-generate-config --root /mnt --show-hardware-config \
-  > hosts/$HOST/hardware-configuration.nix
-git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked files
+sudo nixos-generate-config --root /mnt --show-hardware-config \
+  | sudo tee hosts/$HOST/hardware-configuration.nix > /dev/null   # `sudo tee`, not `>` (redirect runs as nixos)
+```
+
+> ⚠️ **Verify the file was actually written before staging it.** A plain `>`
+> redirect runs as the unprivileged `nixos` user and silently fails on the
+> root-owned tree (`Permission denied`) — which leaves the committed *placeholder*
+> in place. If you then `git add` and install, the placeholder's `ext4` root never
+> mounts and the machine drops to emergency mode on first boot
+> (`Timed out waiting for device /dev/disk/by-label/nixos`). Confirm the real
+> values landed:
+>
+> ```sh
+> grep -E 'fsType|subvol|by-uuid' hosts/$HOST/hardware-configuration.nix
+> ```
+>
+> You must see `fsType = "btrfs"`, an `options = [ "subvol=@" ];` line, and a
+> `by-uuid` device — **not** `ext4` or `by-label`. Only then:
+
+```sh
+sudo git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked files
 ```
 
 ### 5. Review before building (a few values are intentionally TODO)
@@ -193,9 +217,10 @@ git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked f
 ### 6. Install + set passwords
 
 ```sh
-nixos-install --flake .#$HOST                  # prompts for the root password at the end
-nixos-enter --root /mnt -c 'passwd <username>' # set your login user's password
-reboot
+sudo NIX_CONFIG="experimental-features = nix-command flakes" \
+  nixos-install --flake .#$HOST                # prompts for the root password at the end
+sudo nixos-enter --root /mnt -c 'passwd <username>'   # set your login user's password
+sudo reboot
 ```
 
 ### 7. First boot

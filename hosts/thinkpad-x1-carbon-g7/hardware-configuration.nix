@@ -29,18 +29,23 @@
   ];
   boot.kernelModules = [ "kvm-intel" ];
 
-  # TODO: replace with the generated fileSystems entries.
+  # TODO: replace with the generated fileSystems entries. The install steps in
+  # README format the root as btrfs with an `@` subvolume (matching the Gen 12),
+  # so the regen will emit `fsType = "btrfs"; options = [ "subvol=@" ];` against
+  # a by-uuid device. These by-label placeholders only let `nix flake check`
+  # evaluate; they are NOT bootable as-is.
   fileSystems."/" = {
     device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
+    fsType = "btrfs";
+    options = [ "subvol=@" ];
   };
   fileSystems."/boot" = {
     device = "/dev/disk/by-label/boot";
     fsType = "vfat";
   };
 
-  # Intel graphics (X1 Carbon 7th gen).
-  hardware.graphics.enable = true;
+  # NOTE: hardware.graphics.enable lives in ./configuration.nix (not here), so it
+  # survives regenerating this file. Don't re-add it here.
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

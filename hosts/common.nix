@@ -156,5 +156,5 @@
   ];
 
   # First NixOS generation this config targets. Do not change after install.
-  system.stateVersion = "25.11"; # TODO: set to the installer's release
+  system.stateVersion = "26.05"; # the release first installed; never bump after install
 }
