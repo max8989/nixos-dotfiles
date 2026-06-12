@@ -112,6 +112,23 @@ sudo nmtui            # Activate a connection → choose your SSID → enter pas
 ping -c1 nixos.org    # confirm connectivity
 ```
 
+### 1b. (Optional) Continue over SSH
+
+Handy for doing the rest from another machine (copy-paste, a real terminal). The
+installer logs in as the `nixos` user, which has no password and so can't SSH in
+yet — set one, then find the laptop's IP:
+
+```sh
+passwd                # set a password for the 'nixos' user (sshd is already running)
+ip -c a               # note the wlan IP, e.g. 192.168.2.31
+```
+
+From your other machine, connect as `nixos` and continue with the steps below:
+
+```sh
+ssh nixos@<IP>        # e.g. ssh nixos@192.168.2.31
+```
+
 ### 2. Enable flakes for this installer session
 
 `nixos-install --flake` needs the flakes feature turned on:
@@ -168,8 +185,8 @@ git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked f
 ### 5. Review before building (a few values are intentionally TODO)
 
 - `system.stateVersion` (`hosts/common.nix`) **and** `home.stateVersion`
-  (`home/home.nix`) → set both to the ISO's release (e.g. `25.11`). Never bump
-  after install.
+  (`home/home.nix`) → preset to `26.05` (the current ISO). Only change these if you
+  install a different release, and never bump them after install.
 - `time.timeZone` (currently `America/Toronto`) and `i18n.defaultLocale`.
 - Confirm the generated `hardware-configuration.nix` shows your real filesystems.
 
