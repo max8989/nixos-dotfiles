@@ -229,11 +229,34 @@ Remove the USB and boot. Log in at **tuigreet → Hyprland** as your user, then
 enroll the fingerprint reader with `fprintd-enroll`. From here on, apply changes
 with the rebuild command below.
 
+### Where the repo lives after install
+
+The installer clones it to **`/etc/nixos/nixos-dotfiles`** (that's
+`/mnt/etc/nixos/...` during install). That copy is root-owned, which is awkward
+for day-to-day edits, so the common pattern is to keep a working clone in your
+home and rebuild from there — flakes build from **any** path, the location is not
+special:
+
+```sh
+git clone https://github.com/max8989/nixos-dotfiles ~/repos/nixos-dotfiles
+cd ~/repos/nixos-dotfiles
+```
+
+Pick one home for the repo and rebuild from it consistently (the examples below
+use `~/repos/nixos-dotfiles`). The only hard rule is that the flake can only see
+**git-tracked** files inside the repo, so `git add` new files before rebuilding.
+
 ### Rebuild after changes
 
 ```sh
-sudo nixos-rebuild switch --flake ~/path/to/nixos-dotfiles#thinkpad-x1-carbon-g12
+cd ~/repos/nixos-dotfiles
+nix flake check                                              # evaluate both hosts first
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # or .#thinkpad-x1-carbon-g7
 ```
+
+`switch` builds the new generation and activates it immediately. Use
+`boot` instead of `switch` to apply only on next reboot, or `test` to activate
+without making it the boot default.
 
 ### (Optional) test in a VM first
 
@@ -241,6 +264,48 @@ sudo nixos-rebuild switch --flake ~/path/to/nixos-dotfiles#thinkpad-x1-carbon-g1
 nix build .#nixosConfigurations.thinkpad-x1-carbon-g12.config.system.build.vm
 ./result/bin/run-thinkpad-x1-carbon-g12-vm
 ```
+
+## Adding or changing packages
+
+Where a package goes depends on what it is. Find the binary you want first
+(`nix search nixpkgs <name>` or <https://search.nixos.org/packages>), then add the
+**attribute name** to the right list:
+
+| What you're adding | Where | How |
+|--------------------|-------|-----|
+| A user app or CLI tool (browsers, editors, `ripgrep`, …) | `home/home.nix` → `home.packages` | add the attr to the list |
+| A system service / daemon (docker, flatpak, firewall, printing, …) | `hosts/common.nix` | use its NixOS option, e.g. `services.<name>.enable = true;` |
+| A font | `hosts/common.nix` → `fonts.packages` | add the attr to the list |
+| Something only one machine needs (GPU drivers, kernel modules) | `hosts/<host>/configuration.nix` | per-host option |
+
+Most of the time you want the first row. For example, to add `neofetch`:
+
+```nix
+# home/home.nix — inside home.packages = with pkgs; [ … ];
+home.packages = with pkgs; [
+  # …existing…
+  neofetch
+];
+```
+
+Then evaluate and apply:
+
+```sh
+cd ~/repos/nixos-dotfiles
+nix flake check                                             # catch typos/renamed attrs early
+nixfmt **/*.nix                                             # keep formatting consistent
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12  # or -g7
+```
+
+Notes:
+
+- **Unfree packages** (Chrome, Spotify, VS Code, …) already work — `common.nix`
+  sets `nixpkgs.config.allowUnfree = true;`.
+- **No native package?** Check if it's on Flathub — `services.flatpak` is enabled
+  (add a remote once: `flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo`),
+  or for browser-launched binaries see the zen-browser flake input as a model.
+- Don't `pip install` / `npm -g` / drop binaries in `~/.local/bin` and expect them
+  to persist — on NixOS the declarative list is the source of truth.
 
 ## Verify on first build
 
