@@ -10,8 +10,10 @@ rewritten as pure Nix (no live-symlinked dotfile tree).
   125U / Meteor Lake, btrfs root).
 
 Both hosts share one system module (`hosts/common.nix`) and the same Home Manager
-config; each only adds its own generated `hardware-configuration.nix` (plus, for
-the Gen 12, the Meteor Lake iGPU video stack).
+config; each only adds its own declarative disk layout (`disko.nix`) and
+generated `hardware-configuration.nix` (plus, for the Gen 12, the Meteor Lake
+iGPU video stack). Fresh installs are one command via **disko + nixos-anywhere**
+(see [Install](#install)).
 
 ## What's inside
 
@@ -38,11 +40,13 @@ flake.nix                      # inputs + per-user vars + `hosts` list → one c
 hosts/
   common.nix                   # shared system config (imported by every host)
   thinkpad-x1-carbon-g7/
-    configuration.nix          # imports ../common.nix + hardware
-    hardware-configuration.nix # PLACEHOLDER — regenerate on the machine
+    configuration.nix          # imports ../common.nix + disko + hardware
+    disko.nix                  # declarative disk layout (partitioning + fileSystems)
+    hardware-configuration.nix # detected hardware only — regenerated at install
   thinkpad-x1-carbon-g12/
-    configuration.nix          # ../common.nix + Meteor Lake iGPU video stack
-    hardware-configuration.nix # PLACEHOLDER — regenerate on the machine
+    configuration.nix          # ../common.nix + disko + Meteor Lake iGPU video stack
+    disko.nix                  # declarative disk layout (partitioning + fileSystems)
+    hardware-configuration.nix # detected hardware only — regenerated at install
 home/
   home.nix  hyprland.nix  waybar.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
@@ -70,28 +74,29 @@ hosts = [
 Each entry builds `nixosConfigurations.<name>` (via `lib.genAttrs`), sets
 `networking.hostName`, and reads `hosts/<name>/`. To add a machine, copy an
 existing host dir (e.g. `cp -r hosts/thinkpad-x1-carbon-g7 hosts/<name>`), add the
-name to the list, and regenerate its `hardware-configuration.nix` on the box.
+name to the list, adjust its `disko.nix` (target device + layout), and let the
+install regenerate its `hardware-configuration.nix` (see Install below).
 `home.homeDirectory`, the NixOS user (`users.users.${username}`), and the flake's
 host path all derive from the variables; runtime config paths use `~`, so they
 need no edits.
 
 ## Install
 
-A from-scratch walkthrough — from NixOS install media to this flake running on the
-machine. Commands assume the **Gen 12** (`thinkpad-x1-carbon-g12`: UEFI, NVMe,
-btrfs root); set `HOST=thinkpad-x1-carbon-g7` for the 7th Gen. The committed
-`hardware-configuration.nix` files are placeholders (**not bootable**) that exist
-only so `nix flake check` evaluates — you regenerate the real one in step 5.
+Installs are driven by **[disko](https://github.com/nix-community/disko)**
+(declarative partitioning — each host's layout lives in
+`hosts/<hostname>/disko.nix`) and
+**[nixos-anywhere](https://github.com/nix-community/nixos-anywhere)**. You boot
+the target laptop on the NixOS installer USB, then run **one command from
+another machine** — it partitions and formats per the disko layout, generates
+the real `hardware-configuration.nix` back into your working tree, installs the
+flake, and reboots. No manual `parted`/`mkfs`, no `nixos-enter`.
 
-> ⚠️ **Step 3 erases the target disk.** Confirm the device name with `lsblk`
-> before running any `parted`/`mkfs` command. Official manual:
-> <https://nixos.org/manual/nixos/stable/#sec-installation>.
+Commands assume the **Gen 12** (`thinkpad-x1-carbon-g12`); set
+`HOST=thinkpad-x1-carbon-g7` for the 7th Gen.
 
-> The installer logs you in as the unprivileged `nixos` user, so every command
-> that touches the disk, `/mnt`, or the system is prefixed with `sudo` below.
-> Prefer this over `sudo -i` so your `DISK`/`HOST` shell vars stay set. One catch:
-> a `>` redirect runs as `nixos` (not root) and fails on root-owned paths, so the
-> hardware-config step pipes to `sudo tee` instead (step 4).
+> ⚠️ **The install erases the device named in `hosts/$HOST/disko.nix`**
+> (`/dev/nvme0n1`). Confirm with `lsblk` on the target — the disko layout, not
+> an interactive prompt, decides what gets wiped.
 
 ### 0. Make NixOS install media
 
@@ -118,132 +123,98 @@ sudo nmtui            # Activate a connection → choose your SSID → enter pas
 ping -c1 nixos.org    # confirm connectivity
 ```
 
-### 1b. (Optional) Continue over SSH
+### 2. Let the other machine SSH in (on the target)
 
-Handy for doing the rest from another machine (copy-paste, a real terminal). The
-installer logs in as the `nixos` user, which has no password and so can't SSH in
-yet — set one, then find the laptop's IP:
+The installer logs in as the `nixos` user, which has no password and so can't be
+SSH'd into yet — set one, then note the laptop's IP:
 
 ```sh
 passwd                # set a password for the 'nixos' user (sshd is already running)
 ip -c a               # note the wlan IP, e.g. 192.168.2.31
 ```
 
-From your other machine, connect as `nixos` and continue with the steps below:
+That's everything on the target. The rest runs from your other machine.
+
+### 3. Run nixos-anywhere (from your other machine)
+
+Any Linux/macOS box with Nix will do (flakes enabled — if not, prefix the
+commands with `NIX_CONFIG="experimental-features = nix-command flakes"`).
 
 ```sh
-ssh nixos@<IP>        # e.g. ssh nixos@192.168.2.31
+git clone https://github.com/max8989/nixos-dotfiles
+cd nixos-dotfiles
 ```
 
-### 2. Enable flakes for this installer session
+Review before installing:
 
-`nixos-install --flake` needs the flakes feature turned on:
+- `hosts/$HOST/disko.nix` → the `device` that will be **erased** (default
+  `/dev/nvme0n1` — check against `lsblk` on the target).
+- `system.stateVersion` (`hosts/common.nix`) **and** `home.stateVersion`
+  (`home/home.nix`) → preset to `26.05`. Only change these if you install a
+  different release, and never bump them after install.
+- `time.timeZone` (currently `America/Toronto`) and `i18n.defaultLocale`.
 
-```sh
-export NIX_CONFIG="experimental-features = nix-command flakes"
-```
-
-### 3. Partition + format (UEFI / GPT, btrfs root)
-
-Identify the disk with `lsblk` — the X1's NVMe is usually `/dev/nvme0n1`, whose
-partitions are suffixed `p1`, `p2`, …. Set `DISK` to match, then:
-
-```sh
-DISK=/dev/nvme0n1
-
-sudo parted $DISK -- mklabel gpt
-sudo parted $DISK -- mkpart ESP fat32 1MB 1GB      # EFI system partition
-sudo parted $DISK -- set 1 esp on
-sudo parted $DISK -- mkpart nixos 1GB 100%         # root fills the rest
-
-sudo mkfs.fat -F 32 -n boot ${DISK}p1
-sudo mkfs.btrfs -L nixos ${DISK}p2
-```
-
-Create a btrfs `@` subvolume (matches the `subvol=@` in the host's hardware
-placeholder) and mount everything under `/mnt`:
-
-```sh
-sudo mount ${DISK}p2 /mnt
-sudo btrfs subvolume create /mnt/@
-sudo umount /mnt
-
-sudo mount -o subvol=@,compress=zstd,noatime ${DISK}p2 /mnt
-sudo mkdir -p /mnt/boot
-sudo mount -o umask=077 ${DISK}p1 /mnt/boot
-```
-
-> Optional swap: add a `@swap` subvolume + swapfile (or a swap partition) and
-> `swapon` it — `nixos-generate-config` records whatever it finds.
-
-### 4. Clone this repo + generate real hardware config
+Then install:
 
 ```sh
 HOST=thinkpad-x1-carbon-g12        # or: thinkpad-x1-carbon-g7
-nix-shell -p git
-sudo git clone https://github.com/max8989/nixos-dotfiles /mnt/etc/nixos/nixos-dotfiles
-cd /mnt/etc/nixos/nixos-dotfiles
-sudo nixos-generate-config --root /mnt --show-hardware-config \
-  | sudo tee hosts/$HOST/hardware-configuration.nix > /dev/null   # `sudo tee`, not `>` (redirect runs as nixos)
+
+nix run github:nix-community/nixos-anywhere -- \
+  --generate-hardware-config nixos-generate-config ./hosts/$HOST/hardware-configuration.nix \
+  --flake .#$HOST \
+  --target-host nixos@<IP>
 ```
 
-> ⚠️ **Verify the file was actually written before staging it.** A plain `>`
-> redirect runs as the unprivileged `nixos` user and silently fails on the
-> root-owned tree (`Permission denied`) — which leaves the committed *placeholder*
-> in place. If you then `git add` and install, the placeholder's `ext4` root never
-> mounts and the machine drops to emergency mode on first boot
-> (`Timed out waiting for device /dev/disk/by-label/nixos`). Confirm the real
-> values landed:
->
-> ```sh
-> grep -E 'fsType|subvol|by-uuid' hosts/$HOST/hardware-configuration.nix
-> ```
->
-> You must see `fsType = "btrfs"`, an `options = [ "subvol=@" ];` line, and a
-> `by-uuid` device — **not** `ext4` or `by-label`. Only then:
+One command does all of it: SSHes to the installer (it detects the NixOS
+installer and skips its kexec step), partitions + formats per
+`hosts/$HOST/disko.nix`, regenerates `hosts/$HOST/hardware-configuration.nix`
+in your working tree (with `--no-filesystems` — disko owns the filesystems),
+builds and installs the flake, and reboots into the new system.
+
+Afterwards, commit the regenerated hardware config so the repo matches the
+machine:
 
 ```sh
-sudo git add hosts/$HOST/hardware-configuration.nix   # flakes only see git-tracked files
+git add hosts/$HOST/hardware-configuration.nix
+git commit -m "hardware config for $HOST"
+git push
 ```
 
-### 5. Review before building (a few values are intentionally TODO)
+> **No second machine?** disko still replaces all the manual partitioning. On
+> the installer itself: clone the repo, regenerate
+> `hosts/$HOST/hardware-configuration.nix` with
+> `sudo nixos-generate-config --no-filesystems --show-hardware-config | sudo tee hosts/$HOST/hardware-configuration.nix`,
+> then run
+> `sudo nix run 'github:nix-community/disko/latest#disko-install' -- --flake .#$HOST --disk main /dev/nvme0n1`
+> (one step: partition + format + install), set passwords with
+> `sudo nixos-enter --root /mnt -c 'passwd <username>'`, and reboot.
 
-- `system.stateVersion` (`hosts/common.nix`) **and** `home.stateVersion`
-  (`home/home.nix`) → preset to `26.05` (the current ISO). Only change these if you
-  install a different release, and never bump them after install.
-- `time.timeZone` (currently `America/Toronto`) and `i18n.defaultLocale`.
-- Confirm the generated `hardware-configuration.nix` shows your real filesystems.
+### 4. First boot
 
-### 6. Install + set passwords
+Remove the USB. Log in at **tuigreet → Hyprland** as your user with the
+first-boot password **`changeme`** (seeded via `initialPassword` in
+`hosts/common.nix` because nixos-anywhere has no interactive password step) —
+then **immediately** change it and enroll the fingerprint reader:
 
 ```sh
-sudo NIX_CONFIG="experimental-features = nix-command flakes" \
-  nixos-install --flake .#$HOST                # prompts for the root password at the end
-sudo nixos-enter --root /mnt -c 'passwd <username>'   # set your login user's password
-sudo reboot
+passwd
+fprintd-enroll
 ```
-
-### 7. First boot
-
-Remove the USB and boot. Log in at **tuigreet → Hyprland** as your user, then
-enroll the fingerprint reader with `fprintd-enroll`. From here on, apply changes
-with the rebuild command below.
 
 ### Where the repo lives after install
 
-The installer clones it to **`/etc/nixos/nixos-dotfiles`** (that's
-`/mnt/etc/nixos/...` during install). That copy is root-owned, which is awkward
-for day-to-day edits, so the common pattern is to keep a working clone in your
-home and rebuild from there — flakes build from **any** path, the location is not
-special:
+Clone the repo on the new machine and rebuild from there — flakes build from
+**any** path, the location is not special:
 
 ```sh
 git clone https://github.com/max8989/nixos-dotfiles ~/repos/nixos-dotfiles
 cd ~/repos/nixos-dotfiles
 ```
 
-Pick one home for the repo and rebuild from it consistently (the examples below
-use `~/repos/nixos-dotfiles`). The only hard rule is that the flake can only see
+If you pushed the regenerated `hardware-configuration.nix` in step 3 it's
+already here; otherwise copy/commit it before the first rebuild. Pick one home
+for the repo and rebuild from it consistently (the examples below use
+`~/repos/nixos-dotfiles`). The only hard rule is that the flake can only see
 **git-tracked** files inside the repo, so `git add` new files before rebuilding.
 
 ### Rebuild after changes

@@ -32,8 +32,9 @@ have drifted. Always `nix flake check` after changes (see below). The README's
 ```
 flake.nix                         # inputs + per-user vars + `hosts` list → nixosConfigurations (genAttrs)
 hosts/common.nix                  # shared NixOS system options (imported by every host)
-hosts/<hostname>/configuration.nix         # imports ../common.nix + hardware + host-specific overrides
-hosts/<hostname>/hardware-configuration.nix # PLACEHOLDER — regenerate on the machine, never hand-edit to "fix"
+hosts/<hostname>/configuration.nix         # imports ../common.nix + disko.nix + hardware + host-specific overrides
+hosts/<hostname>/disko.nix                 # declarative disk layout (disko) — partitioning AND fileSystems.* come from here
+hosts/<hostname>/hardware-configuration.nix # detected hardware ONLY (no filesystems) — regenerated at install with --no-filesystems, never hand-edit to "fix"
 home/*.nix                        # Home Manager modules (imported by home.nix)
 home/starship.toml                # imported via lib.importTOML
 home/files/                       # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
@@ -55,11 +56,15 @@ matching `hosts/<name>/` dir (copy an existing one), and regenerate its
 `configuration.nix`; runtime paths use `~` or `config.home.homeDirectory`).
 
 **Shared vs. host-specific system config.** Anything host-agnostic goes in
-`hosts/common.nix`. Genuinely per-machine bits (filesystems, kernel modules,
-microcode, GPU driver packages) go in the host's `hardware-configuration.nix`
-(regenerated) or its `configuration.nix` (for things that must survive a
-`nixos-generate-config` regen, e.g. the Gen 12's `hardware.graphics.extraPackages`
-= `intel-media-driver` + `vpl-gpu-rt` and `LIBVA_DRIVER_NAME = "iHD"`).
+`hosts/common.nix`. Genuinely per-machine bits go per host: **disk layout and
+filesystems in `disko.nix`** (the disko module derives `fileSystems.*` from it —
+never define `fileSystems` in `hardware-configuration.nix`, that's a conflicting
+definition), kernel modules/microcode in `hardware-configuration.nix`
+(regenerated with `--no-filesystems`), and everything that must survive a
+`nixos-generate-config` regen in `configuration.nix` (e.g. the Gen 12's
+`hardware.graphics.extraPackages` = `intel-media-driver` + `vpl-gpu-rt` and
+`LIBVA_DRIVER_NAME = "iHD"`). Installs go through disko + nixos-anywhere — see
+README "Install".
 
 **Two-tier rule for configs:**
 1. **Structured config → native Nix attribute sets.** Hyprland binds, Waybar

@@ -1,14 +1,16 @@
 ###############################################################################
-# PLACEHOLDER hardware configuration.
+# Hardware configuration — ThinkPad X1 Carbon 7th Gen.
 #
-# This file MUST be regenerated on the real machine with:
+# Filesystems are NOT defined here — they come from ./disko.nix (the disko
+# module derives fileSystems.* from the declarative layout). This file only
+# carries detected hardware: kernel modules, microcode, platform.
 #
-#     sudo nixos-generate-config --show-hardware-config \
+# `nixos-anywhere --generate-hardware-config nixos-generate-config <this file>`
+# regenerates it at install time (with --no-filesystems, so it never conflicts
+# with disko). To refresh it on a running machine:
+#
+#     sudo nixos-generate-config --no-filesystems --show-hardware-config \
 #       > hosts/thinkpad-x1-carbon-g7/hardware-configuration.nix
-#
-# It will contain the actual filesystems, LUKS devices, kernel modules and
-# CPU/GPU details for the ThinkPad X1 Carbon 7th Gen. The values below are only
-# enough to let `nix flake check` evaluate; they are NOT bootable as-is.
 ###############################################################################
 {
   config,
@@ -28,21 +30,6 @@
     "sd_mod"
   ];
   boot.kernelModules = [ "kvm-intel" ];
-
-  # TODO: replace with the generated fileSystems entries. The install steps in
-  # README format the root as btrfs with an `@` subvolume (matching the Gen 12),
-  # so the regen will emit `fsType = "btrfs"; options = [ "subvol=@" ];` against
-  # a by-uuid device. These by-label placeholders only let `nix flake check`
-  # evaluate; they are NOT bootable as-is.
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@" ];
-  };
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/boot";
-    fsType = "vfat";
-  };
 
   # NOTE: hardware.graphics.enable lives in ./configuration.nix (not here), so it
   # survives regenerating this file. Don't re-add it here.

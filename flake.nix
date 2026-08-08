@@ -13,6 +13,15 @@
     # and tracks upstream more closely than nixpkgs.
     hyprland.url = "github:hyprwm/Hyprland";
 
+    # Declarative disk partitioning. Each host describes its layout in
+    # hosts/<hostname>/disko.nix; `nixos-anywhere` (see README "Install") uses
+    # it to partition + format at install time, and the module derives the
+    # system's fileSystems.* from it afterwards.
+    disko = {
+      url = "github:nix-community/disko/latest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Zen Browser (no nixpkgs package; community flake).
     # Output used below: packages.<system>.default
     zen-browser = {
@@ -27,6 +36,7 @@
       nixpkgs,
       home-manager,
       hyprland,
+      disko,
       zen-browser,
       ...
     }@inputs:
@@ -65,6 +75,7 @@
               ;
           };
           modules = [
+            disko.nixosModules.disko
             ./hosts/${hostname}/configuration.nix
 
             home-manager.nixosModules.home-manager

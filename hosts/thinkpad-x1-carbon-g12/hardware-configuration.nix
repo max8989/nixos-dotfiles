@@ -1,20 +1,20 @@
 ###############################################################################
-# PLACEHOLDER hardware configuration — ThinkPad X1 Carbon Gen 12 (21KC).
+# Hardware configuration — ThinkPad X1 Carbon Gen 12 (21KC).
 #
-# This file MUST be regenerated on the real machine, once booted into the NixOS
-# installer (or NixOS itself), with:
+# Filesystems are NOT defined here — they come from ./disko.nix (the disko
+# module derives fileSystems.* from the declarative layout). This file only
+# carries detected hardware: kernel modules, microcode, platform.
 #
-#     sudo nixos-generate-config --show-hardware-config \
+# `nixos-anywhere --generate-hardware-config nixos-generate-config <this file>`
+# regenerates it at install time (with --no-filesystems, so it never conflicts
+# with disko). To refresh it on a running machine:
+#
+#     sudo nixos-generate-config --no-filesystems --show-hardware-config \
 #       > hosts/thinkpad-x1-carbon-g12/hardware-configuration.nix
 #
-# The values below are only enough to let `nix flake check` evaluate; they are
-# NOT bootable as-is. They are seeded to match the known facts about this
-# machine (Meteor Lake CPU, btrfs root, NVMe) so the diff after regen is small:
+# The values below are seeded to match the known facts about this machine
+# (Meteor Lake CPU, NVMe) so the diff after regen is small:
 #   - CPU: Intel Core Ultra 5 125U (Meteor Lake) -> kvm-intel, intel microcode
-#   - Root filesystem: btrfs (regen will emit the real subvolumes + options)
-#   - /boot: EFI system partition (vfat)
-#
-# Do NOT hand-edit this to "fix" a build — regenerate it on the machine.
 ###############################################################################
 {
   config,
@@ -38,27 +38,6 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
-
-  # TODO: replace with the generated fileSystems entries. The real root is
-  # btrfs and almost certainly uses subvolumes (e.g. subvol=@), which
-  # nixos-generate-config will fill in along with the correct UUIDs.
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@" ];
-  };
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/boot";
-    fsType = "vfat";
-    options = [
-      "fmask=0077"
-      "dmask=0077"
-    ];
-  };
-
-  # TODO: if the install uses a swap partition/file, the generator emits it
-  # here. (The current Arch install reports ~7.5 GiB of swap.)
-  swapDevices = [ ];
 
   # Intel microcode — Meteor Lake.
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

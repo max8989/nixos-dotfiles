@@ -168,6 +168,11 @@
   users.users.${username} = {
     isNormalUser = true;
     description = fullName;
+    # nixos-anywhere installs reboot straight into the system with no
+    # interactive `passwd` step, so seed a throwaway first-login password.
+    # Only applies when the account is first created (users are mutable);
+    # change it immediately after first login with `passwd`.
+    initialPassword = "changeme";
     extraGroups = [
       "wheel"
       "networkmanager"
