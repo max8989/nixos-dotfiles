@@ -138,7 +138,18 @@ That's everything on the target. The rest runs from your other machine.
 ### 3. Run nixos-anywhere (from your other machine)
 
 Any Linux/macOS box with Nix will do (flakes enabled — if not, prefix the
-commands with `NIX_CONFIG="experimental-features = nix-command flakes"`).
+commands with `NIX_CONFIG="experimental-features = nix-command flakes"`, or pass
+`nix --extra-experimental-features "nix-command flakes" run …`; a NixOS installer
+ISO ships with flakes **off**, so from one of those you always need this).
+
+> ⚠️ **Don't drive this from a second NixOS live USB.** The installer's Nix store
+> is a tmpfs sized at ~half RAM, and this flake's closure (LibreOffice, browsers,
+> fonts) does not fit. It dies partway through with
+> `error: write of N bytes: No space left on device`. Either use a real installed
+> machine, or add `--build-on-remote` so the target builds its own closure onto
+> its disk instead of the helper's RAM. With no real second machine, skip to
+> [Install from the target itself](#install-from-the-target-itself) — it's the
+> more reliable route.
 
 ```sh
 git clone https://github.com/max8989/nixos-dotfiles
@@ -180,21 +191,80 @@ git commit -m "hardware config for $HOST"
 git push
 ```
 
-> **No second machine?** disko still replaces all the manual partitioning. On
-> the installer itself: clone the repo, regenerate
-> `hosts/$HOST/hardware-configuration.nix` with
-> `sudo nixos-generate-config --no-filesystems --show-hardware-config | sudo tee hosts/$HOST/hardware-configuration.nix`,
-> then run
-> `sudo nix run 'github:nix-community/disko/latest#disko-install' -- --flake .#$HOST --disk main /dev/nvme0n1`
-> (one step: partition + format + install), set passwords with
-> `sudo nixos-enter --root /mnt -c 'passwd <username>'`, and reboot.
+### Install from the target itself
+
+No second machine needed — run everything on the ThinkPad booted from the
+installer USB (over SSH from anywhere, or at its own console). This is the route
+that was actually used for the Gen 12, and it's more robust than
+`disko-install`: **`disko-install` builds the closure into the installer's tmpfs
+store before it ever touches the disk**, so on a 16 GB machine it fills RAM and
+dies. Splitting it in two avoids that, because `nixos-install` passes
+`--store /mnt` and downloads straight onto the freshly-mounted disk.
+
+```sh
+HOST=thinkpad-x1-carbon-g12
+git clone https://github.com/max8989/nixos-dotfiles ~/nixos-dotfiles
+cd ~/nixos-dotfiles
+
+# 1. Real hardware config (no filesystems — disko owns those)
+sudo nixos-generate-config --no-filesystems --show-hardware-config \
+  > hosts/$HOST/hardware-configuration.nix
+
+# 2. Partition + format + mount at /mnt
+sudo nix --extra-experimental-features "nix-command flakes" \
+  run 'github:nix-community/disko/latest#disko' -- \
+  --mode destroy,format,mount --yes-wipe-all-disks \
+  --flake "path:$PWD#$HOST"
+
+# 3. Build + install onto the disk (this is the long one)
+sudo NIX_CONFIG="experimental-features = nix-command flakes" \
+  nixos-install --root /mnt --flake "path:$PWD#$HOST" --no-root-passwd
+
+sudo reboot
+```
+
+Notes:
+
+- **Use `path:$PWD#$HOST`, not `.#$HOST`.** The `path:` ref copies the directory
+  as-is, so the `hardware-configuration.nix` you just regenerated is picked up
+  without a `git add` (plain `.#` only sees git-tracked files, and errors under
+  `sudo` on a repo owned by another user).
+- `--no-root-passwd` leaves root locked, which is correct here: your account is
+  in `wheel` and gets in via `sudo`, and it logs in first with
+  `initialPassword = "changeme"`.
+- Run step 3 under `screen`, or detached with
+  `sudo setsid nohup … >/tmp/nixos-install.log 2>&1 &`, so a dropped SSH session
+  doesn't kill the install partway through.
+- If the installer's tmpfs fills anyway, reclaim it with `sudo nix-collect-garbage`
+  — but **do not reboot** the installer to clean it: the `nixos` password and
+  your authorized SSH key live on that tmpfs and are lost, which costs you
+  physical access to the machine.
+
+#### Reinstalling over an existing Linux install
+
+A previous install's signatures can survive disko's wipe and resurface at the
+same offset in the new partition, so the mount fails with
+`unknown filesystem type 'LVM2_member'` (or `crypto_LUKS`, `zfs_member`, …) even
+though disko just made a btrfs filesystem there. Scrub the disk once before
+step 2 above and it won't come back:
+
+```sh
+sudo umount -R /mnt 2>/dev/null
+sudo vgchange -an; sudo dmsetup remove_all      # tear down any active LVM
+sudo wipefs -af /dev/nvme0n1p*                  # per-partition signatures
+sudo wipefs -af /dev/nvme0n1                    # GPT/PMBR
+sudo sgdisk --zap-all /dev/nvme0n1
+sudo blkdiscard -f /dev/nvme0n1                 # full SSD trim
+```
+
+`sudo wipefs /dev/nvme0n1` should then print nothing.
 
 ### 4. First boot
 
 Remove the USB. Log in at **tuigreet → Hyprland** as your user with the
 first-boot password **`changeme`** (seeded via `initialPassword` in
-`hosts/common.nix` because nixos-anywhere has no interactive password step) —
-then **immediately** change it and enroll the fingerprint reader:
+`hosts/common.nix`, since neither install route has an interactive password
+step) — then **immediately** change it and enroll the fingerprint reader:
 
 ```sh
 passwd

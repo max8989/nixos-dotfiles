@@ -66,6 +66,15 @@ definition), kernel modules/microcode in `hardware-configuration.nix`
 `LIBVA_DRIVER_NAME = "iHD"`). Installs go through disko + nixos-anywhere — see
 README "Install".
 
+**This closure is too big to build in a live ISO's RAM store.** Both
+`nixos-anywhere` (run from a second NixOS USB) and `disko-install` stage the
+build in the installer's tmpfs `/nix/.rw-store` (~half RAM) *before* writing to
+the target disk, and die with `No space left on device`. Use `--build-on-remote`,
+or the two-step `disko --mode destroy,format,mount` + `nixos-install --root /mnt`
+(the latter passes `--store /mnt`, so it downloads onto the disk). The Gen 12 was
+installed with the two-step route; README "Install from the target itself" has
+it, plus the signature scrub needed when reinstalling over LVM.
+
 **Two-tier rule for configs:**
 1. **Structured config → native Nix attribute sets.** Hyprland binds, Waybar
    modules, hyprlock/hypridle/hyprpaper, wofi, kitty, starship all live as
