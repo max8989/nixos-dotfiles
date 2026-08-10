@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 let
   # Shared by bash and zsh — the set from the Arch ~/.zshrc.
   shellAliases = {
@@ -44,9 +44,9 @@ in
   ## Not carried over from the Arch .zshrc, on purpose:
   ##   - `. "$HOME/.local/bin/env"`      — rustup/uv shim; those come from
   ##                                        home.packages here.
-  ##   - `export PATH=$HOME/.npm-global` — global npm prefix; on NixOS the
-  ##                                        declarative package list is the
-  ##                                        source of truth.
+  ##
+  ## The Arch `export PATH=$HOME/.npm-global` IS carried over — see the npm
+  ## section at the bottom of this file for why it is still needed here.
   ##########################################################################
   programs.zsh = {
     enable = true;
@@ -111,4 +111,17 @@ in
     enableZshIntegration = true;
     settings = lib.importTOML ./starship.toml;
   };
+
+  ##########################################################################
+  ## npm global prefix.
+  ##
+  ## nixpkgs' npm defaults its prefix to its own store path, which is
+  ## read-only — so `npm install -g <pkg>` dies with EACCES. The declarative
+  ## package list stays the source of truth for anything nixpkgs carries, but
+  ## a few tools have no nixpkgs package at all (OpenCLI, @jackwener/opencli,
+  ## pulled in by ~/repos/claude-config/install.sh). Give npm a writable
+  ## prefix and put its bin dir on PATH so those installs work.
+  ##########################################################################
+  home.sessionVariables.NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
+  home.sessionPath = [ "${config.home.homeDirectory}/.npm-global/bin" ];
 }

@@ -116,6 +116,7 @@ in
       awscli2
       azure-cli
       uv
+      nodejs
       (
         with dotnetCorePackages;
         combinePackages [
@@ -127,6 +128,11 @@ in
       vscode
       insomnia
       claude-code
+      # --- claude-config (~/repos/claude-config) dependencies ---
+      # Only gh is declared here; its install.sh fetches the MCP server
+      # binaries (github-mcp-server, mcp-server-git) itself into the repo's
+      # bin/, and gh is what performs that release download.
+      gh
       jetbrains.rider
       jetbrains.datagrip
     ]
