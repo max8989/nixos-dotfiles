@@ -225,7 +225,7 @@ in
       wallpaper = [
         {
           monitor = "";
-          path = "~/.config/backgrounds/nixos-wallpaper.jpg";
+          path = "~/.config/backgrounds/cool-nixos-wallpaper.png";
         }
       ];
     };
