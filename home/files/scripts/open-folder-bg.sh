@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Check if rofi is already open (only works if you name the window)
 pid=$(pgrep -f "rofi -dmenu -p Open\ file\ location")

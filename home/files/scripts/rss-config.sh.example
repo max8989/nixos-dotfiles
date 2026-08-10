@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # RSS Feed Configuration for Hyprlock
 # Copy this file to ~/.config/hypr/rss-config.sh and add your API key
 # The actual config file is gitignored for security

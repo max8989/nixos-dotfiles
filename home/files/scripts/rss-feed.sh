@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # RSS Feed Fetcher for Hyprlock with AI Summarization
 
 set -euo pipefail

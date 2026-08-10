@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # Check if already recording and stop if so
 pgrep -x "wf-recorder" && pkill -INT -x wf-recorder && notify-send "Screen Recording" "Finished Recording" -i video-display -t 5000 && exit 0

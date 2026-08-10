@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Check if playerctl is installed
 if ! command -v playerctl &> /dev/null; then

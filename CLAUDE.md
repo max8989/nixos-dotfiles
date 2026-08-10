@@ -107,6 +107,16 @@ flakes only see git-tracked files inside the flake root.
   - Paths outside the Nix store don't exist. The polkit agent is substituted
     into the Lua via a `@polkitAgent@` placeholder in `home/hyprland.nix`; add
     more the same way rather than hard-coding `/usr/...`.
+- **Script shebangs must be `#!/usr/bin/env bash`.** NixOS has no `/bin/bash`
+  and no `/bin/env` — `/bin` contains only `sh`, `/usr/bin` only `env`. A script
+  in `home/files/**` with an Arch-style `#!/bin/bash` deploys fine and then dies
+  at runtime with `bad interpreter`, which surfaces as a keybind or waybar
+  module that silently does nothing. Check with
+  `grep -rn '^#!' home/files --include='*.sh' | grep -v '#!/usr/bin/env'`
+  after copying anything in from the Arch dotfiles.
+- **Scripts must create their own output dirs.** `$HOME` is not pre-populated on
+  a fresh install (no `~/Pictures/Screenshots`, etc.), and the tools these
+  scripts wrap generally do not `mkdir -p` for you.
 - **Single theme.** Mocha is baked in. There is no runtime theme switcher (it
   was dropped because the Nix store is immutable). To change theme you edit Nix
   and rebuild.
