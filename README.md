@@ -15,6 +15,9 @@ generated `hardware-configuration.nix` (plus, for the Gen 12, the Meteor Lake
 iGPU video stack). Fresh installs are one command via **disko + nixos-anywhere**
 (see [Install](#install)).
 
+👉 **Already installed?** [COMMANDS.md](COMMANDS.md) is the day-to-day cheat
+sheet — rebuild, update, rollback, garbage collection, service debugging.
+
 ## What's inside
 
 | Area | Module | Approach |
