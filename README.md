@@ -25,7 +25,7 @@ iGPU video stack). Fresh installs are one command via **disko + nixos-anywhere**
 | Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
 | Launcher / menus / OSD | `home/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
 | Terminal | `home/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
-| Shell / prompt | `home/shell.nix` | bash + `programs.starship` |
+| Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
 | Scripts + timers | `home/scripts.nix` | in-repo scripts + systemd user timers |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
