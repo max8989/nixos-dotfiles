@@ -133,6 +133,15 @@
   # Bluetooth (waybar bluetooth-menu.sh / bluetoothctl).
   hardware.bluetooth.enable = true;
   services.blueman.enable = true; # GUI bluetooth manager
+  # Removable media. Without udisks2 nothing mounts a USB stick — it shows up in
+  # `lsblk` and then just sits there, since there is no desktop environment here
+  # to do it. udisks2 is the DBus service that does the mounting (under
+  # /run/media/$USER/<label>); polkit above is what lets the logged-in user drive
+  # it without sudo. gvfs is the GIO/userspace-VFS layer nautilus needs to show
+  # the drive in its sidebar and to reach mtp:// / smb:// / trash://.
+  # The actual auto-mount-on-plug is `services.udiskie` in home/desktop.nix.
+  services.udisks2.enable = true;
+  services.gvfs.enable = true;
   # Flatpak (for apps not packaged in nixpkgs). Add remotes manually post-install,
   # e.g. `flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo`.
   services.flatpak.enable = true;

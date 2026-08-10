@@ -218,6 +218,22 @@ in
   };
 
   #########################################################################
+  ## Udiskie — auto-mount removable media (HM systemd user service)
+  ##
+  ## Talks to the system udisks2 service enabled in hosts/common.nix and mounts
+  ## drives as they are plugged in, under /run/media/$USER/<label>. `tray` puts
+  ## an eject/unmount menu in waybar's tray module — it is a StatusNotifierItem,
+  ## so it needs waybar running; the unit already Requires/After tray.target,
+  ## which HM links because waybar is WantedBy it.
+  #########################################################################
+  services.udiskie = {
+    enable = true;
+    automount = true;
+    notify = true; # swaync shows the "mounted at …" pop-up
+    tray = "auto"; # icon appears only while a removable device is present
+  };
+
+  #########################################################################
   ## Wofi — app launcher (config inlined; CSS carried as in-repo files)
   #########################################################################
   programs.wofi = {
