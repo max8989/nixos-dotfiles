@@ -184,6 +184,23 @@
     shell = pkgs.bash;
   };
 
+  ##########################################################################
+  ## SSH
+  ##
+  ## Remote access for debugging a machine whose graphical session is broken
+  ## (a Hyprland config error drops you to a bind-less emergency session, but
+  ## sshd still works). Password auth is on because this is a laptop on a
+  ## trusted LAN with no keys provisioned yet — once you have added a key to
+  ## ~/.ssh/authorized_keys, set PasswordAuthentication = false.
+  ##########################################################################
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = true;
+      PermitRootLogin = "no";
+    };
+  };
+
   # System-wide packages kept minimal; user software lives in Home Manager.
   environment.systemPackages = with pkgs; [
     git
