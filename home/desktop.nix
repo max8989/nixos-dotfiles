@@ -34,20 +34,6 @@ in
         }
       ];
 
-      # Arch Linux logo
-      image = [
-        {
-          monitor = "";
-          path = "$HOME/.config/hypr/assets/archlinux-logo.png";
-          size = "10%";
-          rounding = 0;
-          border_size = 0;
-          position = "0%, -38%";
-          halign = "center";
-          valign = "center";
-        }
-      ];
-
       # i3-style center panel
       shape = [
         {
