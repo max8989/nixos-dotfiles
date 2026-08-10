@@ -267,7 +267,7 @@ in
     # SwayOSD on-screen-display styling.
     "swayosd/style.css".source = ./files/swayosd/style.css;
 
-    # Wallpapers (hyprpaper + wallpaper-switcher.sh reference ~/.config/backgrounds).
+    # Wallpapers (referenced by services.hyprpaper above).
     "backgrounds".source = ./files/backgrounds;
   };
 }

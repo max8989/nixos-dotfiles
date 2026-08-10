@@ -101,6 +101,7 @@ in
       ripgrep
       fastfetch
       yazi
+      superfile # TUI file manager (SUPER+E); binary is `superfile`, not `spf`
       neovim
       bun
       lazygit

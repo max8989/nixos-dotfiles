@@ -11,14 +11,15 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 -- Programs
 local editor      = "zed"
 local terminal    = "kitty"
-local fileManager = "nautilus"
+local fileManager = "superfile" -- TUI file manager; nixpkgs names the binary
+                                -- `superfile`, Arch's AUR package called it `spf`
 local menu        = "pidof rofi && killall rofi || rofi -show drun"
 local browser     = "zen-browser"
 local screenshot  = "~/.config/scripts/screenshot.sh"
 
 -- Application shortcuts
 hl.bind(mainMod .. " + return", hl.dsp.exec_cmd(terminal), { description = "launch terminal emulator" })
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager), { description = "launch file manager" })
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(terminal .. " -e " .. fileManager), { description = "launch file manager" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exec_cmd(terminal .. " -e btop"))
 
 -- Rofi menus
@@ -26,8 +27,10 @@ hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind("ALT + space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd('rofi -show fb -modi "fb:~/.config/scripts/rofi-fb-official.sh"'))
 
--- Wallpaper switcher
-hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd("~/.config/scripts/wallpaper-switcher.sh"))
+-- NOTE: no wallpaper switcher (was SUPER+CTRL+W). The script rewrote
+-- ~/.config/hypr/hyprpaper.conf, which Home Manager makes a read-only Nix
+-- store symlink, so it could never work here. Change the wallpaper by editing
+-- services.hyprpaper in home/desktop.nix and rebuilding.
 
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(

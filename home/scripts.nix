@@ -28,7 +28,7 @@ in
   home.packages = [ pkgs.upower ];
 
   # Custom scripts referenced by keybindings / hyprlock / waybar (screenshot.sh,
-  # screen_record.sh, wallpaper-switcher.sh, rofi-fb-official.sh, whatsong.sh,
+  # screen_record.sh, rofi-fb-official.sh, whatsong.sh,
   # power.sh, …). Carried as in-repo files; their deps come from home.packages.
   #
   # NOTE: waybar/scripts/system-update.sh is Arch-only and self-exits on NixOS
