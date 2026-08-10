@@ -6,6 +6,19 @@
 {
   wayland.windowManager.hyprland = {
     enable = true;
+
+    # Emit ~/.config/hypr/hyprland.conf (hyprlang), NOT hyprland.lua.
+    #
+    # Home Manager's default for this flipped to "lua" at stateVersion 26.05,
+    # and under the Lua backend every settings attribute becomes an
+    # `hl.<name>(...)` call — so the hyprlang variables below ($mainMod,
+    # $terminal, …) render as `hl.$mainMod("SUPER")`, which is not valid Lua:
+    #   hyprland.lua:5: <name> expected near '$'
+    # Hyprland then fails the whole config and falls back to a bind-less
+    # emergency session. The settings below are hyprlang, so pin the backend.
+    # Porting to Lua would mean expressing the variables via `_var` instead.
+    configType = "hyprlang";
+
     # Same Hyprland package the system enables (from the flake input).
     package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
 
