@@ -82,6 +82,11 @@
             {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
+              # Move (don't clobber) pre-existing unmanaged files instead of
+              # aborting the whole activation. Without this, one stray file —
+              # e.g. nwg-look rewriting ~/.config/gtk-4.0/settings.ini —
+              # silently blocks every HM change in the rebuild.
+              home-manager.backupFileExtension = "hm-bak";
               home-manager.extraSpecialArgs = { inherit inputs username; };
               home-manager.users.${username} = import ./home/home.nix;
             }

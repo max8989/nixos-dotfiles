@@ -217,8 +217,17 @@ in
   services.hyprpaper = {
     enable = true;
     settings = {
-      preload = [ "~/.config/backgrounds/arch.png" ];
-      wallpaper = [ ",~/.config/backgrounds/arch.png" ];
+      # hyprpaper >=0.8 parses `wallpaper` as a *section* (hyprlang special
+      # category keyed on `monitor`), not the old flat `monitor,path` string —
+      # and it dropped `preload` entirely. The old one-line form is silently
+      # ignored, which shows up only as "Monitor eDP-1 has no target" in the
+      # log. An empty `monitor` is the wildcard (matches every output).
+      wallpaper = [
+        {
+          monitor = "";
+          path = "~/.config/backgrounds/nixos.webp";
+        }
+      ];
     };
   };
 
