@@ -108,6 +108,7 @@ in
       dnsutils # dig / nslookup (was `bind`)
       alsa-utils # alsamixer / aplay (was `alsa-utils`)
       zip
+      stow
 
       # --- dev block ---
       docker-compose
