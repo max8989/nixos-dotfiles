@@ -1,28 +1,106 @@
 { lib, ... }:
-{
-  programs.bash.enable = true;
+let
+  # Shared by bash and zsh — the set from the Arch ~/.zshrc.
+  shellAliases = {
+    # eza-based listings
+    ls = "eza --group-directories-first --icons";
+    ll = "eza -lh --group-directories-first --icons";
+    la = "eza -lah --group-directories-first --icons";
+    lt = "eza --tree --icons";
+    lla = "ls -lha";
+    l = "ls -CF"; # see NOTE below
+    cat = "bat --paging=never";
 
-  # Aliases migrated from the old Arch install_packages.sh (~/.bashrc additions).
-  programs.bash.shellAliases = {
     grep = "grep --color=auto";
     df = "df -h";
     du = "du -h -c";
     free = "free -h";
-    ls = "ls --color=auto";
-    ll = "ls -lh";
-    la = "ls -A";
-    l = "ls -CF";
-    lla = "ls -lha";
+
     c = "clear";
     q = "exit";
     ".." = "cd ..";
     "..." = "cd ../..";
     neofetch = "fastfetch";
+
+    n = "nvim .";
+    note = "cd ~/Documents/obsidian && nvim .";
+
     pwdc = "pwd | wl-copy";
     cdo = ''pwd | xargs -I{} echo "cd {} && opencode" | wl-copy'';
     cdc = ''pwd | xargs -I{} echo "cd {} && claude" | wl-copy'';
     cdd = ''pwd | xargs -I{} echo "cd {}" | wl-copy'';
   };
+in
+{
+  ##########################################################################
+  ## zsh — the login shell (registered + selected in hosts/common.nix).
+  ##
+  ## Ported from the Arch ~/.zshrc, which was deliberately framework-free (no
+  ## oh-my-zsh / zinit): it sourced two plugins by hand from /usr/share. Those
+  ## paths don't exist on NixOS, so the equivalent Home Manager options are
+  ## used instead — HM sources zsh-syntax-highlighting last, which is the load
+  ## order that plugin requires.
+  ##
+  ## Not carried over from the Arch .zshrc, on purpose:
+  ##   - `. "$HOME/.local/bin/env"`      — rustup/uv shim; those come from
+  ##                                        home.packages here.
+  ##   - `export PATH=$HOME/.npm-global` — global npm prefix; on NixOS the
+  ##                                        declarative package list is the
+  ##                                        source of truth.
+  ##########################################################################
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true; # replaces the manual `autoload -Uz compinit`
+    autocd = true; # setopt AUTO_CD — bare `dir` means `cd dir`
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+
+    history = {
+      size = 50000;
+      save = 50000;
+      ignoreAllDups = true; # HIST_IGNORE_ALL_DUPS
+      ignoreSpace = true; # HIST_IGNORE_SPACE
+      share = true; # SHARE_HISTORY
+      append = true; # INC_APPEND_HISTORY
+      # path defaults to $HOME/.zsh_history, same as the Arch config.
+    };
+
+    initContent = ''
+      # Completion behaviour from the Arch .zshrc.
+      zstyle ':completion:*' menu select
+      zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
+
+      # Machine-local overrides / secrets. Untracked and optional, so the
+      # guard keeps a fresh machine working before the file exists.
+      [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+    '';
+  };
+
+  # Ctrl-R / Ctrl-T / Alt-C and **<Tab> completion. Replaces sourcing
+  # /usr/share/fzf/{key-bindings,completion}.zsh by hand.
+  programs.fzf = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
+  # `z`/`zi` frecency jumping — replaces `eval "$(zoxide init zsh)"`.
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
+  # bash stays enabled: it is not the login shell, but plenty of scripts and
+  # `bash -lc` invocations still expect a configured bash.
+  programs.bash.enable = true;
+
+  # One alias set for both shells, matching the Arch ~/.zshrc.
+  #
+  # NOTE: `l` is inherited verbatim from the Arch config, where `ls` is an eza
+  # alias — shells re-expand the first word, so `l` becomes `eza … -CF` and
+  # eza has no `-C`. It was equally broken on Arch; kept for parity rather
+  # than silently changed. Use `ll`/`la` instead, or redefine `l` here.
+  programs.bash.shellAliases = shellAliases;
+  programs.zsh.shellAliases = shellAliases;
 
   # Starship prompt. The complex Catppuccin-Mocha starship.toml (nerd-font
   # glyphs, palettes) is imported as-is via importTOML — pure (the file lives in
@@ -30,6 +108,7 @@
   programs.starship = {
     enable = true;
     enableBashIntegration = true;
+    enableZshIntegration = true;
     settings = lib.importTOML ./starship.toml;
   };
 }

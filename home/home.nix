@@ -68,6 +68,13 @@ in
       pavucontrol
       (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
       curl
+      # NixOS has no global /usr/bin, so these must be requested explicitly —
+      # each is called by name from a script or keybind and would otherwise
+      # fail silently at runtime.
+      psmisc # killall — rofi toggle in keybindings.lua, power-menu.sh
+      lm_sensors # sensors — waybar/scripts/cpu-temp.sh
+      xdg-utils # xdg-open — scripts/rofi-fb-official.sh
+      pulseaudio # pactl — waybar/scripts/volume-control.sh (talks to pipewire-pulse)
 
       # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
       firefox
@@ -86,6 +93,8 @@ in
       nwg-look # GTK theme settings
 
       # --- CLI tools ---
+      eza # backs the ls/ll/la/lt aliases in shell.nix
+      bat # backs the `cat` alias in shell.nix
       htop
       wget
       fd

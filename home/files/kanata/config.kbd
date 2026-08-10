@@ -2,6 +2,7 @@
 ;; Caps Lock behavior:
 ;; - Tap: Escape
 ;; - Hold + h/j/k/l: Arrow keys (left/down/up/right)
+;; - Hold + j+k (together): Escape
 ;; - Hold + u/o: Home/End
 ;; - Hold + q: Toggle Caps Lock
 ;; - Hold + 1-0: F1-F10
@@ -13,6 +14,7 @@
 (defcfg
   process-unmapped-keys yes
   danger-enable-cmd no
+  concurrent-tap-hold yes
   linux-dev-names-exclude (
     "Keychron Keychron Q4 Pro"
     "Keychron Keychron Q4 Pro Keyboard"
@@ -37,4 +39,12 @@
   ;; Tap for Escape, hold to activate nav layer
   ;; Params: <tap-timeout> <hold-timeout> <tap-action> <hold-action>
   cap (tap-hold 200 200 esc (layer-toggle nav))
+)
+
+;; Chord: with Caps held (nav layer), press j+k together -> Escape.
+;; Disabled in the base layer, so plain "jk" typing is unaffected and
+;; single j/k in the nav layer stay as down/up arrows.
+;; 5-tuple: (keys) action timeout release-behaviour (disabled-layers)
+(defchordsv2
+  (j k) esc 75 all-released (base)
 )

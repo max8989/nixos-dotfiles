@@ -32,4 +32,31 @@
   };
   # Force the iHD driver for VAAPI consumers (mpv, ffmpeg, browsers).
   environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
+
+  ##########################################################################
+  ## Audio — pin the Meteor Lake-P SOF HDA DSP card to the Speaker profile.
+  ##
+  ## Ported from the Arch wireplumber.conf.d/51-alsa-auto-profile.conf. With
+  ## api.acp.auto-profile left on, plugging in HDMI makes WirePlumber switch
+  ## this card to the Headphones profile (priority 10300) over the Speaker
+  ## profile (10200), which silences the laptop speakers. Pinning the Speaker
+  ## profile keeps the speakers alive and still exposes all three HDMI sinks;
+  ## auto-port stays on so jack plug/unplug still switches ports.
+  ##
+  ## Host-specific because the device.name matches this machine's card.
+  ##########################################################################
+  services.pipewire.wireplumber.extraConfig."51-alsa-auto-profile" = {
+    "monitor.alsa.rules" = [
+      {
+        matches = [
+          { "device.name" = "alsa_card.pci-0000_00_1f.3-platform-skl_hda_dsp_generic"; }
+        ];
+        actions.update-props = {
+          "api.acp.auto-profile" = false;
+          "api.acp.auto-port" = true;
+          "device.profile" = "HiFi (HDMI1, HDMI2, HDMI3, Mic1, Mic2, Speaker)";
+        };
+      }
+    ];
+  };
 }

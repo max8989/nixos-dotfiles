@@ -181,7 +181,7 @@
       "uinput"
       "docker"
     ];
-    shell = pkgs.bash;
+    shell = pkgs.zsh;
   };
 
   ##########################################################################
@@ -200,6 +200,11 @@
       PermitRootLogin = "no";
     };
   };
+
+  # zsh must be enabled at the NixOS level too, not just in Home Manager:
+  # this is what registers it in /etc/shells and makes it valid as a login
+  # shell for users.users.<name>.shell above.
+  programs.zsh.enable = true;
 
   # System-wide packages kept minimal; user software lives in Home Manager.
   environment.systemPackages = with pkgs; [
