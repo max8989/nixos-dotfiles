@@ -6,9 +6,9 @@
 -- package.path setup and the `require("keybindings")` call itself, so this
 -- file must NOT require it).
 --
--- @polkitAgent@ is substituted with a Nix store path at build time — see
--- home/hyprland.nix. Do not hard-code /usr paths here; nothing outside the
--- Nix store exists on NixOS.
+-- The polkit agent placeholder below is substituted with a Nix store path at
+-- build time — see home/hyprland.nix. Do not hard-code /usr paths here;
+-- nothing outside the Nix store exists on NixOS.
 --
 -- Docs: https://wiki.hypr.land/Configuring/Start/
 

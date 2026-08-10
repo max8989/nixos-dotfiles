@@ -76,10 +76,11 @@ installed with the two-step route; README "Install from the target itself" has
 it, plus the signature scrub needed when reinstalling over LVM.
 
 **Two-tier rule for configs:**
-1. **Structured config → native Nix attribute sets.** Hyprland binds, Waybar
-   modules, hyprlock/hypridle/hyprpaper, wofi, kitty, starship all live as
+1. **Structured config → native Nix attribute sets.** Waybar modules,
+   hyprlock/hypridle/hyprpaper, wofi, kitty, starship all live as
    `settings = { … }` / list-of-attrs in the `.nix` files. New config of this
-   kind goes here, not into a raw file.
+   kind goes here, not into a raw file. **Hyprland is the exception** — see
+   below.
 2. **Opaque blobs → `home/files/`,** referenced from Nix via
    `builtins.readFile` / `.source` / `lib.importTOML`. CSS, rofi `.rasi`,
    kanata `.kbd`, shell scripts, and images have no meaningful attribute-set
@@ -90,6 +91,22 @@ flakes only see git-tracked files inside the flake root.
 
 ## Gotchas specific to this repo
 
+- **Hyprland config is Lua, in `home/files/hypr/`, not `settings`.**
+  `configType = "lua"` (Home Manager's default from `stateVersion` 26.05) writes
+  `~/.config/hypr/hyprland.lua`. `hyprland.lua` is appended via `extraConfig`;
+  `keybindings.lua` goes in via `extraLuaFiles`, which is what emits the
+  `package.path` setup and the `require("keybindings")` call — so `hyprland.lua`
+  must **not** require it itself. `settings` is deliberately empty: under the Lua
+  backend every attribute becomes an `hl.<name>(...)` call and would duplicate
+  the Lua. Edit the `.lua` files, not `settings`. Syntax-check with
+  `luac -p home/files/hypr/*.lua` before rebuilding — a parse error drops
+  Hyprland into a bind-less emergency session.
+  - Under the Lua backend, hyprlang `$variables` are invalid — `"$mainMod" =
+    "SUPER"` renders as `hl.$mainMod("SUPER")` and Lua rejects it. Use Lua
+    `local`s (as `keybindings.lua` does) or `settings.<name>._var`.
+  - Paths outside the Nix store don't exist. The polkit agent is substituted
+    into the Lua via a `@polkitAgent@` placeholder in `home/hyprland.nix`; add
+    more the same way rather than hard-coding `/usr/...`.
 - **Single theme.** Mocha is baked in. There is no runtime theme switcher (it
   was dropped because the Nix store is immutable). To change theme you edit Nix
   and rebuild.

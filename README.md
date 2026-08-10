@@ -20,7 +20,7 @@ iGPU video stack). Fresh installs are one command via **disko + nixos-anywhere**
 | Area | Module | Approach |
 |------|--------|----------|
 | System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/common.nix` (shared) + `hosts/<host>/configuration.nix` | NixOS options |
-| Compositor + keybindings | `home/hyprland.nix` | `wayland.windowManager.hyprland.settings` (all binds inlined) |
+| Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
 | Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
 | Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
 | Launcher / menus / OSD | `home/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
@@ -34,6 +34,14 @@ have no attribute-set form — CSS, rofi `.rasi`, kanata `.kbd`, the starship TO
 shell scripts, images — live under `home/files/` and are referenced from
 Nix (`readFile` / `.source` / `importTOML`). That keeps the repo self-contained
 and the deployment fully declarative.
+
+**Hyprland is the exception:** its config is Lua
+(`home/files/hypr/hyprland.lua` + `keybindings.lua`), because it relies on loops
+and local tables — direction maps, workspaces 1..10 — that an attribute set
+can't express. `home/hyprland.nix` wires them in and leaves `settings` empty.
+Edit the `.lua` files; check them with `luac -p home/files/hypr/*.lua` before
+rebuilding, since a parse error leaves Hyprland in a bind-less emergency
+session.
 
 ```
 flake.nix                      # inputs + per-user vars + `hosts` list → one config each
@@ -51,7 +59,7 @@ home/
   home.nix  hyprland.nix  waybar.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
   starship.toml
-  files/                       # CSS, rasi, scripts, icons, backgrounds, …
+  files/                       # CSS, rasi, hypr/*.lua, scripts, icons, backgrounds, …
 ```
 
 ## Make it your own
@@ -364,6 +372,9 @@ after any input update and fix anything that has since moved):
   `programs.hyprlock`, `programs.wofi`, `programs.waybar.systemd`.
 - `inputs.zen-browser.packages.<system>.default`.
 - `programs.kitty.themeFile = "Catppuccin-Mocha"` (name from `pkgs.kitty-themes`).
+- `wayland.windowManager.hyprland.configType` — defaults to `"lua"` from
+  `home.stateVersion` 26.05 (it was `"hyprlang"` before). The Lua backend also
+  provides `extraLuaFiles` / `extraConfig`, both used here.
 
 ## Known gaps / deviations from the Arch setup
 
