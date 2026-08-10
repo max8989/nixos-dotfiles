@@ -110,11 +110,17 @@ flakes only see git-tracked files inside the flake root.
 - **Single theme.** Mocha is baked in. There is no runtime theme switcher (it
   was dropped because the Nix store is immutable). To change theme you edit Nix
   and rebuild.
-- **Daemon autostart is split:** `hyprpaper` / `hypridle` / `waybar` run as HM
-  systemd user services (`graphical-session.target`); `swaync` /
-  `swayosd-server` / `kanata` / cliphist / the polkit agent are launched from
-  Hyprland `exec-once` in `home/hyprland.nix`. Don't launch the
-  systemd-managed ones from `exec-once` too (double instances).
+- **Daemon autostart is split three ways:** `hyprpaper` / `hypridle` / `waybar`
+  are HM systemd user services on `graphical-session.target`; **`kanata` is a HM
+  systemd user service on `default.target`** (evdev-level, so it must not depend
+  on the compositor); `swaync` / `swayosd-server` / cliphist / the polkit agent
+  are started from the `hyprland.start` hook in `home/files/hypr/hyprland.lua`.
+  Don't also start the systemd-managed ones from the hook (double instances).
+  - Anything started from that hook is lost if the Hyprland config fails to
+    parse — the hook never registers. Same for `graphical-session.target`, so a
+    config error takes waybar/hyprpaper/hypridle down with it. If a daemon is
+    missing, check `systemctl --user is-active graphical-session.target` before
+    suspecting the daemon.
 - **`hyprwat` (SUPER+F12, waybar audio click) is dead** — not in nixpkgs. Left
   as-is intentionally; `pavucontrol`/`wpctl` cover it.
 - **`hyprswitch` was renamed upstream to `hyprshell`** with a different CLI; the

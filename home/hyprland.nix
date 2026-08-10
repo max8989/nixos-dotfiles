@@ -37,7 +37,34 @@
       (builtins.readFile ./files/hypr/hyprland.lua);
   };
 
-  # kanata config (referenced by the hyprland.start hook in hyprland.lua).
-  # Carried as an in-repo file — kanata's .kbd format has no HM module.
+  ##########################################################################
+  ## kanata (caps-lock vim nav + j/k Escape chord).
+  ##
+  ## A systemd user service on default.target, NOT a Hyprland exec — kanata
+  ## works at the evdev level and needs no Wayland session, so tying it to the
+  ## compositor only makes it fragile: a Hyprland config error means no
+  ## remapping at all, and a compositor restart drops it. Restart=on-failure
+  ## also gets it back after a crash, which an exec-once never would.
+  ## This matches the Arch unit's own rationale.
+  ##
+  ## /dev/uinput access comes from hardware.uinput.enable + the uinput/input
+  ## groups in hosts/common.nix.
+  ##########################################################################
+  systemd.user.services.kanata = {
+    Unit = {
+      Description = "Kanata keyboard remapper";
+      Documentation = "https://github.com/jtroo/kanata";
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = "${pkgs.kanata}/bin/kanata --cfg %h/.config/kanata/config.kbd";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
+
+  # kanata config (read by the service above). Carried as an in-repo file —
+  # kanata's .kbd format has no HM module.
   xdg.configFile."kanata/config.kbd".source = ./files/kanata/config.kbd;
 }

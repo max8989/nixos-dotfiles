@@ -43,8 +43,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("swaync & swayosd-server")
     hl.exec_cmd("wl-paste --type text --watch cliphist store")  -- text only
     hl.exec_cmd("wl-paste --type image --watch cliphist store") -- images only
-    hl.exec_cmd("kanata --cfg ~/.config/kanata/config.kbd")
 end)
+-- NOTE: kanata is deliberately absent — it runs as a systemd user service on
+-- default.target (see home/hyprland.nix) so it survives a compositor restart
+-- and does not depend on this config parsing at all.
 
 -------------------------------
 ---- ENVIRONMENT VARIABLES ----
