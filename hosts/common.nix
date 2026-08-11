@@ -93,11 +93,17 @@
 
   ##########################################################################
   ## Login — greetd + tuigreet launching Hyprland.
+  ##
+  ## `start-hyprland`, NOT the bare `Hyprland` binary: since 0.5x the binary
+  ## is only the compositor, and the wrapper is what sets up the session
+  ## (env/XDG vars, dbus). Launching `Hyprland` directly still works but
+  ## paints the "started without start-hyprland" warning banner on every
+  ## login. It is also what the package's own hyprland.desktop entry execs.
   ##########################################################################
   services.greetd = {
     enable = true;
     settings.default_session = {
-      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd start-hyprland";
       user = "greeter";
     };
   };
