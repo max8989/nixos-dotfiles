@@ -1,50 +1,51 @@
+/* Neon glass launcher — blurred by the hyprland.lua layer rule
+ * (namespace "wofi", ignore_alpha 0.35: keep window alpha above that). */
+
 window {
     margin: 0px;
-    border: 5px solid #1e1e2e;
-    background-color: #cdd6f4;
-    border-radius: 10px;
+    border: 1px solid rgba(120, 140, 170, 0.4);
+    background-color: rgba(10, 10, 18, 0.75);
+    border-radius: 16px;
 }
 
 #input {
-    padding: 4px;
-    margin: 4px;
+    padding: 6px;
     padding-left: 20px;
-    border: none;
-    color: #cdd6f4;
+    border: 1px solid rgba(120, 140, 170, 0.35);
+    color: #d8f0ff;
     font-weight: bold;
-    background-color: #1e1e2e;
-    /* background: ; */
+    background-color: rgba(16, 18, 28, 0.9);
     outline: none;
-    border-radius: 10px;
+    border-radius: 12px;
     margin: 10px 13px;
     margin-bottom: 2px;
 }
+
 #input:focus {
-    border: 0px solid #1e1e2e;
+    border: 1px solid rgba(51, 153, 255, 0.6);
     margin-bottom: 0px;
 }
 
 #inner-box {
     margin: 4px;
-    border: 10px solid #1e1e2e;
-    color: #cdd6f4;
+    border: none;
+    color: #d8f0ff;
     font-weight: bold;
-    background-color: #1e1e2e;
-    /* background-color: red; */
-    border-radius: 15px;
+    background-color: transparent;
+    border-radius: 12px;
 }
 
 #outer-box {
     margin: 0px;
-    border: 1.5px solid #ffffff;
-    border-radius: 10px;
-    background-color: #1e1e2e;
+    border: none;
+    border-radius: 16px;
+    background-color: transparent;
 }
 
 #scroll {
     margin-top: 5px;
     border: none;
-    border-radius: 15px;
+    border-radius: 12px;
     margin-bottom: 5px;
 }
 
@@ -53,30 +54,36 @@ window {
 }
 
 #img:selected {
-    background-color: #89b4fa;
+    background-color: transparent;
     margin-right: 10px;
     border-radius: 10px;
 }
 
+#text {
+    color: #d8f0ff;
+}
+
 #text:selected {
-    color: #cdd6f4;
-    color: black;
+    color: #ffffff;
     margin: 0px 0px;
     border: none;
     border-radius: 10px;
-    background-color: #89b4fa;
-}
-
-#entry {
-    margin: 0px 0px;
-    border: none;
-    border-radius: 15px;
     background-color: transparent;
 }
 
-#entry:selected {
-    margin: 0px 0px;
+#entry {
+    margin: 0px 8px;
+    padding: 2px;
     border: none;
-    border-radius: 5px;
-    background-color: #89b4fa;
+    border-radius: 10px;
+    background-color: transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+#entry:selected {
+    margin: 0px 8px;
+    padding: 2px;
+    border: none;
+    border-radius: 10px;
+    background-color: rgba(51, 102, 255, 0.35);
 }

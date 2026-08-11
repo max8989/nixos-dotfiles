@@ -67,9 +67,9 @@ hl.config({
         border_size = 2,
 
         col = {
-            -- Omarchy cyan-green gradient
-            active_border   = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 },
-            inactive_border = "rgba(595959aa)",
+            -- Neon blue→cyan gradient; borderangle below slowly rotates it.
+            active_border   = { colors = { "rgba(3366ffee)", "rgba(33ccffee)" }, angle = 45 },
+            inactive_border = "rgba(1a1f2eaa)",
         },
 
         resize_on_border = false,
@@ -79,25 +79,29 @@ hl.config({
     },
 
     decoration = {
-        rounding       = 6,
-        rounding_power = 1,
+        rounding       = 12,
+        rounding_power = 2,
 
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
 
+        -- Focus pop: slightly dim whatever isn't focused.
+        dim_inactive = true,
+        dim_strength = 0.08,
+
         shadow = {
             enabled      = true,
-            range        = 2,
+            range        = 3,
             render_power = 3,
-            color        = 0xee1a1a1a, -- rgba(1a1a1aee) as ARGB
+            color        = 0x1033ccff, -- barely-there cyan tint under the active window (ARGB)
         },
 
         blur = {
-            enabled    = false,
-            size       = 2,
+            enabled    = true,
+            size       = 8,
             passes     = 2,
-            brightness = 0.60,
-            contrast   = 0.75,
+            brightness = 0.80,
+            contrast   = 0.90,
             vibrancy   = 0.1696,
         },
     },
@@ -113,12 +117,13 @@ hl.curve("easeInOutCubic", { type = "bezier", points = { { 0.65, 0 },   { 0.35, 
 hl.curve("linear",         { type = "bezier", points = { { 0, 0 },      { 1, 1 } } })
 hl.curve("almostLinear",   { type = "bezier", points = { { 0.5, 0.5 },  { 0.75, 1.0 } } })
 hl.curve("quick",          { type = "bezier", points = { { 0.15, 0 },   { 0.1, 1 } } })
+hl.curve("overshot",       { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } }) -- slight bounce past the target
 
 -- Smooth window animations
 hl.animation({ leaf = "windows",     enabled = true,  speed = 4.79, bezier = "easeOutQuint" })
-hl.animation({ leaf = "windowsIn",   enabled = true,  speed = 4.1,  bezier = "easeOutQuint",  style = "popin 87%" })
+hl.animation({ leaf = "windowsIn",   enabled = true,  speed = 4.1,  bezier = "overshot",      style = "popin 80%" })
 hl.animation({ leaf = "windowsOut",  enabled = true,  speed = 1.49, bezier = "linear",        style = "popin 87%" })
-hl.animation({ leaf = "windowsMove", enabled = true,  speed = 2.5,  bezier = "easeInOutCubic" })
+hl.animation({ leaf = "windowsMove", enabled = true,  speed = 2.5,  bezier = "overshot" })
 hl.animation({ leaf = "fade",        enabled = true,  speed = 3.03, bezier = "quick" })
 hl.animation({ leaf = "fadeIn",      enabled = true,  speed = 1.73, bezier = "almostLinear" })
 hl.animation({ leaf = "fadeOut",     enabled = true,  speed = 1.46, bezier = "almostLinear" })
@@ -126,8 +131,14 @@ hl.animation({ leaf = "fadeSwitch",  enabled = false, speed = 1,    bezier = "ea
 hl.animation({ leaf = "fadeShadow",  enabled = true,  speed = 10,   bezier = "almostLinear" })
 hl.animation({ leaf = "fadeDim",     enabled = true,  speed = 4.03, bezier = "almostLinear" })
 hl.animation({ leaf = "border",      enabled = true,  speed = 0.81, bezier = "easeOutQuint" })
-hl.animation({ leaf = "borderangle", enabled = true,  speed = 0.81, bezier = "easeOutQuint" })
+-- Slow continuous rotation of the cyan→green border gradient. NOTE: `loop`
+-- keeps the compositor rendering at refresh rate — speed 100 (10 s/turn)
+-- keeps the cost low; disable this line first if battery life matters more.
+hl.animation({ leaf = "borderangle", enabled = true,  speed = 100,  bezier = "linear",        style = "loop" })
 hl.animation({ leaf = "workspaces",  enabled = true,  speed = 0.8,  bezier = "easeOutQuint",  style = "slidefade" })
+-- Special workspace (SUPER+S scratchpad): same slidefade as before, but with
+-- the overshot curve so it bounces into place like moving windows do.
+hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "overshot", style = "slidefade" })
 hl.animation({ leaf = "layers",      enabled = true,  speed = 3.81, bezier = "easeOutQuint",  style = "fade" })
 hl.animation({ leaf = "layersIn",    enabled = true,  speed = 4,    bezier = "easeOutQuint",  style = "fade" })
 hl.animation({ leaf = "layersOut",   enabled = true,  speed = 1.5,  bezier = "linear",        style = "fade" })
@@ -153,6 +164,21 @@ hl.config({
         disable_hyprland_logo   = false,
     },
 })
+
+---------------------
+---- LAYER RULES ----
+---------------------
+
+-- Glassy blur for the shell surfaces. ignore_alpha keeps fully-transparent
+-- regions (the gaps between waybar's three islands) from being blurred —
+-- the threshold must sit below each surface's background alpha.
+hl.layer_rule({ match = { namespace = "waybar" },                      blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "wofi" },                        blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "rofi" },                        blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "swaync-control-center" },       blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "swaync-notification-window" },  blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "swayosd" },                     blur = true, ignore_alpha = 0.35 })
+hl.layer_rule({ match = { namespace = "wlogout" },                     blur = true, ignore_alpha = 0.2 })
 
 ---------------
 ---- INPUT ----

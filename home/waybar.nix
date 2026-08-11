@@ -14,6 +14,13 @@
       reload_style_on_change = true;
       gtk-layer-shell = true;
 
+      # Float the bar off the screen edge; the three module groups render as
+      # separate glass "islands" (see style.css — window background is
+      # transparent, blur comes from the hyprland.lua layer rule).
+      margin-top = 6;
+      margin-left = 12;
+      margin-right = 12;
+
       modules-left = [
         "hyprland/workspaces"
         "hyprland/window"

@@ -1,0 +1,241 @@
+/* SwayNC — neon glass notifications + control center.
+ * Selectors match SwayNotificationCenter 0.12.6 (see its default
+ * etc/xdg/swaync/style.css). Blur comes from the hyprland.lua layer rules
+ * ("swaync-control-center" / "swaync-notification-window"). */
+
+@define-color noir rgba(10, 10, 18, 0.85);
+@define-color surface rgba(16, 18, 28, 0.9);
+@define-color cyan #33ccff;
+@define-color green #00ff99;
+@define-color urgent #ff3366;
+@define-color text #d8f0ff;
+@define-color dim #66788c;
+
+* {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+}
+
+.blank-window {
+  background: transparent;
+}
+
+/* ---- Floating notification pop-ups ---- */
+.floating-notifications {
+  background: transparent;
+}
+
+.notification-row {
+  outline: none;
+  margin: 6px;
+  padding: 0;
+}
+
+.notification-background {
+  background: transparent;
+}
+
+.notification {
+  border-radius: 14px;
+  border: 1px solid rgba(51, 204, 255, 0.4);
+  background: @noir;
+  margin: 4px;
+  padding: 0;
+}
+
+.notification.critical {
+  border: 1px solid rgba(255, 51, 102, 0.8);
+}
+
+.notification-content {
+  background: transparent;
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.notification-default-action,
+.notification-action {
+  background: transparent;
+  border: none;
+  color: @text;
+  border-radius: 12px;
+  transition: background 0.2s ease-in-out;
+}
+
+.notification-default-action:hover,
+.notification-action:hover {
+  background: rgba(51, 204, 255, 0.12);
+}
+
+.close-button {
+  background: @surface;
+  color: @dim;
+  border-radius: 999px;
+  margin: 6px;
+  padding: 2px;
+  border: none;
+}
+
+.close-button:hover {
+  background: rgba(255, 51, 102, 0.3);
+  color: @text;
+}
+
+.summary {
+  color: @cyan;
+  font-weight: bold;
+}
+
+.time {
+  color: @dim;
+}
+
+.body {
+  color: @text;
+}
+
+.image {
+  border-radius: 10px;
+  margin: 6px;
+}
+
+/* ---- Control center ---- */
+.control-center {
+  background: @noir;
+  border: 1px solid rgba(51, 204, 255, 0.5);
+  border-radius: 16px;
+  margin: 8px;
+  padding: 8px;
+}
+
+.control-center-list {
+  background: transparent;
+}
+
+.control-center-list-placeholder {
+  color: @dim;
+}
+
+.notification-group {
+  background: transparent;
+}
+
+.notification-group-headers {
+  color: @cyan;
+  font-weight: bold;
+}
+
+.notification-group-icon {
+  color: @cyan;
+}
+
+.notification-group-close-button {
+  background: @surface;
+  color: @dim;
+  border-radius: 999px;
+  border: none;
+}
+
+/* Widgets */
+.widget-title {
+  color: @text;
+  margin: 6px;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.widget-title > button {
+  color: @text;
+  background: @surface;
+  border: 1px solid rgba(51, 204, 255, 0.4);
+  border-radius: 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+.widget-title > button:hover {
+  background: rgba(51, 204, 255, 0.2);
+  border: 1px solid rgba(51, 204, 255, 0.9);
+}
+
+.widget-dnd {
+  color: @text;
+  margin: 6px;
+}
+
+.widget-dnd > switch {
+  background: @surface;
+  border: 1px solid rgba(51, 204, 255, 0.4);
+  border-radius: 999px;
+}
+
+.widget-dnd > switch:checked {
+  background: @cyan;
+}
+
+.widget-dnd > switch slider {
+  background: @text;
+  border-radius: 999px;
+}
+
+.widget-label {
+  color: @dim;
+  margin: 6px;
+}
+
+.widget-mpris {
+  background: @surface;
+  border-radius: 14px;
+  margin: 6px;
+  padding: 6px;
+  color: @text;
+}
+
+.widget-mpris-title {
+  color: @cyan;
+  font-weight: bold;
+}
+
+.widget-mpris-subtitle {
+  color: @dim;
+}
+
+.widget-buttons-grid {
+  background: transparent;
+  margin: 6px;
+}
+
+.widget-buttons-grid > flowbox > flowboxchild > button {
+  background: @surface;
+  border: 1px solid rgba(51, 204, 255, 0.3);
+  border-radius: 12px;
+  color: @text;
+  transition: all 0.2s ease-in-out;
+}
+
+.widget-buttons-grid > flowbox > flowboxchild > button:hover {
+  background: rgba(51, 204, 255, 0.2);
+  border: 1px solid rgba(51, 204, 255, 0.9);
+  color: @cyan;
+}
+
+.widget-volume {
+  background: @surface;
+  border-radius: 14px;
+  margin: 6px;
+  padding: 6px;
+  color: @cyan;
+}
+
+.widget-slider {
+  background: @surface;
+  border-radius: 14px;
+}
+
+trough {
+  background: rgba(30, 34, 48, 1.0);
+  border-radius: 999px;
+}
+
+trough > highlight {
+  background: linear-gradient(90deg, #3366ff 0%, #33ccff 100%);
+  border-radius: 999px;
+}

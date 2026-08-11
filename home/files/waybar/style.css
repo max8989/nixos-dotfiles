@@ -1,8 +1,19 @@
-/* i3bar-like styling for Waybar */
+/* Neon glass islands for Waybar.
+ *
+ * The bar window itself is fully transparent; the three module groups
+ * (.modules-left/center/right) render as separate rounded "islands".
+ * Hyprland blurs them via a layer rule (namespace "waybar") with
+ * ignore_alpha 0.35 — island backgrounds must stay above that alpha,
+ * the gaps between them below it.
+ *
+ * Palette: bg rgba(10,10,18,·) · blue #3366ff · cyan #33ccff
+ *          green #00ff99 (states only) · urgent #ff3366 · warning #ffcc66
+ *          text #d8f0ff · dim #66788c
+ */
 
 * {
   font-family: "JetBrainsMono Nerd Font", monospace;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: normal;
   min-height: 0;
   padding: 0;
@@ -10,59 +21,56 @@
   margin: 0;
 }
 
-/* Main bar background */
 window#waybar {
-  background: #222222;
-  color: #ffffff;
+  background: transparent;
+  color: #d8f0ff;
 }
 
-window#waybar > box {
-  background: #222222;
-  margin: 0;
+/* The three islands */
+.modules-left,
+.modules-center,
+.modules-right {
+  background: rgba(10, 10, 18, 0.72);
+  border: 1px solid rgba(120, 140, 170, 0.3);
+  border-radius: 14px;
+  padding: 2px 8px;
 }
 
-/* Workspace buttons - i3 style */
+/* Workspace buttons */
 #workspaces button {
-  background: #222222;
-  color: #888888;
-  padding: 0 10px;
-  margin: 0;
-  border: none;
-  border-top: 2px solid #222222;
-  border-bottom: 2px solid #222222;
-  min-width: 30px;
+  color: #66788c;
+  padding: 0 8px;
+  margin: 3px 2px;
+  border-radius: 10px;
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.55, -0.68, 0.48, 1.68);
 }
 
 #workspaces button:hover {
-  background: #333333;
-  color: #ffffff;
-  border-top: 2px solid #333333;
-  border-bottom: 2px solid #333333;
+  color: #d8f0ff;
+  background: rgba(51, 204, 255, 0.1);
 }
 
 #workspaces button.active {
-  background: #285577;
-  color: #ffffff;
-  border-top: 2px solid #4c7899;
-  border-bottom: 2px solid #4c7899;
+  color: #0a0a12;
+  background: linear-gradient(45deg, #3366ff, #33ccff);
+  min-width: 24px;
+  text-shadow: none;
 }
 
 #workspaces button.urgent {
-  background: #900000;
-  color: #ffffff;
-  border-top: 2px solid #dc322f;
-  border-bottom: 2px solid #dc322f;
+  color: #0a0a12;
+  background: #ff3366;
 }
 
 /* Window title */
 #window {
-  padding: 0 10px;
-  color: #ffffff;
+  padding: 0 12px;
+  color: #d8f0ff;
+  font-style: italic;
 }
 
-/* All modules - consistent styling */
-#cpu,
-#memory,
+/* All right-side + center modules */
 #custom-cpu,
 #custom-memory,
 #network,
@@ -75,114 +83,126 @@ window#waybar > box {
 #custom-notification,
 #custom-power,
 #power-profiles-daemon,
-#idle_inhibitor {
+#idle_inhibitor,
+#custom-reminders {
   padding: 0 10px;
-  color: #ffffff;
-  background: #222222;
-  border-left: 1px solid #333333;
+  margin: 3px 1px;
+  border-radius: 10px;
+  background: transparent;
+  transition: all 0.2s ease-in-out;
 }
 
-/* Clock in center */
+/* Modules stay neutral — color is reserved for states (battery low,
+ * charging, urgent, …) and the active-workspace pill. */
+#custom-cpu,
+#custom-memory,
+#network,
+#pulseaudio,
+#custom-mic,
+#battery,
+#power-profiles-daemon,
+#custom-notification  { color: #b8c8d8; }
+#language,
+#idle_inhibitor       { color: #66788c; }
+
+/* Quiet hover highlight on interactive modules */
+#custom-cpu:hover,
+#custom-memory:hover,
+#network:hover,
+#pulseaudio:hover,
+#custom-mic:hover,
+#custom-notification:hover,
+#idle_inhibitor:hover,
+#custom-reminders:hover {
+  background: rgba(51, 204, 255, 0.1);
+  color: #d8f0ff;
+}
+
+/* Clock — bold but neutral */
 #clock {
-  background: #222222;
-  color: #ffffff;
-  border: none;
+  color: #d8f0ff;
+  font-weight: bold;
 }
 
 /* Battery states */
 #battery.warning {
-  background: #f0c674;
-  color: #000000;
+  color: #ffcc66;
 }
 
 #battery.critical {
-  background: #dc322f;
-  color: #ffffff;
+  color: #ff3366;
+  animation: pulse 1s ease-in-out infinite alternate;
 }
 
 #battery.charging {
-  color: #26c933;
+  color: #00ff99;
 }
 
-/* Pulseaudio */
-#pulseaudio.muted {
-  background: #333333;
-  color: #888888;
-}
-
-/* Network */
+/* Muted / disconnected → dim */
+#pulseaudio.muted,
 #network.disconnected {
-  color: #888888;
+  color: #66788c;
 }
 
 /* Tray */
-#tray {
-  background: #222222;
-}
-
 #tray > .passive {
   -gtk-icon-effect: dim;
 }
 
 #tray > .needs-attention {
   -gtk-icon-effect: highlight;
-  background-color: #eb4d4b;
+  background-color: rgba(255, 51, 102, 0.4);
+  border-radius: 10px;
 }
 
-/* Remove all fancy effects */
+/* Tooltips — same glass as the islands */
 tooltip {
-  background: #222222;
-  border: 1px solid #285577;
-  border-radius: 0;
+  background: rgba(10, 10, 18, 0.92);
+  border: 1px solid rgba(120, 140, 170, 0.5);
+  border-radius: 10px;
 }
 
 tooltip label {
-  color: #ffffff;
-  padding: 5px;
+  color: #d8f0ff;
+  padding: 6px;
 }
 
 /* Idle inhibitor (presentation mode) */
 #idle_inhibitor.activated {
-  background: #285577;
-  color: #ffffff;
+  color: #0a0a12;
+  background: linear-gradient(45deg, #3366ff, #33ccff);
 }
 
-/* Power menu button */
+/* Power menu button — neutral until hovered */
 #custom-power {
-  color: #dc322f;
+  color: #b8c8d8;
   font-weight: bold;
 }
 
 #custom-power:hover {
-  background: #333333;
+  background: rgba(255, 51, 102, 0.15);
+  color: #ff3366;
 }
 
 /* Reminders module (next to clock in center) */
-#custom-reminders {
-  padding: 0 10px;
-  color: #888888;
-  background: #222222;
-  border: none;
-}
-
 #custom-reminders.overdue {
-  color: #f38ba8;
+  color: #ff3366;
   animation: pulse 1s ease-in-out infinite alternate;
 }
 
 #custom-reminders.today {
-  color: #f9e2af;
+  color: #ffcc66;
 }
 
 #custom-reminders.upcoming {
-  color: #a6e3a1;
+  color: #00ff99;
 }
 
 #custom-reminders.none {
-  color: #888888;
+  color: #66788c;
 }
 
 @keyframes pulse {
   from { opacity: 1; }
-  to { opacity: 0.6; }
+  to { opacity: 0.5; }
 }

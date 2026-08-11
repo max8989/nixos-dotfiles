@@ -14,14 +14,14 @@ in
   ];
 
   #########################################################################
-  ## Hyprlock — i3lock-style screen locker (Catppuccin Mocha accents)
+  ## Hyprlock — neon glass locker (blurred screenshot + cyan/green accents)
   #########################################################################
   programs.hyprlock = {
     enable = true;
     settings = {
       general = {
-        no_fade_in = true;
-        no_fade_out = true;
+        no_fade_in = false;
+        no_fade_out = false;
         hide_cursor = false;
         grace = 0;
         disable_loading_bar = true;
@@ -30,19 +30,24 @@ in
       background = [
         {
           monitor = "";
-          color = "rgb(000000)";
+          path = "screenshot"; # frosted-glass: blur whatever was on screen
+          color = "rgba(10, 10, 18, 1.0)"; # fallback
+          blur_passes = 3;
+          blur_size = 8;
+          brightness = 0.6;
+          vibrancy = 0.2;
         }
       ];
 
-      # i3-style center panel
+      # Glass center panel
       shape = [
         {
           monitor = "";
           size = "26%, 32%";
-          color = "rgba(30, 30, 30, 0.95)";
-          rounding = 0;
-          border_size = 3;
-          border_color = "rgb(285577)"; # i3_blue
+          color = "rgba(10, 10, 18, 0.75)";
+          rounding = 16;
+          border_size = 2;
+          border_color = "rgb(33ccff)"; # neon cyan
           rotate = 0;
           position = "0%, 0%";
           halign = "center";
@@ -54,24 +59,24 @@ in
         {
           monitor = "";
           size = "21%, 5.5%";
-          outline_thickness = 3;
+          outline_thickness = 2;
           dots_size = 0.3;
           dots_spacing = 0.3;
           dots_center = true;
-          outer_color = "rgb(285577)"; # i3_blue
-          inner_color = "rgb(1e1e1e)";
-          font_color = "rgb(ffffff)"; # i3_text
+          outer_color = "rgb(33ccff)"; # neon cyan
+          inner_color = "rgba(16, 18, 28, 0.9)";
+          font_color = "rgb(d8f0ff)";
           fade_on_empty = false;
-          placeholder_text = ''<span foreground="##888888">請輸入密碼</span>'';
+          placeholder_text = ''<span foreground="##66788c">請輸入密碼</span>'';
           hide_input = true;
-          check_color = "rgb(a6e3a1)"; # mocha green
-          fail_color = "rgb(900000)"; # i3_urgent
+          check_color = "rgb(00ff99)"; # neon green
+          fail_color = "rgb(ff3366)"; # neon magenta-red
           fail_text = "<b>驗證失敗</b>";
-          capslock_color = "rgb(f9e2af)"; # mocha yellow
+          capslock_color = "rgb(ffcc66)"; # neon amber
           position = "0%, -4%";
           halign = "center";
           valign = "center";
-          rounding = 0;
+          rounding = 12;
           font_size = 16;
         }
       ];
@@ -81,7 +86,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:3600000] sed -n "$(($(date +%j) % $(wc -l < ~/.config/hypr/phrases_zh.txt) + 1))p" ~/.config/hypr/phrases_zh.txt'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 30;
           font_family = font;
           position = "0%, -23%";
@@ -92,7 +97,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:1000] echo "$(date +"%H:%M:%S")"'';
-          color = "rgb(ffffff)";
+          color = "rgb(33ccff)"; # neon cyan clock
           font_size = 48;
           font_family = "${font} Bold";
           position = "0%, 7%";
@@ -103,7 +108,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:1000] echo "$(date +"%Y年%m月%d日") $(case $(date +%u) in 1) echo "星期一";; 2) echo "星期二";; 3) echo "星期三";; 4) echo "星期四";; 5) echo "星期五";; 6) echo "星期六";; 7) echo "星期日";; esac)"'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 18;
           font_family = font;
           position = "0%, 2%";
@@ -114,7 +119,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:0] echo "$USER@$(uname -n)"'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 18;
           font_family = font;
           position = "0%, -10%";
@@ -125,7 +130,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:1000] echo "  $(uname -n) | $(uname -r)  "'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 16;
           font_family = font;
           position = "1%, -3%";
@@ -136,7 +141,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:1000] echo "$(~/.config/scripts/whatsong.sh)"'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 16;
           font_family = font;
           position = "0%, -3%";
@@ -147,7 +152,7 @@ in
         {
           monitor = "";
           text = ''cmd[update:30000] echo "  電池: $(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null || echo 'AC')% | 記憶體: $(free -h | awk '/^Mem:/ {print $3 "/" $2}')  "'';
-          color = "rgb(ffffff)";
+          color = "rgb(d8f0ff)";
           font_size = 16;
           font_family = font;
           position = "-1%, -3%";
@@ -277,6 +282,9 @@ in
 
     # SwayOSD on-screen-display styling.
     "swayosd/style.css".source = ./files/swayosd/style.css;
+
+    # SwayNC notification center styling (overrides its packaged default).
+    "swaync/style.css".source = ./files/swaync/style.css;
 
     # Wallpapers (referenced by services.hyprpaper above).
     "backgrounds".source = ./files/backgrounds;

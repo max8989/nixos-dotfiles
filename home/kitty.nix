@@ -18,6 +18,10 @@
       italic_font = "auto";
       bold_italic_font = "auto";
       background_opacity = "0.5";
+      # Override the Mocha base (#1e1e2e) with the desktop's noir background
+      # so the starship prompt's dark segments blend in. Settings are emitted
+      # after the themeFile include, so this wins over the theme.
+      background = "#0a0a12";
     };
 
     keybindings = {

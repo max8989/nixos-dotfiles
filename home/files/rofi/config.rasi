@@ -1,18 +1,20 @@
+/* Neutral glass launcher — dark translucent surface, muted gray-blue frame,
+ * quiet blue selection. Blurred via the hyprland.lua layer rule ("rofi"). */
 * {
     font: "Figtree 13";
     g-spacing: 10px;
     g-margin: 0;
-    b-color: #333333FF;
-    fg-color: #FFFFFFFF;
-    fgp-color: #888888FF;
-    b-radius: 0px;
+    b-color: #788CAA4D;
+    fg-color: #D8F0FFFF;
+    fgp-color: #66788CFF;
+    b-radius: 14px;
     g-padding: 8px;
-    hl-color: #285577FF;
+    hl-color: #3366FF59;
     hlt-color: #FFFFFFFF;
-    alt-color: #1A1A1AFF;
-    wbg-color: #16181aFF;
-    w-border: 4px solid;
-    w-border-color: #285577FF;
+    alt-color: #10121CFF;
+    wbg-color: #0A0A12D9;
+    w-border: 1px solid;
+    w-border-color: #788CAA4D;
     w-padding: 12px;
 }
 
