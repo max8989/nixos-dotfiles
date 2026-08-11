@@ -19,8 +19,10 @@ Host names (the `#…` in every flake command):
 ## The one you'll use every time
 
 ```sh
-nix flake check                                              # evaluate BOTH hosts — catches typos/renamed attrs
-sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # build + activate now
+# evaluate BOTH hosts — catches typos/renamed attrs
+nix flake check
+# build + activate now
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 ```
 
 ⚠️ **`git add` new files before rebuilding.** A flake only sees git-tracked
