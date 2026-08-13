@@ -128,6 +128,7 @@ in
       vscode
       insomnia
       claude-code
+      codex
       # --- claude-config (~/repos/claude-config) dependencies ---
       # Only gh is declared here; its install.sh fetches the MCP server
       # binaries (github-mcp-server, mcp-server-git) itself into the repo's
