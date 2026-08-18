@@ -57,6 +57,10 @@
       443
       53317 # Localsend
     ];
+    # mDNS — Chrome does its own multicast discovery for Google Cast (it does
+    # not go through avahi), and drops the responses without this. Also what
+    # `services.avahi.openFirewall` would open if avahi were ever enabled.
+    allowedUDPPorts = [ 5353 ];
   };
 
   time.timeZone = "America/Toronto";
