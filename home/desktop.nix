@@ -223,6 +223,42 @@ in
   };
 
   #########################################################################
+  ## Hyprshell — Alt-Tab window switcher (HM systemd user service)
+  ##
+  ## Successor to hyprswitch. It registers its own Alt+Tab shortcut through
+  ## Hyprland's global-shortcuts protocol, so there is deliberately no bind in
+  ## home/files/hypr/keybindings.lua — configuring `switch` here *is* the
+  ## keybind. Hold ALT and tap TAB (SHIFT+TAB / grave to go backwards), release
+  ## ALT to focus the selection.
+  ##
+  ## `version` is mandatory and must match the schema hyprshell ships with (4
+  ## as of 4.10.x). Omitting it, or leaving it behind, makes hyprshell try to
+  ## *rewrite* the config on startup — and Home Manager makes
+  ## ~/.config/hyprshell/config.json a read-only Nix store symlink, so that
+  ## migration can never succeed. Bump it when the package moves to a newer
+  ## schema; `hyprshell config check` reports the mismatch.
+  ##
+  ## Fields are validated strictly: an unknown key makes hyprshell refuse the
+  ## whole config. `windows` accepts scale / items_per_row / overview / switch /
+  ## switch_2; `switch` accepts modifier / key / filter_by / switch_workspaces /
+  ## exclude_workspaces / kill_key. There is no `enable` key — a section is on
+  ## because it is present, so leaving `overview` out keeps the SUPER overview
+  ## + launcher off and only ships the Alt-Tab switcher.
+  #########################################################################
+  services.hyprshell = {
+    enable = true;
+    settings = {
+      version = 4;
+      windows = {
+        switch = {
+          modifier = "alt";
+          key = "tab";
+        };
+      };
+    };
+  };
+
+  #########################################################################
   ## Udiskie — auto-mount removable media (HM systemd user service)
   ##
   ## Talks to the system udisks2 service enabled in hosts/common.nix and mounts

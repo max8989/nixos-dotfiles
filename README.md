@@ -385,9 +385,13 @@ after any input update and fix anything that has since moved):
   config files into place). Pure Nix puts configs in the immutable store, so the
   switcher is dropped — **Catppuccin Mocha** is baked in declaratively. The other
   themes' CSS/jsonc were not ported.
-- **`hyprswitch` removed.** Upstream renamed it to **`hyprshell`** with a
-  different CLI, so the old Alt-Tab binds/`exec-once` would break. They're
-  dropped; re-add via the `hyprshell` flake + new CLI if you want the switcher.
+- **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
+  changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
+  back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd
+  user service that registers ALT+TAB itself via Hyprland's global-shortcuts
+  protocol, so there is no bind in `keybindings.lua`. Hold ALT, tap TAB
+  (SHIFT+TAB or grave to go backwards), release ALT to focus. The SUPER overview
+  / launcher half of hyprshell is left off.
 - **`hyprwat` (SUPER+F12 / waybar audio click) is dead.** It's AUR-only and not
   in nixpkgs. `pavucontrol` and `wpctl` cover audio selection until it's packaged.
 - **Daemon autostart.** `hyprpaper` / `hypridle` / `waybar` run as Home Manager

@@ -133,8 +133,15 @@ flakes only see git-tracked files inside the flake root.
     suspecting the daemon.
 - **`hyprwat` (SUPER+F12, waybar audio click) is dead** — not in nixpkgs. Left
   as-is intentionally; `pavucontrol`/`wpctl` cover it.
-- **`hyprswitch` was renamed upstream to `hyprshell`** with a different CLI; the
-  old binds were removed rather than ported.
+- **Alt-Tab comes from `services.hyprshell`** (`home/desktop.nix`), not from a
+  bind in `keybindings.lua` — hyprshell claims ALT+TAB itself through Hyprland's
+  global-shortcuts protocol. Its `settings` are validated strictly (an unknown
+  key rejects the whole config) and `version` is mandatory: it must match the
+  schema of the packaged hyprshell (4 as of 4.10.x), otherwise hyprshell tries
+  to migrate the file in place and fails, because Home Manager makes
+  `~/.config/hyprshell/config.json` a read-only store symlink. Check with
+  `hyprshell config check` / `hyprshell config explain`. `hyprswitch`, the old
+  name, is gone from nixpkgs.
 - **Nix string interpolation:** in `''…''` and `"…"` strings only `${` triggers
   interpolation. Hyprlock/Waybar command strings contain `$(…)`, `$3`, `%`, `{…}`
   — all literal. If you ever need a literal `${`, escape it as `''${`.

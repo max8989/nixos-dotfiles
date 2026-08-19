@@ -130,9 +130,10 @@ end
 
 hl.bind("CTRL + ALT + space", hl.dsp.exec_raw("fcitx5-remote -t"))
 
--- NOTE: the Alt-Tab window switcher is absent on purpose. It used hyprswitch,
--- which upstream renamed to hyprshell with a different CLI, so the old binds
--- would only produce errors. Re-add via the hyprshell flake if you want it.
+-- NOTE: there is no Alt-Tab bind here on purpose. The switcher is hyprshell
+-- (successor to hyprswitch), configured in home/desktop.nix as
+-- `services.hyprshell`. It grabs ALT+TAB itself over Hyprland's
+-- global-shortcuts protocol, so a bind in this file would only fight it.
 
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_right", hl.dsp.focus({ workspace = "e+1" }))
