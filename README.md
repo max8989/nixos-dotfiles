@@ -392,8 +392,9 @@ after any input update and fix anything that has since moved):
   protocol, so there is no bind in `keybindings.lua`. Hold ALT, tap TAB
   (SHIFT+TAB or grave to go backwards), release ALT to focus. The SUPER overview
   / launcher half of hyprshell is left off.
-- **`hyprwat` (SUPER+F12 / waybar audio click) is dead.** It's AUR-only and not
-  in nixpkgs. `pavucontrol` and `wpctl` cover audio selection until it's packaged.
+- **Audio output selection** (SUPER+F12 / waybar audio click) is a rofi menu,
+  `waybar/scripts/audio-menu.sh` (pactl + jq). It replaced `hyprwat`, which is
+  AUR-only and not in nixpkgs.
 - **Daemon autostart.** `hyprpaper` / `hypridle` / `waybar` run as Home Manager
   systemd user services (on `graphical-session.target`); `swaync` / `swayosd-server`
   are still launched from Hyprland `exec-once`. If something doesn't start, check

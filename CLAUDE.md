@@ -131,8 +131,9 @@ flakes only see git-tracked files inside the flake root.
     config error takes waybar/hyprpaper/hypridle down with it. If a daemon is
     missing, check `systemctl --user is-active graphical-session.target` before
     suspecting the daemon.
-- **`hyprwat` (SUPER+F12, waybar audio click) is dead** — not in nixpkgs. Left
-  as-is intentionally; `pavucontrol`/`wpctl` cover it.
+- **Audio output selection (SUPER+F12, waybar audio click) is
+  `waybar/scripts/audio-menu.sh`** — a rofi sink selector (pactl + jq). It
+  replaced `hyprwat`, which is AUR-only and not in nixpkgs.
 - **Alt-Tab comes from `services.hyprshell`** (`home/desktop.nix`), not from a
   bind in `keybindings.lua` — hyprshell claims ALT+TAB itself through Hyprland's
   global-shortcuts protocol. Its `settings` are validated strictly (an unknown

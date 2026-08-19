@@ -142,7 +142,7 @@ in
       inputs.zen-browser.packages.${system}.default
     ];
 
-  # NOTE: `hyprwat` (audio device selector, bound to SUPER+F12 and the waybar
-  # pulseaudio on-click) is AUR-only and not in nixpkgs. Until packaged, that
-  # bind is dead; `pavucontrol` / `wpctl` cover it. See README "Known gaps".
+  # NOTE: audio output selection (SUPER+F12 and the waybar pulseaudio
+  # on-click) is waybar/scripts/audio-menu.sh — a rofi sink selector using
+  # pactl + jq. It replaced `hyprwat`, which is AUR-only and not in nixpkgs.
 }

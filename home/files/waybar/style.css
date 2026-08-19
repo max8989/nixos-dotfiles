@@ -83,8 +83,7 @@ window#waybar {
 #custom-notification,
 #custom-power,
 #power-profiles-daemon,
-#idle_inhibitor,
-#custom-reminders {
+#idle_inhibitor {
   padding: 0 10px;
   margin: 3px 1px;
   border-radius: 10px;
@@ -112,8 +111,7 @@ window#waybar {
 #pulseaudio:hover,
 #custom-mic:hover,
 #custom-notification:hover,
-#idle_inhibitor:hover,
-#custom-reminders:hover {
+#idle_inhibitor:hover {
   background: rgba(51, 204, 255, 0.1);
   color: #d8f0ff;
 }
@@ -182,24 +180,6 @@ tooltip label {
 #custom-power:hover {
   background: rgba(255, 51, 102, 0.15);
   color: #ff3366;
-}
-
-/* Reminders module (next to clock in center) */
-#custom-reminders.overdue {
-  color: #ff3366;
-  animation: pulse 1s ease-in-out infinite alternate;
-}
-
-#custom-reminders.today {
-  color: #ffcc66;
-}
-
-#custom-reminders.upcoming {
-  color: #00ff99;
-}
-
-#custom-reminders.none {
-  color: #66788c;
 }
 
 @keyframes pulse {

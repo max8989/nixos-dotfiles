@@ -165,6 +165,6 @@ hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDI
 hl.bind(mainMod .. " + SHIFT + Up",   hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%+"), { locked = true, repeating = true })
 hl.bind(mainMod .. " + SHIFT + Down", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-"), { locked = true, repeating = true })
 
--- NOTE: the audio device selector (SUPER+F12) is absent on purpose — it used
--- hyprwat, which is AUR-only and not packaged for NixOS. Use pavucontrol or
--- `wpctl` instead.
+-- Audio output selector (rofi menu; replaces hyprwat, which is AUR-only and
+-- not packaged for NixOS)
+hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("~/.config/waybar/scripts/audio-menu.sh"))

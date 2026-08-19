@@ -60,7 +60,7 @@
     # mDNS — Chrome does its own multicast discovery for Google Cast (it does
     # not go through avahi), and drops the responses without this. Also what
     # `services.avahi.openFirewall` would open if avahi were ever enabled.
-    allowedUDPPorts = [ 5353 ];
+    allowedUDPPorts = [ 5353 53317 ];
   };
 
   time.timeZone = "America/Toronto";
@@ -139,6 +139,10 @@
   services.fprintd.enable = true;
   # Power profile switcher — backs waybar's `power-profiles-daemon` module.
   services.power-profiles-daemon.enable = true;
+  # Battery daemon — the `upower` CLI in battery-level.sh (low-battery
+  # notifications) talks to this over D-Bus; without it every timer run dies
+  # with "org.freedesktop.DBus.Error.ServiceUnknown".
+  services.upower.enable = true;
   # Brightness control without root (hypridle / swayosd via brightnessctl).
   services.udev.packages = [ pkgs.brightnessctl ];
   # Bluetooth (waybar bluetooth-menu.sh / bluetoothctl).

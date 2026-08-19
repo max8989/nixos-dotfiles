@@ -17,7 +17,6 @@ let
       gnugrep
       gawk
       findutils
-      jq
       libnotify # notify-send
       upower # battery-level.sh
     ]
@@ -49,23 +48,6 @@ in
   };
   systemd.user.timers.battery-level = {
     Unit.Description = "Check battery level every minute";
-    Timer = {
-      OnBootSec = "1min";
-      OnUnitActiveSec = "1min";
-    };
-    Install.WantedBy = [ "timers.target" ];
-  };
-
-  systemd.user.services.reminders-notify = {
-    Unit.Description = "Obsidian reminder notification checker";
-    Service = {
-      Type = "oneshot";
-      Environment = "PATH=${timerPath}";
-      ExecStart = "${home}/.config/waybar/scripts/reminders-notify.sh";
-    };
-  };
-  systemd.user.timers.reminders-notify = {
-    Unit.Description = "Check for Obsidian reminders every minute";
     Timer = {
       OnBootSec = "1min";
       OnUnitActiveSec = "1min";

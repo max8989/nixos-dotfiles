@@ -27,7 +27,6 @@
       ];
       modules-center = [
         "clock"
-        "custom/reminders"
       ];
       modules-right = [
         "custom/cpu"
@@ -115,7 +114,7 @@
         tooltip = true;
         tooltip-format = "{desc} — {volume}%";
         scroll-step = 5;
-        on-click = "hyprwat --audio"; # NOTE: hyprwat not packaged — see README "Known gaps"
+        on-click = "~/.config/waybar/scripts/audio-menu.sh"; # rofi sink selector (hyprwat replacement)
         on-click-right = "swayosd-client --output-volume mute-toggle";
         on-scroll-up = "swayosd-client --output-volume raise";
         on-scroll-down = "swayosd-client --output-volume lower";
@@ -135,8 +134,35 @@
           warning = 20;
           critical = 10;
         };
-        format = "BAT {capacity}%";
-        format-charging = "CHR {capacity}%";
+        format = "{icon} {capacity}%";
+        format-icons = {
+          default = [
+            "󰂎"
+            "󰁺"
+            "󰁻"
+            "󰁼"
+            "󰁽"
+            "󰁾"
+            "󰁿"
+            "󰂀"
+            "󰂁"
+            "󰂂"
+            "󰁹"
+          ];
+          charging = [
+            "󰢟"
+            "󰢜"
+            "󰂆"
+            "󰂇"
+            "󰂈"
+            "󰢝"
+            "󰂉"
+            "󰢞"
+            "󰂊"
+            "󰂋"
+            "󰂅"
+          ];
+        };
         tooltip = false;
         interval = 30;
       };
@@ -161,14 +187,6 @@
 
       tray = {
         spacing = 10;
-      };
-
-      "custom/reminders" = {
-        exec = "~/.config/waybar/scripts/reminders.sh";
-        return-type = "json";
-        interval = 30;
-        on-click = "~/.config/waybar/scripts/reminders-popup.sh";
-        tooltip = true;
       };
 
       "custom/notification" = {
