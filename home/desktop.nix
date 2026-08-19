@@ -148,6 +148,22 @@ in
           halign = "center";
           valign = "top";
         }
+        # Obsidian todos (right side) — lockscreen-todos.sh mirrors the task
+        # queries on the vault's Home.md and emits Pango markup.
+        {
+          monitor = "";
+          text = ''cmd[update:60000] ~/.config/scripts/lockscreen-todos.sh'';
+          color = "rgb(d8f0ff)";
+          font_size = 13;
+          font_family = font;
+          text_align = "left";
+          position = "-3%, 0%";
+          halign = "right";
+          valign = "center";
+          shadow_passes = 2;
+          shadow_size = 4;
+          shadow_color = "rgba(0, 0, 0, 0.85)";
+        }
         # Battery + memory (top-right)
         {
           monitor = "";
