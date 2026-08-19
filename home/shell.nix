@@ -123,5 +123,9 @@ in
   ## prefix and put its bin dir on PATH so those installs work.
   ##########################################################################
   home.sessionVariables.NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
-  home.sessionPath = [ "${config.home.homeDirectory}/.npm-global/bin" ];
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.npm-global/bin"
+    # uv tool installs (agent-reach, etc.) land here.
+    "${config.home.homeDirectory}/.local/bin"
+  ];
 }
