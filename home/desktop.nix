@@ -43,15 +43,38 @@ in
       shape = [
         {
           monitor = "";
-          size = "26%, 32%";
+          size = "26%, 34%";
           color = "rgba(10, 10, 18, 0.75)";
-          rounding = 16;
+          rounding = 18;
           border_size = 2;
-          border_color = "rgb(33ccff)"; # neon cyan
+          border_color = "rgba(3366ffee) rgba(33ccffee) 45deg"; # matches window borders
           rotate = 0;
           position = "0%, 0%";
           halign = "center";
           valign = "center";
+          shadow_passes = 2;
+          shadow_size = 6;
+          shadow_color = "rgba(0, 0, 0, 0.6)";
+        }
+      ];
+
+      # Album art (below the now-playing line) — the script prints a
+      # transparent placeholder when nothing is playing, hiding the widget.
+      image = [
+        {
+          monitor = "";
+          path = "~/.config/hypr/assets/transparent.png";
+          size = 64;
+          rounding = 12;
+          border_size = 0;
+          reload_time = 5;
+          reload_cmd = "~/.config/scripts/lockscreen-albumart.sh";
+          position = "0%, -6.5%";
+          halign = "center";
+          valign = "top";
+          shadow_passes = 2;
+          shadow_size = 4;
+          shadow_color = "rgba(0, 0, 0, 0.7)";
         }
       ];
 
@@ -63,7 +86,7 @@ in
           dots_size = 0.3;
           dots_spacing = 0.3;
           dots_center = true;
-          outer_color = "rgb(33ccff)"; # neon cyan
+          outer_color = "rgba(3366ffee) rgba(33ccffee) 45deg"; # matches window borders
           inner_color = "rgba(16, 18, 28, 0.9)";
           font_color = "rgb(d8f0ff)";
           fade_on_empty = false;
@@ -82,27 +105,35 @@ in
       ];
 
       label = [
-        # Phrase of the day — Traditional Chinese
+        # Phrase of the day — Traditional Chinese, rendered vertically
+        # (one character per line, classical style) on the left side.
         {
           monitor = "";
-          text = ''cmd[update:3600000] sed -n "$(($(date +%j) % $(wc -l < ~/.config/hypr/phrases_zh.txt) + 1))p" ~/.config/hypr/phrases_zh.txt'';
+          text = ''cmd[update:3600000] sed -n "$(($(date +%j) % $(wc -l < ~/.config/hypr/phrases_zh.txt) + 1))p" ~/.config/hypr/phrases_zh.txt | LC_ALL=C.UTF-8 grep -o .'';
           color = "rgb(d8f0ff)";
-          font_size = 30;
+          font_size = 26;
           font_family = font;
-          position = "0%, -23%";
-          halign = "center";
+          text_align = "center";
+          position = "5%, 0%";
+          halign = "left";
           valign = "center";
+          shadow_passes = 2;
+          shadow_size = 4;
+          shadow_color = "rgba(0, 0, 0, 0.85)";
         }
         # Time
         {
           monitor = "";
           text = ''cmd[update:1000] echo "$(date +"%H:%M:%S")"'';
           color = "rgb(33ccff)"; # neon cyan clock
-          font_size = 48;
+          font_size = 64;
           font_family = "${font} Bold";
           position = "0%, 7%";
           halign = "center";
           valign = "center";
+          shadow_passes = 2;
+          shadow_size = 4;
+          shadow_color = "rgba(0, 0, 0, 0.6)";
         }
         # Date (Chinese)
         {
@@ -152,7 +183,7 @@ in
         # queries on the vault's Home.md and emits Pango markup.
         {
           monitor = "";
-          text = ''cmd[update:60000] ~/.config/scripts/lockscreen-todos.sh'';
+          text = "cmd[update:60000] ~/.config/scripts/lockscreen-todos.sh";
           color = "rgb(d8f0ff)";
           font_size = 13;
           font_family = font;
@@ -172,6 +203,17 @@ in
           font_size = 16;
           font_family = font;
           position = "-1%, -3%";
+          halign = "right";
+          valign = "top";
+        }
+        # Weather (top-right, under battery/memory) — cached wttr.in, zh-TW
+        {
+          monitor = "";
+          text = "cmd[update:900000] ~/.config/scripts/lockscreen-weather.sh";
+          color = "rgb(d8f0ff)";
+          font_size = 14;
+          font_family = font;
+          position = "-1%, -6%";
           halign = "right";
           valign = "top";
         }
