@@ -27,6 +27,7 @@
       ];
       modules-center = [
         "clock"
+        "custom/todos"
       ];
       modules-right = [
         "custom/cpu"
@@ -187,6 +188,17 @@
 
       tray = {
         spacing = 10;
+      };
+
+      # Obsidian vault todo counter; click → rofi list (open note / vault Home).
+      "custom/todos" = {
+        exec = "~/.config/waybar/scripts/todos.sh";
+        return-type = "json";
+        format = "󰄲 {}";
+        interval = 60;
+        signal = 8; # manual refresh: pkill -RTMIN+8 waybar (todo-menu.sh "Refresh")
+        on-click = "~/.config/waybar/scripts/todo-menu.sh";
+        tooltip = true;
       };
 
       "custom/notification" = {

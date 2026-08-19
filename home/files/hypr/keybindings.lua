@@ -168,3 +168,9 @@ hl.bind(mainMod .. " + SHIFT + Down", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT
 -- Audio output selector (rofi menu; replaces hyprwat, which is AUR-only and
 -- not packaged for NixOS)
 hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("~/.config/waybar/scripts/audio-menu.sh"))
+
+-- Close rofi menus on any left click outside them (rofi 2.0's wayland
+-- backend can't see clicks outside its own surface). Non-consuming: the
+-- click still reaches whatever was clicked. The script skips clicks inside
+-- waybar, whose module scripts toggle rofi themselves.
+hl.bind("mouse:272", hl.dsp.exec_cmd("~/.config/scripts/rofi-close-outside.sh"), { non_consuming = true })

@@ -83,7 +83,8 @@ window#waybar {
 #custom-notification,
 #custom-power,
 #power-profiles-daemon,
-#idle_inhibitor {
+#idle_inhibitor,
+#custom-todos {
   padding: 0 10px;
   margin: 3px 1px;
   border-radius: 10px;
@@ -100,7 +101,8 @@ window#waybar {
 #custom-mic,
 #battery,
 #power-profiles-daemon,
-#custom-notification  { color: #b8c8d8; }
+#custom-notification,
+#custom-todos         { color: #b8c8d8; }
 #language,
 #idle_inhibitor       { color: #66788c; }
 
@@ -111,7 +113,8 @@ window#waybar {
 #pulseaudio:hover,
 #custom-mic:hover,
 #custom-notification:hover,
-#idle_inhibitor:hover {
+#idle_inhibitor:hover,
+#custom-todos:hover {
   background: rgba(51, 204, 255, 0.1);
   color: #d8f0ff;
 }
@@ -180,6 +183,11 @@ tooltip label {
 #custom-power:hover {
   background: rgba(255, 51, 102, 0.15);
   color: #ff3366;
+}
+
+/* Todos module (next to clock in center) — dim when nothing is open */
+#custom-todos.none {
+  color: #66788c;
 }
 
 @keyframes pulse {
