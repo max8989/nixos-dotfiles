@@ -120,8 +120,9 @@ flakes only see git-tracked files inside the flake root.
 - **Single theme.** Mocha is baked in. There is no runtime theme switcher (it
   was dropped because the Nix store is immutable). To change theme you edit Nix
   and rebuild.
-- **Daemon autostart is split three ways:** `hyprpaper` / `hypridle` / `waybar`
-  are HM systemd user services on `graphical-session.target`; **`kanata` is a HM
+- **Daemon autostart is split three ways:** `hyprpaper` / `hypridle` /
+  `hyprsunset` / `waybar` are HM systemd user services on
+  `graphical-session.target`; **`kanata` is a HM
   systemd user service on `default.target`** (evdev-level, so it must not depend
   on the compositor); `swaync` / `swayosd-server` / cliphist / the polkit agent
   are started from the `hyprland.start` hook in `home/files/hypr/hyprland.lua`.

@@ -84,6 +84,7 @@ window#waybar {
 #custom-power,
 #power-profiles-daemon,
 #idle_inhibitor,
+#custom-nightlight,
 #custom-todos {
   padding: 0 10px;
   margin: 3px 1px;
@@ -104,6 +105,7 @@ window#waybar {
 #custom-notification,
 #custom-todos         { color: #b8c8d8; }
 #language,
+#custom-nightlight,
 #idle_inhibitor       { color: #66788c; }
 
 /* Quiet hover highlight on interactive modules */
@@ -114,6 +116,7 @@ window#waybar {
 #custom-mic:hover,
 #custom-notification:hover,
 #idle_inhibitor:hover,
+#custom-nightlight:hover,
 #custom-todos:hover {
   background: rgba(51, 204, 255, 0.1);
   color: #d8f0ff;
@@ -172,6 +175,12 @@ tooltip label {
 #idle_inhibitor.activated {
   color: #0a0a12;
   background: linear-gradient(45deg, #3366ff, #33ccff);
+}
+
+/* Night light — warm amber while the blue-light filter is on */
+#custom-nightlight.active {
+  color: #0a0a12;
+  background: linear-gradient(45deg, #ff9933, #ffcc66);
 }
 
 /* Power menu button — neutral until hovered */

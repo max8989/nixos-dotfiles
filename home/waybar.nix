@@ -35,6 +35,7 @@
         "network"
         "pulseaudio"
         "custom/mic"
+        "custom/nightlight"
         "idle_inhibitor"
         "power-profiles-daemon"
         "battery"
@@ -128,6 +129,20 @@
         on-click = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
         on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%+";
         on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-";
+      };
+
+      # Night light (blue-light filter) — toggles hyprsunset over hyprctl IPC.
+      # No polling: the script signals waybar (RTMIN+9) after every change, so
+      # `interval` is "once" and the module only re-runs when it is clicked.
+      "custom/nightlight" = {
+        exec = "~/.config/waybar/scripts/nightlight.sh status";
+        return-type = "json";
+        interval = "once";
+        signal = 9; # must match WAYBAR_SIGNAL in nightlight.sh
+        on-click = "~/.config/waybar/scripts/nightlight.sh toggle";
+        on-scroll-up = "~/.config/waybar/scripts/nightlight.sh up"; # cooler
+        on-scroll-down = "~/.config/waybar/scripts/nightlight.sh down"; # warmer
+        tooltip = true;
       };
 
       battery = {

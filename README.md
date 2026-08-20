@@ -25,7 +25,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/common.nix` (shared) + `hosts/<host>/configuration.nix` | NixOS options |
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
 | Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
-| Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` |
+| Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
 | Launcher / menus / OSD | `home/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
 | Terminal | `home/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
@@ -372,7 +372,8 @@ after any input update and fix anything that has since moved):
 - `pkgs.zed-editor`, `pkgs.swayosd`, `pkgs.swaynotificationcenter`.
 - `i18n.inputMethod.type = "fcitx5"` (newer form; older nixpkgs used `enabled = "fcitx5"`).
 - HM service modules used here: `services.hypridle`, `services.hyprpaper`,
-  `programs.hyprlock`, `programs.wofi`, `programs.waybar.systemd`.
+  `services.hyprsunset`, `programs.hyprlock`, `programs.wofi`,
+  `programs.waybar.systemd`.
 - `inputs.zen-browser.packages.<system>.default`.
 - `programs.kitty.themeFile = "Catppuccin-Mocha"` (name from `pkgs.kitty-themes`).
 - `wayland.windowManager.hyprland.configType` — defaults to `"lua"` from
@@ -395,7 +396,10 @@ after any input update and fix anything that has since moved):
 - **Audio output selection** (SUPER+F12 / waybar audio click) is a rofi menu,
   `waybar/scripts/audio-menu.sh` (pactl + jq). It replaced `hyprwat`, which is
   AUR-only and not in nixpkgs.
-- **Daemon autostart.** `hyprpaper` / `hypridle` / `waybar` run as Home Manager
+- **Night light.** `services.hyprsunset` runs as a no-op daemon (one `identity`
+  profile); waybar's `custom/nightlight` module toggles it over hyprctl IPC via
+  `waybar/scripts/nightlight.sh` — click to warm the screen, scroll to adjust.
+- **Daemon autostart.** `hyprpaper` / `hypridle` / `hyprsunset` / `waybar` run as Home Manager
   systemd user services (on `graphical-session.target`); `swaync` / `swayosd-server`
   are still launched from Hyprland `exec-once`. If something doesn't start, check
   `systemctl --user status <name>`.

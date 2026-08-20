@@ -261,6 +261,37 @@ in
   };
 
   #########################################################################
+  ## Hyprsunset — blue-light filter / night light (HM systemd user service)
+  ##
+  ## The daemon itself is a no-op at rest: the single profile below is
+  ## `identity = true`, so nothing is tinted until something asks it to be.
+  ## Control is manual, from waybar's custom/nightlight module, which talks to
+  ## this daemon over hyprctl IPC (`hyprctl hyprsunset temperature 4000` /
+  ## `hyprctl hyprsunset identity`) — see files/waybar/scripts/nightlight.sh.
+  ## The daemon must be running for those IPC calls to land at all.
+  ##
+  ## To make it warm up on a schedule instead, add a second profile — profiles
+  ## activate at their `time` and reset everything the previous one set, which
+  ## also means an evening profile would stomp a manual toggle at that hour:
+  ##   { time = "21:00"; temperature = 4000; }
+  ##
+  ## Do NOT use the module's `transitions` option — it is deprecated upstream
+  ## in favour of `settings`.
+  #########################################################################
+  services.hyprsunset = {
+    enable = true;
+    settings = {
+      max-gamma = 100;
+      profile = [
+        {
+          time = "00:00";
+          identity = true;
+        }
+      ];
+    };
+  };
+
+  #########################################################################
   ## Hyprpaper — wallpaper daemon (HM systemd user service)
   #########################################################################
   services.hyprpaper = {
