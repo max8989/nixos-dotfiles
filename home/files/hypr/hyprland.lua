@@ -17,10 +17,22 @@
 ------------------
 
 -- See all monitors: hyprctl monitors all
+--
+-- Catch-all for any display without a rule of its own.
 hl.monitor({ output = "", mode = "highres", position = "auto", scale = 1 })
-hl.monitor({ output = "DP-2", mode = "2560x1440@60", position = "auto-right", scale = 1 })
+
+-- Per-display rules are keyed on the EDID description (`desc:` prefix), NOT on
+-- the connector, so a monitor keeps its settings whichever port it lands on.
+-- The dock hands out DP-1..DP-4 in whatever order it feels like, which is why
+-- the old per-connector rules (DP-1/DP-2/DP-3/HDMI-A-1) were four guesses at
+-- the same physical monitor.
+--
+-- The string is the `description:` line from `hyprctl monitors`, up to but not
+-- including the portname. Dropping the trailing serial makes it match any unit
+-- of that model instead of this exact one.
+local GIGABYTE_G24F = "desc:GIGA-BYTE TECHNOLOGY CO. LTD. G24F 2 22450B007095"
 hl.monitor({ output = "DP-1", mode = "1920x1080@60", position = "auto-left", scale = 1 })
-hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@60", position = "auto-left", scale = 1 })
+hl.monitor({ output = GIGABYTE_G24F, mode = "2560x1440@60", position = "auto-left", scale = 1 })
 
 -- Virtual display for Sunshine game streaming
 -- Activate with: hyprctl output create headless SUNSHINE

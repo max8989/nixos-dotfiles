@@ -39,13 +39,33 @@ esc() {
 
 default_sink=$(pactl get-default-sink)
 
+# Only sinks with a usable port. The HDMI/DisplayPort sinks exist permanently
+# (one per pcm the codec exposes) and are indistinguishable by description —
+# "HDMI / DisplayPort 1/2/3 Output" says nothing about which dock port that is.
+# An unplugged one reports its port as "not available", so dropping those
+# leaves just the outputs that actually have a display attached.
+# A sink is kept if ANY of its ports is usable ("available" / "availability
+# unknown"): the analog sink carries both Speaker and Headphones ports and
+# must not disappear because the headphone jack is empty.
+list_sinks() {
+  pactl -f json list sinks | jq -r "$1"' | "\(.name)\t\(.description)"'
+}
+
+read_sinks() {
+  names=()
+  descs=()
+  while IFS=$'\t' read -r name desc; do
+    names+=("$name")
+    descs+=("$desc")
+  done < <(list_sinks "$1")
+}
+
 # Parallel arrays: sink names and their human-readable descriptions.
-names=()
-descs=()
-while IFS=$'\t' read -r name desc; do
-  names+=("$name")
-  descs+=("$desc")
-done < <(pactl -f json list sinks | jq -r '.[] | "\(.name)\t\(.description)"')
+read_sinks '.[] | select((.ports | length) == 0 or any(.ports[]; .availability != "not available"))'
+
+# Every port unavailable (e.g. laptop lid closed on a dock that went away):
+# fall back to the unfiltered list rather than showing an empty menu.
+[ "${#names[@]}" -gt 0 ] || read_sinks '.[]'
 
 [ "${#names[@]}" -gt 0 ] || exit 0
 
