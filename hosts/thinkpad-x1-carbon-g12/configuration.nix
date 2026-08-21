@@ -12,6 +12,18 @@
     ./hardware-configuration.nix
   ];
 
+  # Disk-backed overflow for cold anonymous memory. nixpkgs detects btrfs and
+  # creates this with `btrfs filesystem mkswapfile`, so the file is NODATACOW
+  # and uncompressed despite the root mount's compress=zstd option. Keep it at
+  # /: the btrfs setup path does not create a missing parent directory.
+  swapDevices = [
+    {
+      device = "/swapfile";
+      size = 8 * 1024; # MiB
+      priority = 0; # zram (priority 100) fills first
+    }
+  ];
+
   ##########################################################################
   ## Graphics — Meteor Lake iGPU.
   ##

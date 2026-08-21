@@ -21,6 +21,26 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Compressed swap is the first tier on every host. Pages in zram remain in
+  # RAM, but compression gives memory reclaim more room before earlyoom must
+  # kill an application. The disk-backed overflow tier is host-specific.
+  zramSwap = {
+    enable = true;
+    memoryPercent = 50;
+    algorithm = "zstd";
+    priority = 100;
+  };
+
+  # Prefer cheap zram swapping over evicting executable page cache. Disable
+  # swap readahead because zram is random-access, and start reclaim earlier to
+  # avoid the bursty cache-refault stalls seen under memory pressure.
+  boot.kernel.sysctl = {
+    "vm.swappiness" = 180;
+    "vm.page-cluster" = 0;
+    "vm.watermark_boost_factor" = 0;
+    "vm.watermark_scale_factor" = 125;
+  };
+
   ##########################################################################
   ## Nix / flakes
   ##########################################################################
@@ -160,8 +180,14 @@
   # Flatpak (for apps not packaged in nixpkgs). Add remotes manually post-install,
   # e.g. `flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo`.
   services.flatpak.enable = true;
-  # earlyoom — kill memory hogs before the system locks up under OOM.
-  services.earlyoom.enable = true;
+  # Keep enough headroom for the desktop to remain responsive while earlyoom
+  # terminates a process, and make kills visible to the logged-in user.
+  services.earlyoom = {
+    enable = true;
+    freeMemThreshold = 15;
+    freeMemKillThreshold = 8;
+    enableNotifications = true;
+  };
 
   ##########################################################################
   ## Virtualisation — Docker (dev block). User added to the docker group below.
