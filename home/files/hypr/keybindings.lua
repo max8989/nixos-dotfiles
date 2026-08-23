@@ -14,7 +14,7 @@ local terminal    = "kitty"
 local fileManager = "superfile" -- TUI file manager; nixpkgs names the binary
                                 -- `superfile`, Arch's AUR package called it `spf`
 local menu        = "pidof rofi && killall rofi || rofi -show drun"
-local browser     = "zen-browser"
+local browser     = "zen-beta" -- wrapper binary name from the zen-browser flake
 local screenshot  = "~/.config/scripts/screenshot.sh"
 
 -- Application shortcuts

@@ -23,10 +23,15 @@
     };
 
     # Zen Browser (no nixpkgs package; community flake).
-    # Output used below: packages.<system>.default
+    # Output used: homeModules.beta, imported by home/zen.nix. That module is
+    # built on Home Manager's own mkFirefoxModule, so home-manager MUST follow
+    # ours — otherwise it pulls a second, differently-versioned copy.
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        home-manager.follows = "home-manager";
+      };
     };
   };
 

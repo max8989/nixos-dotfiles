@@ -1,13 +1,8 @@
 {
-  inputs,
   pkgs,
-  lib,
   username,
   ...
 }:
-let
-  system = pkgs.stdenv.hostPlatform.system;
-in
 {
   imports = [
     ./hyprland.nix
@@ -17,6 +12,7 @@ in
     ./desktop.nix
     ./scripts.nix
     ./theming.nix
+    ./zen.nix
   ];
 
   home.username = username;
@@ -31,116 +27,110 @@ in
   ## On NixOS scripts can't assume a global PATH, so anything referenced must
   ## be here.
   ##########################################################################
-  home.packages =
-    with pkgs;
-    [
-      # --- core desktop apps (from keybindings.conf) ---
-      kitty
-      nautilus
-      zed-editor # `zed` editor binary
-      btop
+  home.packages = with pkgs; [
+    # --- core desktop apps (from keybindings.conf) ---
+    kitty
+    nautilus
+    zed-editor # `zed` editor binary
+    btop
 
-      # --- launchers / menus ---
-      rofi # rofi-wayland was merged into rofi
-      wofi
+    # --- launchers / menus ---
+    rofi # rofi-wayland was merged into rofi
+    wofi
 
-      # --- clipboard ---
-      cliphist
-      wl-clipboard # wl-copy / wl-paste
+    # --- clipboard ---
+    cliphist
+    wl-clipboard # wl-copy / wl-paste
 
-      # --- wayland utils / media ---
-      playerctl
-      brightnessctl # hypridle.conf
-      kanata # caps-lock vim nav, launched from exec-once
+    # --- wayland utils / media ---
+    playerctl
+    brightnessctl # hypridle.conf
+    kanata # caps-lock vim nav, launched from exec-once
 
-      # --- screenshots / recording (scripts/screenshot.sh, screen_record.sh) ---
-      hyprshot
-      grim
-      slurp
-      wf-recorder
-      swappy
+    # --- screenshots / recording (scripts/screenshot.sh, screen_record.sh) ---
+    hyprshot
+    grim
+    slurp
+    wf-recorder
+    swappy
 
-      # --- script + waybar-module dependencies ---
-      jq
-      yad
-      libnotify # notify-send
-      bluez # bluetoothctl (bluetooth-menu.sh)
-      pavucontrol
-      (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
-      curl
-      # NixOS has no global /usr/bin, so these must be requested explicitly —
-      # each is called by name from a script or keybind and would otherwise
-      # fail silently at runtime.
-      psmisc # killall — rofi toggle in keybindings.lua, power-menu.sh
-      lm_sensors # sensors — waybar/scripts/cpu-temp.sh
-      xdg-utils # xdg-open — scripts/rofi-fb-official.sh
-      pulseaudio # pactl — waybar/scripts/volume-control.sh (talks to pipewire-pulse)
+    # --- script + waybar-module dependencies ---
+    jq
+    yad
+    libnotify # notify-send
+    bluez # bluetoothctl (bluetooth-menu.sh)
+    pavucontrol
+    (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
+    curl
+    # NixOS has no global /usr/bin, so these must be requested explicitly —
+    # each is called by name from a script or keybind and would otherwise
+    # fail silently at runtime.
+    psmisc # killall — rofi toggle in keybindings.lua, power-menu.sh
+    lm_sensors # sensors — waybar/scripts/cpu-temp.sh
+    xdg-utils # xdg-open — scripts/rofi-fb-official.sh
+    pulseaudio # pactl — waybar/scripts/volume-control.sh (talks to pipewire-pulse)
 
-      # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
-      firefox
-      google-chrome
-      libreoffice-fresh
-      vlc
-      discord
-      slack
-      spotify
-      bitwarden-desktop
-      obsidian
-      qbittorrent
-      localsend
-      solaar # Logitech device manager
-      blueman # bluetooth GUI (service enabled in common.nix)
-      nwg-look # GTK theme settings
+    # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
+    firefox
+    google-chrome
+    libreoffice-fresh
+    vlc
+    discord
+    slack
+    spotify
+    bitwarden-desktop
+    obsidian
+    qbittorrent
+    localsend
+    solaar # Logitech device manager
+    blueman # bluetooth GUI (service enabled in common.nix)
+    nwg-look # GTK theme settings
 
-      # --- CLI tools ---
-      eza # backs the ls/ll/la/lt aliases in shell.nix
-      bat # backs the `cat` alias in shell.nix
-      htop
-      wget
-      fd
-      ripgrep
-      fastfetch
-      yazi
-      superfile # TUI file manager (SUPER+E); binary is `superfile`, not `spf`
-      neovim
-      bun
-      lazygit
-      dnsutils # dig / nslookup (was `bind`)
-      alsa-utils # alsamixer / aplay (was `alsa-utils`)
-      zip
-      stow
+    # --- CLI tools ---
+    eza # backs the ls/ll/la/lt aliases in shell.nix
+    bat # backs the `cat` alias in shell.nix
+    htop
+    wget
+    fd
+    ripgrep
+    fastfetch
+    yazi
+    superfile # TUI file manager (SUPER+E); binary is `superfile`, not `spf`
+    neovim
+    bun
+    lazygit
+    dnsutils # dig / nslookup (was `bind`)
+    alsa-utils # alsamixer / aplay (was `alsa-utils`)
+    zip
+    stow
 
-      # --- dev block ---
-      docker-compose
-      lazydocker
-      awscli2
-      azure-cli
-      uv
-      nodejs
-      (
-        with dotnetCorePackages;
-        combinePackages [
-          sdk_9_0
-          aspnetcore_9_0
-        ]
-      )
-      supabase-cli
-      vscode
-      insomnia
-      claude-code
-      codex
-      # --- claude-config (~/repos/claude-config) dependencies ---
-      # Only gh is declared here; its install.sh fetches the MCP server
-      # binaries (github-mcp-server, mcp-server-git) itself into the repo's
-      # bin/, and gh is what performs that release download.
-      gh
-      jetbrains.rider
-      jetbrains.datagrip
-    ]
-    ++ [
-      # Zen Browser from its flake (no nixpkgs package).
-      inputs.zen-browser.packages.${system}.default
-    ];
+    # --- dev block ---
+    docker-compose
+    lazydocker
+    awscli2
+    azure-cli
+    uv
+    nodejs
+    (
+      with dotnetCorePackages;
+      combinePackages [
+        sdk_9_0
+        aspnetcore_9_0
+      ]
+    )
+    supabase-cli
+    vscode
+    insomnia
+    claude-code
+    codex
+    # --- claude-config (~/repos/claude-config) dependencies ---
+    # Only gh is declared here; its install.sh fetches the MCP server
+    # binaries (github-mcp-server, mcp-server-git) itself into the repo's
+    # bin/, and gh is what performs that release download.
+    gh
+    jetbrains.rider
+    jetbrains.datagrip
+  ];
 
   # NOTE: audio output selection (SUPER+F12 and the waybar pulseaudio
   # on-click) is waybar/scripts/audio-menu.sh — a rofi sink selector using
