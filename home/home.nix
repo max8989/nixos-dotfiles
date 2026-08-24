@@ -111,6 +111,7 @@
     azure-cli
     uv
     nodejs
+    yarn
     (
       with dotnetCorePackages;
       combinePackages [
