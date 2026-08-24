@@ -116,7 +116,9 @@
       with dotnetCorePackages;
       combinePackages [
         sdk_9_0
+        sdk_10_0
         aspnetcore_9_0
+        aspnetcore_10_0
       ]
     )
     supabase-cli
