@@ -1,5 +1,5 @@
 {
-  description = "Declarative NixOS + Home Manager config — Hyprland desktop (Catppuccin Mocha)";
+  description = "Declarative NixOS + Home Manager config — Hyprland desktop (Catppuccin Mocha) + headless home server";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -57,18 +57,31 @@
       username = "maxime"; # login name; home dir becomes /home/<username>
       fullName = "Maxime Gagne"; # GECOS / account description
 
-      # One entry per machine. The name MUST match the hosts/<name>/ directory
-      # and becomes networking.hostName + the nixosConfigurations attr you
-      # build with `--flake .#<name>`.
-      hosts = [
-        "thinkpad-x1-carbon-g7" # ThinkPad X1 Carbon 7th Gen
-        "thinkpad-x1-carbon-g12" # ThinkPad X1 Carbon Gen 12 (21KC, Meteor Lake)
-      ];
+      # One entry per machine. The attr name MUST match the hosts/<name>/
+      # directory and becomes networking.hostName + the nixosConfigurations
+      # attr you build with `--flake .#<name>`.
+      #
+      # `desktop` picks the profile: true → the host's configuration.nix must
+      # import hosts/desktop.nix and gets the full graphical Home Manager
+      # config (home/home.nix); false → headless, minimal shell-only Home
+      # Manager config (home/server.nix).
+      hosts = {
+        "thinkpad-x1-carbon-g7" = {
+          desktop = true;
+        }; # ThinkPad X1 Carbon 7th Gen
+        "thinkpad-x1-carbon-g12" = {
+          desktop = true;
+        }; # ThinkPad X1 Carbon Gen 12 (21KC, Meteor Lake)
+        "homeserver" = {
+          desktop = false;
+        }; # H81M-HD2 / i5-4460 / RTX 3070 — headless media server
+      };
 
       # Build one nixosSystem per host, threading the per-user settings + the
       # host's own name down to the system + Home Manager modules.
       mkHost =
         hostname:
+        { desktop }:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = {
@@ -93,12 +106,12 @@
               # silently blocks every HM change in the rebuild.
               home-manager.backupFileExtension = "hm-bak";
               home-manager.extraSpecialArgs = { inherit inputs username; };
-              home-manager.users.${username} = import ./home/home.nix;
+              home-manager.users.${username} = import (if desktop then ./home/home.nix else ./home/server.nix);
             }
           ];
         };
     in
     {
-      nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
+      nixosConfigurations = nixpkgs.lib.mapAttrs mkHost hosts;
     };
 }

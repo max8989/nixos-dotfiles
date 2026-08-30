@@ -5,12 +5,16 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (Catppuccin **Mocha**). Two hosts, both ThinkPad X1 Carbons:
+desktop (Catppuccin **Mocha**) plus a headless home server. Three hosts:
 `thinkpad-x1-carbon-g7` (7th Gen) and `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
-Intel Core Ultra 5 125U / Meteor Lake, btrfs root). They share one system module
-(`hosts/common.nix`) and the same Home Manager config; each host dir only adds its
-generated `hardware-configuration.nix` (plus the Gen 12's Meteor Lake iGPU video
-stack). Migrated from an Arch/Hyprland dotfiles repo and rewritten as pure Nix.
+Intel Core Ultra 5 125U / Meteor Lake, btrfs root), both desktops; and
+`homeserver` (Gigabyte H81M-HD2, i5-4460 Haswell, RTX 3070) — headless, runs the
+Docker Compose media stack (Traefik, Jellyfin, *arr, qBittorrent+PIA VPN,
+SABnzbd, Homepage) unchanged on NixOS-provided Docker + NVIDIA container
+toolkit. Every host imports `hosts/common.nix`; graphical hosts also import
+`hosts/desktop.nix` and get `home/home.nix`, headless hosts get the minimal
+`home/server.nix` (chosen by the `desktop` flag per host in `flake.nix`).
+Migrated from an Arch/Hyprland dotfiles repo and rewritten as pure Nix.
 See `README.md` for install steps and the full module map.
 
 ## Hard rule — verify library/option specifics before stating them
@@ -30,12 +34,13 @@ have drifted. Always `nix flake check` after changes (see below). The README's
 ## Layout & conventions
 
 ```
-flake.nix                         # inputs + per-user vars + `hosts` list → nixosConfigurations (genAttrs)
-hosts/common.nix                  # shared NixOS system options (imported by every host)
-hosts/<hostname>/configuration.nix         # imports ../common.nix + disko.nix + hardware + host-specific overrides
+flake.nix                         # inputs + per-user vars + `hosts` set ({ desktop = bool; }) → nixosConfigurations (mapAttrs)
+hosts/common.nix                  # role-agnostic NixOS system options (imported by every host)
+hosts/desktop.nix                 # desktop-only system options — Hyprland, greetd, PipeWire, fonts, laptop peripherals (graphical hosts only)
+hosts/<hostname>/configuration.nix         # imports ../common.nix (+ ../desktop.nix if graphical) + disko.nix + hardware + host-specific overrides
 hosts/<hostname>/disko.nix                 # declarative disk layout (disko) — partitioning AND fileSystems.* come from here
 hosts/<hostname>/hardware-configuration.nix # detected hardware ONLY (no filesystems) — regenerated at install with --no-filesystems, never hand-edit to "fix"
-home/*.nix                        # Home Manager modules (imported by home.nix)
+home/*.nix                        # Home Manager modules (home.nix = desktop profile; server.nix = minimal headless profile — both import shell.nix)
 home/starship.toml                # imported via lib.importTOML
 home/files/                       # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
 ```
@@ -55,8 +60,12 @@ matching `hosts/<name>/` dir (copy an existing one), and regenerate its
 (`username` is passed to `home/home.nix`, `common.nix`, and each
 `configuration.nix`; runtime paths use `~` or `config.home.homeDirectory`).
 
-**Shared vs. host-specific system config.** Anything host-agnostic goes in
-`hosts/common.nix`. Genuinely per-machine bits go per host: **disk layout and
+**Shared vs. desktop vs. host-specific system config.** Anything host- AND
+role-agnostic goes in `hosts/common.nix` (boot, zram, nix settings, network,
+firewall, user, SSH, Docker, earlyoom). Anything that only makes sense with a
+graphical session goes in `hosts/desktop.nix` (Hyprland + its cachix, greetd,
+PipeWire, fcitx5, fonts, bluetooth, fprintd, udisks2/flatpak, uinput/kanata) —
+the server must never import it. Genuinely per-machine bits go per host: **disk layout and
 filesystems in `disko.nix`** (the disko module derives `fileSystems.*` from it —
 never define `fileSystems` in `hardware-configuration.nix`, that's a conflicting
 definition), kernel modules/microcode in `hardware-configuration.nix`

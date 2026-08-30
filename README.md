@@ -5,15 +5,22 @@ themed **Catppuccin Mocha**. Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
 **Hosts:**
-- `thinkpad-x1-carbon-g7` — ThinkPad X1 Carbon (7th Gen).
+- `thinkpad-x1-carbon-g7` — ThinkPad X1 Carbon (7th Gen). Desktop.
 - `thinkpad-x1-carbon-g12` — ThinkPad X1 Carbon (Gen 12, 21KC; Intel Core Ultra 5
-  125U / Meteor Lake, btrfs root).
+  125U / Meteor Lake, btrfs root). Desktop.
+- `homeserver` — Gigabyte H81M-HD2 (i5-4460 Haswell, 16 GB, RTX 3070). Headless
+  media server: the Docker Compose stack (Traefik, Jellyfin, *arr, qBittorrent
+  behind a PIA WireGuard container, SABnzbd, Homepage, …) runs unchanged on top
+  of NixOS-provided Docker + NVIDIA container toolkit.
 
-Both hosts share one system module (`hosts/common.nix`) and the same Home Manager
-config; each only adds its own declarative disk layout (`disko.nix`) and
-generated `hardware-configuration.nix` (plus, for the Gen 12, the Meteor Lake
-iGPU video stack). Fresh installs are one command via **disko + nixos-anywhere**
-(see [Install](#install)).
+Every host imports `hosts/common.nix` (role-agnostic system config); graphical
+hosts additionally import `hosts/desktop.nix` (Hyprland, greetd, PipeWire,
+fonts, laptop peripherals). The `desktop` flag per host in `flake.nix` also
+selects the Home Manager profile: `home/home.nix` (full desktop) or
+`home/server.nix` (shell + CLI tools only). Each host dir adds its declarative
+disk layout (`disko.nix`) and generated `hardware-configuration.nix`. Fresh
+installs are one command via **disko + nixos-anywhere** (see
+[Install](#install)).
 
 👉 **Already installed?** [COMMANDS.md](COMMANDS.md) is the day-to-day cheat
 sheet — rebuild, update, rollback, garbage collection, service debugging.
@@ -22,7 +29,8 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 
 | Area | Module | Approach |
 |------|--------|----------|
-| System (boot, audio, login, fonts, fcitx5, fingerprint, …) | `hosts/common.nix` (shared) + `hosts/<host>/configuration.nix` | NixOS options |
+| System (boot, nix, network, user, SSH, Docker, …) | `hosts/common.nix` (every host) + `hosts/<host>/configuration.nix` | NixOS options |
+| Desktop system (audio, login, fonts, fcitx5, fingerprint, …) | `hosts/desktop.nix` (graphical hosts only) | NixOS options |
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
 | Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
 | Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
@@ -47,19 +55,26 @@ rebuilding, since a parse error leaves Hyprland in a bind-less emergency
 session.
 
 ```
-flake.nix                      # inputs + per-user vars + `hosts` list → one config each
+flake.nix                      # inputs + per-user vars + `hosts` set (with desktop flag) → one config each
 hosts/
-  common.nix                   # shared system config (imported by every host)
+  common.nix                   # role-agnostic system config (imported by every host)
+  desktop.nix                  # desktop-only system config (imported by graphical hosts)
   thinkpad-x1-carbon-g7/
-    configuration.nix          # imports ../common.nix + disko + hardware
+    configuration.nix          # imports ../common.nix + ../desktop.nix + disko + hardware
     disko.nix                  # declarative disk layout (partitioning + fileSystems)
     hardware-configuration.nix # detected hardware only — regenerated at install
   thinkpad-x1-carbon-g12/
-    configuration.nix          # ../common.nix + disko + Meteor Lake iGPU video stack
+    configuration.nix          # ../common.nix + ../desktop.nix + disko + Meteor Lake iGPU video stack
     disko.nix                  # declarative disk layout (partitioning + fileSystems)
     hardware-configuration.nix # detected hardware only — regenerated at install
+  homeserver/
+    configuration.nix          # ../common.nix (NO desktop.nix) + headless NVIDIA + server tweaks
+    disko.nix                  # declarative disk layout (partitioning + fileSystems)
+    hardware-configuration.nix # placeholder — regenerate at install
 home/
-  home.nix  hyprland.nix  waybar.nix  kitty.nix  shell.nix
+  home.nix                     # full desktop HM profile (desktop hosts)
+  server.nix                   # minimal HM profile: shell + CLI only (headless hosts)
+  hyprland.nix  waybar.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
   starship.toml
   files/                       # CSS, rasi, hypr/*.lua, scripts, icons, backgrounds, …
@@ -69,24 +84,28 @@ home/
 
 The config is parameterized — to adopt it you don't need to find-and-replace a
 username. Edit the two per-user values at the top of the `let` block in
-`flake.nix`, then add (or rename) a host in the `hosts` list:
+`flake.nix`, then add (or rename) a host in the `hosts` set:
 
 ```nix
 username = "maxime";       # your login name → home dir becomes /home/<username>
 fullName = "Maxime Gagne"; # account description
 
-hosts = [
-  "thinkpad-x1-carbon-g7"
-  "thinkpad-x1-carbon-g12"
-  # "<your-hostname>"      # ← add yours; create a matching hosts/<your-hostname>/
-];
+hosts = {
+  "thinkpad-x1-carbon-g7" = { desktop = true; };
+  "thinkpad-x1-carbon-g12" = { desktop = true; };
+  "homeserver" = { desktop = false; };   # headless — no Hyprland, minimal HM profile
+  # "<your-hostname>" = { desktop = …; } # ← add yours; create a matching hosts/<your-hostname>/
+};
 ```
 
-Each entry builds `nixosConfigurations.<name>` (via `lib.genAttrs`), sets
-`networking.hostName`, and reads `hosts/<name>/`. To add a machine, copy an
-existing host dir (e.g. `cp -r hosts/thinkpad-x1-carbon-g7 hosts/<name>`), add the
-name to the list, adjust its `disko.nix` (target device + layout), and let the
-install regenerate its `hardware-configuration.nix` (see Install below).
+Each entry builds `nixosConfigurations.<name>` (via `lib.mapAttrs`), sets
+`networking.hostName`, and reads `hosts/<name>/`. `desktop = true` hosts must
+import `../desktop.nix` in their `configuration.nix` and get the full
+`home/home.nix`; `desktop = false` hosts skip it and get `home/server.nix`. To
+add a machine, copy an existing host dir (a laptop for a desktop machine,
+`hosts/homeserver` for a headless one), add the entry to the set, adjust its
+`disko.nix` (target device + layout), and let the install regenerate its
+`hardware-configuration.nix` (see Install below).
 `home.homeDirectory`, the NixOS user (`users.users.${username}`), and the flake's
 host path all derive from the variables; runtime config paths use `~`, so they
 need no edits.

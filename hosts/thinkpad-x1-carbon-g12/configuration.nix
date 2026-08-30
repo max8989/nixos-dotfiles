@@ -8,6 +8,7 @@
 {
   imports = [
     ../common.nix
+    ../desktop.nix
     ./disko.nix
     ./hardware-configuration.nix
   ];
