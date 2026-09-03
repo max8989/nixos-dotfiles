@@ -13,6 +13,7 @@
     ./scripts.nix
     ./theming.nix
     ./zen.nix
+    ./superfile.nix
   ];
 
   home.username = username;
@@ -30,7 +31,37 @@
   home.packages = with pkgs; [
     # --- core desktop apps (from keybindings.conf) ---
     kitty
-    nautilus
+    # Main GUI file manager — set as the XDG default for inode/directory in
+    # desktop.nix. kio-extras supplies the extra KIO protocols and the
+    # thumbnailers Dolphin has no built-in equivalent for; without it a
+    # non-Plasma session gets a working but thumbnail-less Dolphin.
+    kdePackages.dolphin
+    kdePackages.kio-extras
+    nautilus # kept as a GTK fallback; nothing defaults to it any more
+
+    # PDF reader and GUI text editor. Both are KDE rather than GNOME so they
+    # share Dolphin's Qt stack — no second GTK4/libadwaita closure, and
+    # Dolphin's "Open With" and service menus pick them up natively. The GNOME
+    # equivalents are `papers` and `gnome-text-editor` if you prefer them.
+    kdePackages.okular
+    kdePackages.kate
+
+    # Image viewers, deliberately both: gwenview is the double-click default
+    # (Qt, thumbnail browser, basic editing), imv is the tiny Wayland-native
+    # one with vim keys for opening a file straight from a shell or keybind.
+    kdePackages.gwenview
+    imv
+    # Archive manager — also what gives Dolphin its right-click
+    # extract/compress entries; without it archives are terminal-only.
+    kdePackages.ark
+    # Second PDF reader, vim-keybound, kept alongside Okular: Okular for
+    # annotating and forms, zathura for reading. The nixpkgs `zathura` attr is
+    # the with-plugins wrapper and already bundles libpdf-mupdf.so, so no
+    # separate backend package is needed.
+    zathura
+    # Visual disk usage (Qt counterpart of baobab).
+    kdePackages.filelight
+    qalculate-gtk
     zed-editor # `zed` editor binary
     btop
 
@@ -95,7 +126,8 @@
     ripgrep
     fastfetch
     yazi
-    superfile # TUI file manager (SUPER+E); binary is `superfile`, not `spf`
+    # superfile (TUI file manager, SUPER+E) is installed from superfile.nix —
+    # it comes from the upstream flake input, not nixpkgs.
     neovim
     bun
     lazygit

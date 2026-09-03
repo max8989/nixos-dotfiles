@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Official rofi file browser from davatorium/rofi-scripts
-# Modified to open directories in nautilus
+# Modified to open directories in dolphin
 
-EDITOR=nautilus
+EDITOR=dolphin
 
 CUR_DIR=$PWD
 

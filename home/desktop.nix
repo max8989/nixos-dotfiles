@@ -179,8 +179,9 @@ in
           halign = "center";
           valign = "top";
         }
-        # Obsidian todos (right side) — lockscreen-todos.sh mirrors the task
-        # queries on the vault's Home.md and emits Pango markup.
+        # Obsidian todos (right side) — lockscreen-todos.sh reads the vault's
+        # Templates/TODO.md and emits Pango markup, capped/truncated so the
+        # right-anchored block can't grow into the center panel.
         {
           monitor = "";
           text = "cmd[update:60000] ~/.config/scripts/lockscreen-todos.sh";
@@ -386,6 +387,57 @@ in
       gtk_dark = true;
     };
     style = builtins.readFile ./files/wofi/style.css;
+  };
+
+  #########################################################################
+  ## Default applications — Dolphin is the main file manager.
+  ##
+  ## inode/directory is the only type Dolphin's desktop file declares, and it
+  ## is what "open containing folder" in other apps resolves through.
+  ## Enabling this makes ~/.config/mimeapps.list a read-only store symlink, so
+  ## any "set as default" button in a GUI app will silently fail to persist —
+  ## add the association here instead.
+  #########################################################################
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "inode/directory" = [ "org.kde.dolphin.desktop" ];
+
+      # Okular ships one desktop entry per format; org.kde.okular.desktop
+      # itself only claims application/vnd.kde.okular-archive, so the PDF
+      # association has to name okularApplication_pdf.desktop. It is
+      # NoDisplay=true (hidden from menus) but valid as a default handler.
+      "application/pdf" = [ "okularApplication_pdf.desktop" ];
+
+      "text/plain" = [ "org.kde.kate.desktop" ];
+
+      # Images → Gwenview. imv and zathura's mupdf backend also claim several
+      # of these, so the association has to be explicit or the winner is
+      # whichever .desktop the mime cache happens to rank first.
+      "image/jpeg" = [ "org.kde.gwenview.desktop" ];
+      "image/png" = [ "org.kde.gwenview.desktop" ];
+      "image/gif" = [ "org.kde.gwenview.desktop" ];
+      "image/webp" = [ "org.kde.gwenview.desktop" ];
+      "image/bmp" = [ "org.kde.gwenview.desktop" ];
+      "image/tiff" = [ "org.kde.gwenview.desktop" ];
+      "image/avif" = [ "org.kde.gwenview.desktop" ];
+      "image/heif" = [ "org.kde.gwenview.desktop" ];
+      "image/svg+xml" = [ "org.kde.gwenview.desktop" ];
+
+      # Archives → Ark. Only the formats actually reachable day to day; Ark's
+      # own desktop entry claims a much longer list.
+      "application/zip" = [ "org.kde.ark.desktop" ];
+      "application/x-tar" = [ "org.kde.ark.desktop" ];
+      "application/x-compressed-tar" = [ "org.kde.ark.desktop" ];
+      "application/x-xz-compressed-tar" = [ "org.kde.ark.desktop" ];
+      "application/x-bzip2-compressed-tar" = [ "org.kde.ark.desktop" ];
+      "application/x-zstd-compressed-tar" = [ "org.kde.ark.desktop" ];
+      "application/gzip" = [ "org.kde.ark.desktop" ];
+      "application/x-xz" = [ "org.kde.ark.desktop" ];
+      "application/zstd" = [ "org.kde.ark.desktop" ];
+      "application/x-7z-compressed" = [ "org.kde.ark.desktop" ];
+      "application/vnd.rar" = [ "org.kde.ark.desktop" ];
+    };
   };
 
   #########################################################################

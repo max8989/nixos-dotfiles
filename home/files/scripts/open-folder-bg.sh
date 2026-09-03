@@ -9,7 +9,9 @@ else
   (
     selected=$(fd . ~ | rofi -dmenu -p "Open file location")
     if [ -n "$selected" ]; then
-      nautilus "$(dirname "$selected")"
+      # --select opens the containing folder with the file highlighted,
+      # which the old `nautilus "$(dirname …)"` could not do.
+      dolphin --select "$selected"
     fi
   ) &
 fi

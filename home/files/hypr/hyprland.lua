@@ -79,8 +79,8 @@ hl.config({
         border_size = 2,
 
         col = {
-            -- Neon blue→cyan gradient; borderangle below slowly rotates it.
-            active_border   = { colors = { "rgba(3366ffee)", "rgba(33ccffee)" }, angle = 45 },
+            -- Hyprland-signature cyan→green gradient; borderangle below slowly rotates it.
+            active_border   = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 },
             inactive_border = "rgba(1a1f2eaa)",
         },
 

@@ -1,0 +1,72 @@
+Local patch against superfile v1.6.0 (applied in home/superfile.nix).
+
+Upstream, `copy_items` (y) fills only superfile's internal clipboard and
+`copy_path` (Y) writes the path as plain text. This patch:
+  - makes y/copy_items also write the path(s), newline-separated, to the
+    system clipboard;
+  - turns Y/copy_path into "copy the actual file": a percent-encoded
+    file:// URI pushed as text/uri-list via wl-copy (from wl-clipboard in
+    home.packages), so the hovered file pastes as a real file into
+    browsers and GUI applications.
+
+Regenerate on a version bump: clone the tagged superfile source, re-apply
+these hunks, `gofmt`, and `git diff > home/files/superfile-system-clipboard.patch`.
+
+diff --git a/src/internal/handle_file_operations.go b/src/internal/handle_file_operations.go
+index b4faeff..0a53f7b 100644
+--- a/src/internal/handle_file_operations.go
++++ b/src/internal/handle_file_operations.go
+@@ -4,6 +4,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"log/slog"
++	"net/url"
+ 	"os"
+ 	"os/exec"
+ 	"path/filepath"
+@@ -247,6 +248,7 @@ func (m *model) copySingleItem(cut bool) {
+ 	slog.Debug("handle_file_operations.copySingleItem", "cut", cut,
+ 		"panel location", panel.GetFocusedItem().Location)
+ 	m.clipboard.Add(panel.GetFocusedItem().Location)
++	writeTextToSystemClipboard(panel.GetFocusedItem().Location)
+ }
+ 
+ // Copy all selected file or directory's paths to the clipboard
+@@ -260,6 +262,7 @@ func (m *model) copyMultipleItem(cut bool) {
+ 	slog.Debug("handle_file_operations.copyMultipleItem", "cut", cut,
+ 		"panel selected files", items)
+ 	m.clipboard.SetItems(items)
++	writeTextToSystemClipboard(strings.Join(items, "\n"))
+ }
+ 
+ func (m *model) getPasteItemCmd() tea.Cmd {
+@@ -574,7 +577,14 @@ func (m *model) openDirectoryWithEditor() tea.Cmd {
+ 	})
+ }
+ 
+-// Copy file path
++func writeTextToSystemClipboard(text string) {
++	if err := clipboard.WriteAll(text); err != nil {
++		slog.Error("Error while writing system clipboard", "error", err)
++	}
++}
++
++// Copy the file itself (as a text/uri-list) to the system clipboard, so it
++// can be pasted as a real file into browsers and GUI applications.
+ // TODO: This is also an IO operations, do it via tea.Cmd
+ func (m *model) copyPath() {
+ 	panel := m.getFocusedFilePanel()
+@@ -583,8 +593,11 @@ func (m *model) copyPath() {
+ 		return
+ 	}
+ 
+-	if err := clipboard.WriteAll(panel.GetFocusedItem().Location); err != nil {
+-		slog.Error("Error while copy path", "error", err)
++	uri := url.URL{Scheme: "file", Path: panel.GetFocusedItem().Location}
++	cmd := exec.Command("wl-copy", "--type", "text/uri-list")
++	cmd.Stdin = strings.NewReader(uri.String())
++	if err := cmd.Run(); err != nil {
++		slog.Error("Error while copying file to system clipboard", "error", err)
+ 	}
+ }
+ 

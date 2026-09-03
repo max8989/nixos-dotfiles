@@ -22,6 +22,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # superfile — nixpkgs still ships 1.3.3, whose image preview decodes
+    # images synchronously at full resolution and freezes navigation
+    # (yorukot/superfile#899; fixed upstream in 1.4.0 by moving previews to
+    # async thumbnail rendering). Pin the upstream flake at the release tag;
+    # drop this input once nixpkgs catches up past 1.4.0.
+    superfile = {
+      url = "github:yorukot/superfile/v1.6.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Zen Browser (no nixpkgs package; community flake).
     # Output used: homeModules.beta, imported by home/zen.nix. That module is
     # built on Home Manager's own mkFirefoxModule, so home-manager MUST follow
