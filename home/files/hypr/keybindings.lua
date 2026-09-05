@@ -117,15 +117,18 @@ end
 hl.bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
 
--- Move the active window, or insert it into a neighboring group (arrows + vim keys)
+-- Move the active window without inserting it into a neighboring group.
 -- NOTE: SUPER+SHIFT+Up/Down are re-bound to mic volume further down, matching the
 -- original keybindings.conf ordering.
-local moveOrGroup = {
+local moveDirs = {
     left = "left", right = "right", up = "up", down = "down",
     h    = "left", l     = "right", k  = "up", j    = "down",
 }
-for key, dir in pairs(moveOrGroup) do
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ direction = dir, group_aware = true }))
+for key, dir in pairs(moveDirs) do
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ direction = dir }))
+
+    -- Adding a window to a tabbed group requires the more deliberate Ctrl chord.
+    hl.bind(mainMod .. " + CTRL + SHIFT + " .. key, hl.dsp.window.move({ direction = dir, group_aware = true }))
 end
 
 hl.bind("CTRL + ALT + space", hl.dsp.exec_raw("fcitx5-remote -t"))

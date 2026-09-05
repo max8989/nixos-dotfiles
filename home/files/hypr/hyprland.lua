@@ -161,6 +161,23 @@ hl.animation({ leaf = "layersOut",   enabled = true,  speed = 1.5,  bezier = "li
 -- hl.window_rule({ name = "no-gaps-wtv1", match = { float = false, workspace = "w[tv1]" }, border_size = 0, rounding = 0 })
 -- hl.window_rule({ name = "no-gaps-f1",   match = { float = false, workspace = "f[1]" },   border_size = 0, rounding = 0 })
 
+-- Smart gaps, inverted: a workspace holding exactly one tiled window gets fat
+-- side padding instead of none, so a lone window sits centred as a column
+-- rather than filling the whole screen. `w[tv1]` = "exactly 1 tiled+visible
+-- window"; `s[false]` keeps the special/scratchpad workspace out of it. As soon
+-- as a second window opens the selector stops matching and the normal 10px gaps
+-- come back, so tiling behaves exactly as before.
+--
+-- gaps_out here is a *directional* css_gaps value. Under the Lua backend that
+-- must be a table of named sides -- a "10 200 10 200" string silently parses to
+-- ~2px, and a positional { 10, 200, 10, 200 } list is read as a single value.
+-- Left/right 200 gives 1516x1137 on the 1920x1200 panel (a tidy 4:3); raise
+-- them to squeeze the window further, lower them to let it breathe wider.
+hl.workspace_rule({
+    workspace = "w[tv1]s[false]",
+    gaps_out  = { top = 10, right = 10, bottom = 10, left = 10 },
+})
+
 hl.config({
     dwindle = {
         preserve_split = true, -- You probably want this
