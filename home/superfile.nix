@@ -84,10 +84,17 @@ in
     show_select_icons = true;
     # 0 = a full page, as before 1.6.0
     page_scroll_size = 0;
-    # 0: Name, 1: Size, 2: Date Modified, 3: Type
+    # 0: Name, 1: Size, 2: Date Modified, 3: Type, 4: Natural
     default_sort_type = 2;
-    # true = descending, i.e. most recently modified first
-    sort_order_reversed = true;
+    # Counter-intuitively false, and only because we sort by date: upstream's
+    # unreversed date comparator is `ModTime().After(...)`, i.e. it already
+    # sorts newest-first, unlike every other sort kind whose base comparator is
+    # `<` (ascending). `reversed` XORs that result
+    # (getOrderingFunc, src/internal/ui/filepanel/sort.go), so true would give
+    # oldest-first here. false = most recently modified at the top; flip it at
+    # runtime with `R` (toggle_reverse_sort). Revisit if default_sort_type ever
+    # changes away from 2.
+    sort_order_reversed = false;
     case_sensitive_sort = false;
 
     shell_close_on_success = false;
