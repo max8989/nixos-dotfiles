@@ -42,9 +42,11 @@ hl.monitor({ output = "SUNSHINE", mode = "1280x720@30", position = "auto", scale
 ---- AUTOSTART ----
 -------------------
 
--- NOTE: hyprpaper, hypridle and waybar are Home Manager systemd user services
--- (see desktop.nix / waybar.nix) bound to graphical-session.target. Do NOT
--- start them here as well or you get two of each.
+-- NOTE: hyprpaper, hypridle, waybar and swaync are Home Manager systemd user
+-- services (see desktop.nix / waybar.nix) bound to graphical-session.target.
+-- Do NOT start them here as well or you get two of each — swaync especially:
+-- its package ships a D-Bus-activated unit, so a hook-started instance races
+-- the systemd one at login and one of the two always fails.
 --
 -- Home Manager also emits its own hyprland.start hook that runs
 -- dbus-update-activation-environment and starts hyprland-session.target, so
@@ -52,7 +54,7 @@ hl.monitor({ output = "SUNSHINE", mode = "1280x720@30", position = "auto", scale
 hl.on("hyprland.start", function()
     hl.exec_cmd("hyprctl setcursor catppuccin-frappe-dark-cursors 28")
     hl.exec_cmd("@polkitAgent@")
-    hl.exec_cmd("swaync & swayosd-server")
+    hl.exec_cmd("swayosd-server")
     hl.exec_cmd("wl-paste --type text --watch cliphist store")  -- text only
     hl.exec_cmd("wl-paste --type image --watch cliphist store") -- images only
 end)
@@ -115,6 +117,73 @@ hl.config({
             brightness = 0.80,
             contrast   = 0.90,
             vibrancy   = 0.1696,
+        },
+    },
+
+    -- Tab strip drawn above a grouped window (SUPER+G groups; see keybindings.lua).
+    --
+    -- Upstream defaults leave the titles unreadable: `gradients` is false, and
+    -- CHyprGroupBarDecoration only draws a background plate behind a tab when
+    -- it is true, so the title texture lands straight on the wallpaper with no
+    -- backing -- 8px light-grey text over whatever happens to be behind it.
+    --
+    -- So the plate has to be on. The styling then follows the Waybar islands
+    -- (home/files/waybar/style.css): dark translucent glass, individually
+    -- rounded, blurred. Deliberately restrained -- this strip sits directly
+    -- under a bar that already carries the desktop's accent colour, and a
+    -- second saturated band right below it just fights with it. The focused
+    -- tab is marked the way a browser marks one: a lighter plate and brighter,
+    -- heavier text, not a slab of colour.
+    group = {
+        groupbar = {
+            -- The fix. Without this nothing below about col.* is even drawn.
+            gradients = true,
+            -- Plates are translucent, so frost what shows through -- same
+            -- treatment the Waybar islands get from their layer rule.
+            blur = true,
+
+            -- Keep in sync with `font` in home/desktop.nix -- this is a
+            -- fontconfig family name, so it cannot be shared from there
+            -- (hyprland.lua only gets the @polkitAgent@ substitution). Empty
+            -- would fall back to misc:font_family.
+            font_family = "CaskaydiaCove Nerd Font",
+            font_size = 11,           -- was 8
+            font_weight_active = 600, -- the focused tab leads on weight...
+            font_weight_inactive = 400,
+
+            -- Title texture is font_size + 4 tall (BAR_TEXT_PAD = 2 a side),
+            -- so 20 leaves a few px around a 15px title.
+            height = 20,      -- was 14
+            text_padding = 10,-- keep titles off the plate edges
+            gaps_in = 4,      -- separate the tabs into distinct pills
+            gaps_out = 3,
+
+            -- Round every tab, not just the two ends of the strip. Hyprland
+            -- defaults gradient_round_only_edges to true, which fuses the tabs
+            -- into one long bar with rounded caps; false gives the row of
+            -- separate pills the Waybar islands use.
+            gradient_rounding = 8,
+            gradient_round_only_edges = false,
+
+            -- No accent underline. The indicator takes its colour from the
+            -- *first* stop of col.active, so it cannot be a bright accent
+            -- without dragging the whole plate bright with it -- and the
+            -- lighter plate plus bolder text already says "focused".
+            indicator_height = 0,
+
+            -- ...and on brightness. Both stay well clear of the dim grey that
+            -- made these unreadable to begin with; inactive is subordinate,
+            -- not invisible.
+            text_color = 0xffe6f4ff,
+            -- Explicit because -1 (the default) means "reuse text_color".
+            text_color_inactive = 0xff8296a8,
+            col = {
+                -- Desaturated teal-navy: clearly lighter than the inactive
+                -- plate, without reading as a coloured band.
+                active = { colors = { "rgba(1d3a4ce0)", "rgba(0e1a26e0)" }, angle = 45 },
+                -- 0.70 alpha over the Waybar island background colour.
+                inactive = "rgba(0a0a12b3)",
+            },
         },
     },
 

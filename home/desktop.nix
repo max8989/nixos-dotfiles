@@ -7,11 +7,21 @@ in
   # the polkit agent. hyprlock/hypridle/hyprpaper packages come from their HM
   # modules below.
   home.packages = with pkgs; [
-    swaynotificationcenter # `swaync` / `swaync-client`
     swayosd # `swayosd-server` / `swayosd-client`
     wlogout
     polkit_gnome
   ];
+
+  # SwayNC notification daemon — systemd-managed (NOT started from the
+  # hyprland.start hook: swaync 0.12.x ships a D-Bus-activated user unit, so a
+  # hook-started instance races it at login and one of the two always fails).
+  # This module's unit shadows the packaged one and owns
+  # org.freedesktop.Notifications; empty `settings` writes `{}` = upstream
+  # defaults, `style` keeps the CSS blob in home/files/ per the two-tier rule.
+  services.swaync = {
+    enable = true;
+    style = ./files/swaync/style.css;
+  };
 
   #########################################################################
   ## Hyprlock — neon glass locker (blurred screenshot + cyan/green accents)
@@ -459,9 +469,6 @@ in
 
     # SwayOSD on-screen-display styling.
     "swayosd/style.css".source = ./files/swayosd/style.css;
-
-    # SwayNC notification center styling (overrides its packaged default).
-    "swaync/style.css".source = ./files/swaync/style.css;
 
     # Wallpapers (referenced by services.hyprpaper above).
     "backgrounds".source = ./files/backgrounds;

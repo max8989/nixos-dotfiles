@@ -130,10 +130,12 @@ flakes only see git-tracked files inside the flake root.
   was dropped because the Nix store is immutable). To change theme you edit Nix
   and rebuild.
 - **Daemon autostart is split three ways:** `hyprpaper` / `hypridle` /
-  `hyprsunset` / `waybar` are HM systemd user services on
-  `graphical-session.target`; **`kanata` is a HM
+  `hyprsunset` / `waybar` / `swaync` are HM systemd user services on
+  `graphical-session.target` (`swaync` via `services.swaync` — its package
+  ships a D-Bus-activated unit, so a hook-started instance races it at login;
+  never start it from the hook); **`kanata` is a HM
   systemd user service on `default.target`** (evdev-level, so it must not depend
-  on the compositor); `swaync` / `swayosd-server` / cliphist / the polkit agent
+  on the compositor); `swayosd-server` / cliphist / the polkit agent
   are started from the `hyprland.start` hook in `home/files/hypr/hyprland.lua`.
   Don't also start the systemd-managed ones from the hook (double instances).
   - Anything started from that hook is lost if the Hyprland config fails to

@@ -52,26 +52,15 @@ Moves only that input; everything else stays pinned. Name several to update
 them together.
 
 ```
-nix flake update claude-code
+nix flake update hyprland
 ```
 
 There is no per-package update: almost every package comes from the one
 `nixpkgs` input, so `nix flake update nixpkgs` moves all of them at once. To
-advance one package alone, give it its own flake input — `claude-code`,
-`superfile`, and `zen-browser` each have one — and reference that package in
-the module. An input pinned to a tag (`superfile`, on `v1.6.0`) ignores this
-command; edit the tag in `flake.nix` instead.
-
-### Add a flake input without moving the others
-
-After adding the input to `flake.nix`, lock it on its own. `nix flake check`
-may re-resolve branch-tracked inputs such as `nixpkgs` and quietly bump them;
-`nix flake lock` only adds what is missing.
-
-```
-nix flake lock
-nix flake check --no-update-lock-file
-```
+advance one package alone, give it its own flake input (as `superfile` and
+`zen-browser` have) and reference that in the module. An input pinned to a tag
+— `superfile` is on `v1.6.0` — ignores this command; edit the tag in
+`flake.nix` instead.
 
 ### Syntax-check Hyprland Lua
 

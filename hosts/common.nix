@@ -58,6 +58,11 @@
   networking.networkmanager.enable = true;
   # NetworkManager OpenVPN plugin — import/use .ovpn configs from the applet.
   networking.networkmanager.plugins = [ pkgs.networkmanager-openvpn ];
+  # Wi-Fi power save adds 20-100ms wake-up latency to every packet even at
+  # full signal (iwlwifi sleeps between beacons) — measured 34ms RTT to the
+  # local gateway with it on. Bursty stalls in ssh/git/nix and dropped SSH
+  # sessions; not worth the battery. No-op on wired hosts (homeserver).
+  networking.networkmanager.wifi.powersave = false;
 
   # Firewall (mirrors the old Arch ufw setup: deny incoming, allow SSH/HTTP/HTTPS).
   networking.firewall = {

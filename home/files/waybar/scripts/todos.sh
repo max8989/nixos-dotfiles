@@ -1,23 +1,15 @@
 #!/usr/bin/env bash
 
-# Waybar module: count of open todos ("- [ ]" with actual content) in the
-# Obsidian vault. Click handler: todo-menu.sh (rofi list of the same todos).
+# Waybar module: count of open todos in the dedicated Obsidian TODO note.
+# Click handler: todo-menu.sh (rofi list of the same todos).
 #
-# NOTE: the grep below (pattern + exclusions) must stay in sync with
-# todo-menu.sh and scripts/lockscreen-todos.sh (hyprlock).
+# The list comes from scripts/todo-list.sh, which the hyprlock label
+# (scripts/lockscreen-todos.sh) reads too — bar and lock screen stay in sync
+# by construction, so there is nothing to keep in sync by hand here.
 
 set -uo pipefail
 
-VAULT="$HOME/Documents/obsidian"
-
-count=$(grep -rn --include='*.md' \
-  --exclude-dir='Templates' --exclude-dir='90 Archive' \
-  --exclude-dir='99 System' --exclude-dir='Obsidian' \
-  --exclude-dir='Assets' --exclude-dir='.obsidian' --exclude-dir='.git' \
-  --exclude='SETUP.md' --exclude='README.md' \
-  --exclude='CLAUDE.md' --exclude='AGENTS.md' \
-  -E '^[[:space:]]*[-*] \[ \][[:space:]]*[^[:space:]]' \
-  "$VAULT" 2>/dev/null | wc -l)
+count=$("$HOME/.config/scripts/todo-list.sh" | wc -l)
 
 if [ "$count" -eq 0 ]; then
   class="none"

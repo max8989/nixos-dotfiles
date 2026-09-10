@@ -3,22 +3,16 @@
 # a hyprlock label. Colors match the lock screen theme. Lines are truncated
 # and the list capped so the right-anchored label never grows wide enough to
 # reach the center glass panel.
+#
+# The tasks themselves come from todo-list.sh — the same list waybar's
+# custom/todos module counts and todo-menu.sh shows.
 
-TODO_FILE="$HOME/Documents/obsidian/Templates/TODO.md"
 MAX_SHOWN=10
 MAX_LEN=40
-TODO_RE='^[[:space:]]*[-*] \[ \][[:space:]]*[^[:space:]]'
 
 pango_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 
-clean() { # strip "- [ ]", unwrap wikilinks, trim, drop empties
-  sed -E -e 's/^[[:space:]]*[-*] \[ \][[:space:]]*//' \
-    -e 's/\[\[([^]|]*\|)?([^]]+)\]\]/\2/g' \
-    -e 's/[[:space:]]+$//' |
-    sed '/^$/d'
-}
-
-tasks=$(grep -E "$TODO_RE" "$TODO_FILE" 2>/dev/null | clean)
+tasks=$("$HOME/.config/scripts/todo-list.sh")
 
 if [ -n "$tasks" ]; then
   total=$(printf '%s\n' "$tasks" | wc -l)
