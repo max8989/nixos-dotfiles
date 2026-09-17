@@ -154,6 +154,7 @@
       ]
     )
     supabase-cli
+    postgresql # psql / pg_dump client tools only — no server (that's services.postgresql)
     vscode
     insomnia
     claude-code
