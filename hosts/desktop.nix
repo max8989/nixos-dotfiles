@@ -14,6 +14,11 @@
   ...
 }:
 {
+  imports = [
+    # Share the VPN tunnel with a guest over Wi-Fi AP or Thunderbolt.
+    ./vpn-hotspot.nix
+  ];
+
   ##########################################################################
   ## Nix — Hyprland flake is not built by Hydra / cache.nixos.org; pull its
   ## prebuilt binaries from the official Cachix instead of compiling locally.

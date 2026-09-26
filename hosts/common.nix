@@ -64,6 +64,45 @@
   # sessions; not worth the battery. No-op on wired hosts (homeserver).
   networking.networkmanager.wifi.powersave = false;
 
+  # IPv6 kill switch for IPv4-only VPNs.
+  #
+  # The `maxime-server` OpenVPN profile is IPv4-only: `tun0` gets no IPv6 and
+  # the server pushes no `route-ipv6`, so the RA-provided IPv6 default route on
+  # wlan stays up. Result: IPv4 goes through the tunnel while every
+  # IPv6-capable site still sees the real ISP address — a full geolocation
+  # leak, and the reason whatismyipaddress reports the wrong country.
+  #
+  # On `vpn-up`, if the tunnel itself carries no global IPv6, install an
+  # `unreachable` IPv6 default at metric 1. It outranks the RA route (metric
+  # 600), so global IPv6 connects fail immediately with ENETUNREACH and Happy
+  # Eyeballs falls straight back to IPv4-over-the-tunnel. Link-local and
+  # on-link IPv6 keep working via more-specific routes, and NetworkManager's
+  # own IPv6 state is left alone — NM does RA in userspace with
+  # `accept_ra = 0`, so toggling `disable_ipv6` instead would drop the address
+  # and need a device reapply to get it back (and `conf.all` would take `::1`
+  # on loopback down with it). Removed again on `vpn-down`; if NM or the
+  # machine dies with the VPN up the route simply stays — fail closed.
+  networking.networkmanager.dispatcherScripts = [
+    {
+      type = "basic";
+      source = pkgs.writeShellScript "vpn-ipv6-killswitch" ''
+        # $1 = interface (VPN_IP_IFACE for vpn-* actions), $2 = action
+        ip=${pkgs.iproute2}/bin/ip
+
+        case "$2" in
+          vpn-up)
+            if [ -z "$("$ip" -6 addr show dev "$1" scope global 2>/dev/null)" ]; then
+              "$ip" -6 route replace unreachable default metric 1
+            fi
+            ;;
+          vpn-down)
+            "$ip" -6 route del unreachable default metric 1 2>/dev/null || true
+            ;;
+        esac
+      '';
+    }
+  ];
+
   # Firewall (mirrors the old Arch ufw setup: deny incoming, allow SSH/HTTP/HTTPS).
   networking.firewall = {
     enable = true;
@@ -151,6 +190,12 @@
 
   # System-wide packages kept minimal; user software lives in Home Manager.
   environment.systemPackages = with pkgs; [
+    # Link-layer diagnostics. Needed at the system level because a NIC that
+    # auto-negotiates down (a USB dongle settling on 10BASE-T over a bad cable,
+    # say) looks exactly like a slow ISP or a slow VPN from userspace —
+    # `ethtool <iface>` is what tells the two apart, and `ethtool -s` forces a
+    # renegotiation.
+    ethtool
     git
     vim
   ];
