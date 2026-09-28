@@ -8,6 +8,16 @@ Singleton {
     id: root
     property bool brightnessBusy: false
     property int pendingBrightness: 0
+    property int brightnessPercent: -1
+    function refreshBrightness() {
+        if (Config.preview)
+            return;
+        Runtime.run([Config.bin.brightnessctl, "-m", "info"], function (code, out) {
+            var percent = parseInt(out.trim().split(",")[3]);
+            if (!code && Number.isFinite(percent))
+                root.brightnessPercent = percent;
+        });
+    }
     function brightness(delta) {
         if (Config.preview)
             return;
@@ -27,7 +37,8 @@ Singleton {
                 Runtime.report("Brightness could not be changed");
             else {
                 var fields = out.trim().split(",");
-                Runtime.showOsd("Brightness", parseInt(fields[3] || "0") / 100);
+                root.brightnessPercent = parseInt(fields[3] || "0");
+                Runtime.showOsd("Brightness", root.brightnessPercent / 100);
             }
             root.flushBrightness();
         });

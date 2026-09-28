@@ -55,6 +55,7 @@
           name
         ];
       commands = {
+        controls = menu "controls";
         apps = menu "apps";
         files = menu "files";
         clipboard = menu "clipboard";

@@ -67,13 +67,23 @@ import Quickshell.Io
 import "BUNDLE" as Desktop
 import "BUNDLE/bar" as Bar
 import "BUNDLE/panels" as Panels
+import "BUNDLE/services" as Services
 
 ShellRoot {
     id: root
     Bar.Bar { id: bar; modelData: Quickshell.screens[0] }
-    Panels.Menus { id: menus }
+    property string requestedPower: ""
+    Panels.Menus { id: menus; onPowerRequested: action => root.requestedPower = action }
     Panels.Overlays {}
     TestEvent { id: mouseEvents }
+    function find(item, name) {
+        if (item.objectName === name) return item;
+        for (var i = 0; i < item.children.length; i++) {
+            var result = find(item.children[i], name);
+            if (result) return result;
+        }
+        return null;
+    }
     function controls(item, result) {
         if (item.tipTitle && item.visible) {
             var point = item.mapToItem(bar.contentItem, item.width / 2, item.height / 2);
@@ -105,7 +115,21 @@ ShellRoot {
             }
             return JSON.stringify({buttons: buttons, card: card, menu: Desktop.Runtime.menu,
                                    message: Desktop.Runtime.message,
+                                   query: root.find(menus.contentItem, "menuSearch").text,
+                                   rows: menus.filtered.map(r => ({id:r.id || r.title, title:r.title, value:r.value || ""})),
+                                   selected: menus.filtered[root.find(menus.contentItem, "menuList").currentIndex]?.id || "",
+                                   confirmation: menus.confirmation, requestedPower: root.requestedPower,
+                                   cancelFocused: root.find(menus.contentItem, "cancelPower").activeFocus,
+                                   cancelVisualFocus: root.find(menus.contentItem, "cancelPower").visualFocus,
+                                   dndFocused: root.find(menus.contentItem, "notificationDnd").activeFocus,
+                                   calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
+                                   dnd: Desktop.Preferences.dnd,
+                                   notificationCount: Services.Notifications.entries.length,
                                    osdProgress: Desktop.Runtime.osdProgress});
+        }
+        function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
+        function addNotification(): void {
+            Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
         }
         function openClipboard(): void { Desktop.Runtime.toggleMenu("clipboard", null); }
         function point(x: int, y: int): void {
@@ -123,8 +147,31 @@ ShellRoot {
     settings["features"].update(lock=False, polkit=False, notifications=False)
     # The real bar/clipboard paths run; hardware daemons and weather do not.
     settings["bin"]["curl"] = shutil.which("false")
+    # A private backlight fixture exercises the real Display service and keyboard
+    # adjustments without ever touching the physical screen brightness.
+    brightness = output / "brightnessctl"
+    brightness.write_text("#!" + sys.executable + "\n" + '''import pathlib, sys
+state = pathlib.Path(__file__).with_suffix('.state')
+value = int(state.read_text()) if state.exists() else 50
+if 'set' in sys.argv:
+    change = sys.argv[-1]
+    value = max(0, min(100, value + int(change[:-2]) * (1 if change[-1] == '+' else -1)))
+    state.write_text(str(value))
+print(f'qa_backlight,backlight,{value},{value}%,100')
+''')
+    brightness.chmod(0o700)
+    settings["bin"]["brightnessctl"] = str(brightness)
     (output / "settings.json").write_text(json.dumps(settings))
     env["QS_PREVIEW"] = "0"
+    # Exercise the real state-path fallback, including an existing Quickshell
+    # config alias like the one that made desktop preferences read-only.
+    env.pop("QS_STATE_DIR", None)
+    env["XDG_STATE_HOME"] = str(output / "data-state")
+    preference_dir = output / "data-state/quickshell-desktop"
+    preference_dir.mkdir(parents=True, mode=0o700)
+    aliases = output / "data-state/quickshell"
+    aliases.mkdir()
+    (aliases / "desktop").symlink_to(bundle, target_is_directory=True)
     env["DBUS_SYSTEM_BUS_ADDRESS"] = env["DBUS_SESSION_BUS_ADDRESS"]
     env["CLIPHIST_DB_PATH"] = str(output / "cache/cliphist/interaction-db")
     run(["swaymsg", "output", "HEADLESS-1", "resolution", "1920x1080"])
@@ -180,6 +227,89 @@ ShellRoot {
     control = button("Power & controls")
     assert not control["visualFocus"] and not control["selected"] and control["borderAlpha"] == 0, control
     capture("bar-after-click")
+
+    def key(name):
+        run(["wtype", "-s", "80", "-k", name])
+
+    def query(text):
+        # Allow the new virtual keyboard's focus event to reach Qt before
+        # sending modifiers, just as the other wtype calls do.
+        run(["wtype", "-s", "150", "-M", "ctrl", "-k", "l", "-m", "ctrl", "-s", "80", "-k", "BackSpace", "-d", "10", text])
+        wait(lambda: inspect()["query"] == text)
+
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
+    time.sleep(0.2)
+    capture("controls-home")
+    query("dnd")
+    wait(lambda: [r["id"] for r in inspect()["rows"]] == ["dnd"])
+    initial_dnd = inspect()["dnd"]
+    key("Return")
+    wait(lambda: inspect()["dnd"] != initial_dnd)
+    assert inspect()["selected"] == "dnd"
+    capture("controls-dnd")
+    key("Return")
+    wait(lambda: inspect()["dnd"] == initial_dnd)
+    saved_preferences = preference_dir / "state.json"
+    wait(lambda: saved_preferences.exists() and json.loads(saved_preferences.read_text())["dnd"] == initial_dnd)
+    assert not (bundle / "state.json").exists(), "Preferences were written into the configuration bundle"
+
+    query("brightness")
+    wait(lambda: bool(inspect()["rows"]) and inspect()["rows"][0]["value"] == "50%")
+    key("Right")
+    key("Right")
+    key("Left")
+    wait(lambda: bool(inspect()["rows"]) and inspect()["rows"][0]["value"] == "55%")
+    assert inspect()["selected"] == "brightness"
+    capture("controls-brightness")
+
+    query("wifi")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "wifi")
+    key("Escape")
+    wait(lambda: inspect()["menu"] == "controls")
+    assert inspect()["query"] == "wifi" and inspect()["selected"] == "wifi"
+
+    query("calendar")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "calendar")
+    month = inspect()["calendarMonth"]
+    key("Right")
+    wait(lambda: inspect()["calendarMonth"] == (month + 1) % 12)
+    key("Home")
+    wait(lambda: inspect()["calendarMonth"] == month)
+    key("Escape")
+    wait(lambda: inspect()["menu"] == "controls")
+
+    qa("addNotification")
+    query("notification history")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "notifications" and inspect()["dndFocused"])
+    key("Return")
+    wait(lambda: inspect()["dnd"] != initial_dnd)
+    key("Return")
+    wait(lambda: inspect()["dnd"] == initial_dnd)
+    key("Tab")
+    key("Return")  # Clear history, via the actual focused button.
+    wait(lambda: inspect()["notificationCount"] == 0)
+    capture("controls-notification-keyboard")
+    key("Escape")
+    wait(lambda: inspect()["menu"] == "controls")
+
+    query("restart")
+    key("Return")
+    wait(lambda: inspect()["confirmation"] == "reboot")
+    assert inspect()["cancelFocused"] and inspect()["cancelVisualFocus"] and inspect()["requestedPower"] == ""
+    capture("controls-confirmation")
+    key("Return")  # A second Enter defaults to Cancel, never to reboot.
+    wait(lambda: inspect()["confirmation"] == "")
+    assert inspect()["requestedPower"] == ""
+    key("Return")
+    wait(lambda: inspect()["confirmation"] == "reboot")
+    key("Tab")
+    key("Return")  # The fixture records the signal; it cannot power off the host.
+    wait(lambda: inspect()["requestedPower"] == "reboot" and inspect()["menu"] == "")
+    print("Controls search, live DND/brightness, submenu history, calendar, notification focus and power confirmation passed")
 
     # Decode actual text and PNG history entries through the UI and packaged helper.
     payloads = [("text", "  Clipboard 中文 regression\nsecond line  \n".encode()),
@@ -243,7 +373,8 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    for menu in ["apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "power", "powerProfiles", "notifications", "calendar", "status"]:
+    menu_names = ["controls", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "power", "powerProfiles", "notifications", "calendar", "status"]
+    for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
         run(["grim", str(output / (menu + ".png"))])
@@ -276,8 +407,15 @@ try:
     shell.terminate()
     shell.wait(timeout=5)
     interaction_checks()
-    (output / "result.json").write_text(json.dumps({"passed": True, "menus": 14, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
-    print("14 menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
+    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
+    print(f"{len(menu_names)} menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
+except Exception:
+    fixture_path = output / "interactions.qml"
+    if fixture_path.exists():
+        diagnostic = run(["quickshell", "ipc", "--path", str(fixture_path), "call", "qa", "inspect"], check=False)
+        print("Interaction state at failure:", diagnostic.stdout, flush=True)
+        run(["grim", str(output / "failure.png")], check=False)
+    raise
 finally:
     for process in reversed(processes):
         if process.poll() is None:

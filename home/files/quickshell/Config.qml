@@ -13,7 +13,7 @@ Singleton {
                                                                                      "XDG_STATE_HOME")
                                                                                  || Quickshell.env("HOME")
                                                                                  + "/.local/state")
-                                                                                + "/quickshell/desktop")
+                                                                                + "/quickshell-desktop")
     readonly property var data: Logic.parseJson(file.text(), {}) || ({})
     readonly property bool valid: !!(data.theme && data.bin && data.paths && data.features)
     readonly property var theme: data.theme || ({

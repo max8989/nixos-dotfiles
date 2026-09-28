@@ -11,9 +11,30 @@ ColumnLayout {
     function move(delta) {
         shown = new Date(shown.getFullYear(), shown.getMonth() + delta, 1);
     }
+    function focusDefault() {
+        previousMonth.forceActiveFocus(Qt.TabFocusReason);
+    }
+    Shortcut {
+        sequence: "Left"
+        enabled: root.visible
+        onActivated: root.move(-1)
+    }
+    Shortcut {
+        sequence: "Right"
+        enabled: root.visible
+        onActivated: root.move(1)
+    }
+    Shortcut {
+        sequence: "Home"
+        enabled: root.visible
+        onActivated: root.shown = new Date()
+    }
     RowLayout {
         Chip {
+            id: previousMonth
+            objectName: "calendarPrevious"
             text: "‹"
+            Accessible.name: "Previous month"
             onClicked: root.move(-1)
         }
         Text {
@@ -30,6 +51,7 @@ ColumnLayout {
         }
         Chip {
             text: "›"
+            Accessible.name: "Next month"
             onClicked: root.move(1)
         }
     }

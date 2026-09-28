@@ -24,6 +24,7 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(terminal .. " -e " .. fileManager), {
 hl.bind("CTRL + ALT + Delete", hl.dsp.exec_cmd(terminal .. " -e btop"))
 
 -- Quickshell menus
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(shell.controls), { description = "desktop controls" })
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind("ALT + space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(shell.files))

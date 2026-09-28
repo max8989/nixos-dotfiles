@@ -7,6 +7,7 @@ import "../services"
 Glass {
     id: root
     required property var entry
+    signal focusRequested(var item)
     implicitHeight: content.implicitHeight + 24
     ColumnLayout {
         id: content
@@ -29,6 +30,8 @@ Glass {
             }
             Chip {
                 text: "×"
+                Accessible.name: "Dismiss notification"
+                onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
                 tip: "Dismiss"
                 onClicked: Notifications.dismiss(root.entry.id)
             }
@@ -69,6 +72,7 @@ Glass {
                 model: root.entry.notification ? root.entry.notification.actions : []
                 Chip {
                     required property var modelData
+                    onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
                     text: modelData.text
                     onClicked: Notifications.invoke(root.entry.id, modelData)
                 }

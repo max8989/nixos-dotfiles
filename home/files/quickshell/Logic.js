@@ -56,7 +56,16 @@ function clipboardEntries(text) {
 }
 function search(items, query) {
     var tokens = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
-    return items.filter(function(item) { var text = (item.title+" "+(item.subtitle||"")).toLocaleLowerCase(); return tokens.every(function(token) { return text.indexOf(token) !== -1; }); });
+    if (!tokens.length) return items;
+    var phrase = tokens.join(" ");
+    return items.map(function(item, index) {
+        var title = item.title.toLocaleLowerCase();
+        var text = title + " " + (item.subtitle || "").toLocaleLowerCase() + " " + (item.keywords || "").toLocaleLowerCase();
+        var score = title === phrase ? 0 : title.indexOf(phrase) === 0 ? 1 : tokens.every(function(token) { return title.indexOf(token) !== -1; }) ? 2 : 3;
+        return {item: item, index: index, score: score, matches: tokens.every(function(token) { return text.indexOf(token) !== -1; })};
+    }).filter(function(match) { return match.matches; })
+        .sort(function(a, b) { return a.score - b.score || a.index - b.index; })
+        .map(function(match) { return match.item; });
 }
 
 function batteryAlert(previous, band) {

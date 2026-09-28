@@ -1,9 +1,32 @@
 # Handoff — custom Quickshell desktop
 
 **Updated:** 2026-09-28
-**Status:** The tooltip, interaction and clipboard follow-up bundle is installed
-on `thinkpad-x1-carbon-g12`. The user service is active; all changed QML/JS files
-match the installed bundle (verified after the 10:37 EDT service restart).
+**Status:** Desktop controls are active on `thinkpad-x1-carbon-g12`. The running
+bundle matches the tested source, Super+M is registered, and the active NixOS
+system generation matches the completed build. The writable preference directory
+and saved state file were verified live (0700 and 0600 respectively).
+
+## Desktop controls
+
+- Super+M opens the searchable controls menu. Exact action titles rank ahead
+  of matches in descriptions; aliases include `dnd`, `wifi` and `restart`.
+- Sound, microphone, brightness, night light, DND, connectivity, power profiles,
+  media, workspaces, calendar, notifications, reminders, clipboard, capture,
+  source settings and tray application menus share the existing shell services.
+- Up/Down selects, Enter opens or toggles, and Left/Right adjusts levels.
+  Escape/Alt+Left goes back and restores the parent query/selection. Ctrl+L
+  selects the search text. Calendar and notification actions have keyboard focus.
+- Logout, reboot, shutdown and hibernate focus Cancel first and require an
+  explicit confirmation. The isolated fixture records the power signal without
+  taking any real session action.
+- Preferences now use `$XDG_STATE_HOME/quickshell-desktop` with mode 0700.
+  The former `quickshell/desktop` path was a config alias into the Nix store,
+  causing saves to fail. The UI regression fixture reproduces that alias and
+  verifies that DND saves outside it.
+- Validation: both Nix checks pass; the private Sway harness passes 21 menus,
+  live DND/backlight state, ranked search, submenu history, calendar, notification
+  focus, visible confirmation focus, clipboard regressions and monitor layouts.
+  Latest results: `/tmp/quickshell-controls-persistence-qa/result.json`.
 
 ## Decisions and scope
 
@@ -92,7 +115,7 @@ Launch and IPC both select `--config desktop`. Quickshell 0.3.1 distinguishes a
 symlink path from its store target; mixing `--path <store-bundle>` at launch with
 `--config desktop` for IPC does not work. The isolated UI harness covers this.
 
-Preferences live under `$XDG_STATE_HOME/quickshell/desktop` (falling back to
+Preferences live under `$XDG_STATE_HOME/quickshell-desktop` (falling back to
 `~/.local/state`), never in the Nix store. Development previews use separate state
 and do not own notifications, tray, polkit or session locking. Hardware and
 session actions are disabled in preview.

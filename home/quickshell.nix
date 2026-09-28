@@ -44,6 +44,9 @@ let
     timeZone = osConfig.time.timeZone;
     paths = {
       home = config.home.homeDirectory;
+      dotfiles = "${config.home.homeDirectory}/repos/nixos-dotfiles";
+      screenshot = "${config.xdg.configHome}/scripts/screenshot.sh";
+      screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
       todo = "${config.home.homeDirectory}/Documents/obsidian/Templates/TODO.md";
       vault = "obsidian";
       todoNote = "Templates/TODO";
@@ -66,6 +69,8 @@ let
       notifySend = "${pkgs.libnotify}/bin/notify-send";
       nmtui = "${pkgs.networkmanager}/bin/nmtui";
       bluetooth = "${pkgs.blueman}/bin/blueman-manager";
+      editor = lib.getExe pkgs.zed-editor;
+      inputMethod = "${pkgs.fcitx5}/bin/fcitx5-remote";
       curl = lib.getExe pkgs.curl;
       grim = lib.getExe pkgs.grim;
       remove = "${pkgs.coreutils}/bin/rm";
@@ -139,7 +144,9 @@ in
         "TZ=${osConfig.time.timeZone}"
         "QS_SETTINGS=${bundle}/generated.json"
       ];
-      StateDirectory = "quickshell/desktop";
+      # Keep application preferences outside Quickshell's config-name aliases.
+      StateDirectory = "quickshell-desktop";
+      StateDirectoryMode = "0700";
       RestartSec = 2;
       UMask = "0077";
       StandardOutput = "journal";

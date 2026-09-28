@@ -9,6 +9,7 @@ import Quickshell.Hyprland
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
+import Quickshell.Services.SystemTray
 import ".."
 import "../widgets"
 import "../services"
@@ -33,7 +34,38 @@ PanelWindow {
     readonly property bool fromBar: Runtime.menuAnchorX >= 0
     color: fromBar ? "transparent" : "#44000000"
     property var rows: []
-    property var filtered: Logic.search(rows, search.text)
+    readonly property var pageRows: {
+        switch (Runtime.menu) {
+        case "controls": return search.text.trim() ? controls.all : controls.home;
+        case "display": return controls.display;
+        case "desktop": return controls.desktop;
+        case "capture": return controls.capture;
+        case "settings": return controls.settings;
+        case "workspaces": return controls.workspaces;
+        case "audio": return controls.audio.slice(0, 2).concat(rows);
+        case "power": return controls.power.concat(controls.display.slice(1, 4), [controls.desktop[3]]);
+        case "tray": return root.trayRows();
+        case "trayMenu": return trayOpener.children.values.filter(e => !e.isSeparator).map(e => ({
+            id: e.text, title: e.text.replace(/&(.)/g, "$1"), subtitle: e.enabled ? "" : "Unavailable",
+            icon: "", submenu: e.hasChildren, value: e.checkState === Qt.Checked ? "✓" : "",
+            action: () => {
+                if (!e.enabled || Config.preview)
+                    return;
+                if (e.hasChildren)
+                    root.openTrayMenu(e, e.text.replace(/&(.)/g, "$1"));
+                else {
+                    e.triggered();
+                    Runtime.closeMenu();
+                }
+            }
+        }));
+        default: return rows;
+        }
+    }
+    property var filtered: Logic.search(pageRows, search.text)
+    property string selectionKey: ""
+    property var trayHandle: null
+    property string trayTitle: ""
     property string passwordPrompt: ""
     property var pendingWifi: null
     property string confirmation: ""
@@ -47,6 +79,14 @@ PanelWindow {
     [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
     readonly property string heading: ({
+                                           controls: "Desktop controls",
+                                           display: "Display",
+                                           desktop: "Desktop",
+                                           capture: "Capture",
+                                           settings: "Settings and shortcuts",
+                                           workspaces: "Workspaces",
+                                           tray: "System tray",
+                                           trayMenu: trayTitle,
                                            apps: "Applications",
                                            clipboard: "Clipboard",
                                            files: "Files",
@@ -69,6 +109,109 @@ PanelWindow {
             subtitle: subtitle || "",
             icon: icon || ""
         };
+    }
+    ControlActions {
+        id: controls
+        onOpenMenu: name => root.openPage(name)
+        onPowerRequested: action => root.requestPower(action)
+    }
+    QsMenuOpener {
+        id: trayOpener
+        menu: root.visible && Runtime.menu === "trayMenu" ? root.trayHandle : null
+    }
+    // Keep parent menus acquired while browsing their descendants.
+    Instantiator {
+        model: root.visible ? Runtime.menuHistory.filter(entry => entry.menu === "trayMenu" && entry.trayHandle).map(entry => entry.trayHandle) : []
+        delegate: QsMenuOpener {
+            required property var modelData
+            menu: modelData
+        }
+    }
+    function trayRows() {
+        if (Config.preview)
+            return [];
+        var rows = [];
+        SystemTray.items.values.forEach(item => {
+            var title = item.title || item.tooltipTitle || item.id || "Application";
+            if (!item.onlyMenu)
+                rows.push(row("Open " + title, () => { item.activate(); Runtime.closeMenu(); }, "Tray application"));
+            if (item.hasMenu)
+                rows.push(row(title + " menu", () => openTrayMenu(item.menu, title), "Browse application actions"));
+        });
+        return rows;
+    }
+    function openTrayMenu(handle, title) {
+        openPage("trayMenu");
+        trayHandle = handle;
+        trayTitle = title;
+    }
+    function openPage(name) {
+        Runtime.menuHistory = Runtime.menuHistory.concat([{
+            menu: Runtime.menu, query: search.text, index: list.currentIndex,
+            trayHandle: trayHandle, trayTitle: trayTitle
+        }]);
+        // A nested application menu keeps the same page name.
+        if (Runtime.menu === name) {
+            search.text = "";
+            selectionKey = "";
+            focusTimer.restart();
+        } else
+            Runtime.menu = name;
+    }
+    function back() {
+        var trail = Runtime.menuHistory;
+        if (!trail.length) {
+            Runtime.closeMenu();
+            return;
+        }
+        var previous = trail[trail.length - 1];
+        Runtime.menu = previous.menu;
+        trayHandle = previous.trayHandle;
+        trayTitle = previous.trayTitle;
+        // Acquire the parent before releasing its retained menu opener.
+        Runtime.menuHistory = trail.slice(0, -1);
+        search.text = previous.query;
+        selectIndex(previous.index);
+        focusTimer.restart();
+    }
+    function dismissOrBack() {
+        if (passwordPrompt) {
+            password.text = "";
+            passwordPrompt = "";
+            pendingWifi = null;
+            focusTimer.restart();
+        } else if (confirmation) {
+            confirmation = "";
+            focusTimer.restart();
+        } else
+            back();
+    }
+    function selectIndex(index) {
+        list.currentIndex = Math.max(0, Math.min(filtered.length - 1, index));
+        var item = filtered[list.currentIndex];
+        selectionKey = item ? item.id || item.title : "";
+        list.positionViewAtIndex(list.currentIndex, ListView.Contain);
+    }
+    function adjust(direction) {
+        var item = filtered[list.currentIndex];
+        if (!item?.adjust || confirmation || passwordPrompt)
+            return false;
+        item.adjust(direction);
+        focusTimer.restart();
+        return true;
+    }
+    function requestPower(action) {
+        if (Config.preview) {
+            Runtime.report("Power actions are disabled in preview");
+            return;
+        }
+        if (action === "lock" || action === "suspend") {
+            powerRequested(action);
+            Runtime.closeMenu();
+        } else {
+            confirmation = action;
+            cancelPower.forceActiveFocus(Qt.TabFocusReason);
+        }
     }
     function refresh() {
         var menu = Runtime.menu;
@@ -124,8 +267,6 @@ PanelWindow {
                                              => Audio.select(n), "Output"));
             items = items.concat(Audio.sources.map(n => row((n === Audio.source ? "✓ " : "") + n.description, (
                                                                 ) => Audio.select(n), "Input")));
-            items.push(row("Toggle output mute", () => Audio.mute(false)));
-            items.push(row("Toggle microphone mute", () => Audio.mute(true)));
         } else if (menu === "wifi") {
             items.push(row(Networking.wifiEnabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on", () => {
                 if (!Config.preview)
@@ -166,35 +307,6 @@ PanelWindow {
                                                                                                               PowerProfile.Balanced))];
             if (PowerProfiles.hasPerformanceProfile)
                 items.push(row("Performance", () => setProfile(PowerProfile.Performance)));
-        } else if (menu === "power") {
-            items = ["Lock", "Suspend", "Hibernate", "Logout", "Reboot", "Shutdown"].map(action => row(action,
-                                                                                                       () => {
-                                                                                                           if (Config.preview) {
-                                                                                                               Runtime.report(
-                                                                                                                           "Power actions are disabled in preview");
-                                                                                                               return;
-                                                                                                           }
-                                                                                                           if (action
-                                                                                                                   === "Lock"
-                                                                                                                   || action
-                                                                                                                   === "Suspend") {
-                                                                                                               root.powerRequested(
-                                                                                                                           action.toLowerCase(
-                                                                                                                               ));
-                                                                                                               Runtime.closeMenu(
-                                                                                                                           );
-                                                                                                           } else
-                                                                                                               root.confirmation
-                                                                                                                       = action.toLowerCase(
-                                                                                                                           );
-                                                                                                       }));
-            items.push(row("Night light: " + (Preferences.nightlight ? "on" : "off"), ()
-                           => Display.toggleNightlight()));
-            items.push(row("Presentation mode: " + (Runtime.presentation ? "on" : "off"), () => {
-                Runtime.presentation = !Runtime.presentation;
-                root.refresh();
-            }));
-            items.push(row("System status", () => Runtime.menu = "status"));
         } else if (menu === "status") {
             items = [row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "-e",
                                                                                        Config.bin.btop]),
@@ -207,10 +319,9 @@ PanelWindow {
                                                1) + " GiB"), row("Battery " + (Battery.present
                                                                                ? Battery.percent + "%" : "AC"),
                                                                  () => {}, Battery.band), row("Network", ()
-                                                                                              => Runtime.menu
-                                                                                                 = "wifi", Metrics.networkRate),
-                     row("Bluetooth", () => Runtime.menu = "bluetooth"), row("Audio and microphone", ()
-                                                                             => Runtime.menu = "audio"), row(
+                                                                                              => openPage("wifi"), Metrics.networkRate),
+                     row("Bluetooth", () => openPage("bluetooth")), row("Audio and microphone", ()
+                                                                             => openPage("audio")), row(
                          "Night light", () => Display.toggleNightlight(), Preferences.nightlight
                          ? Preferences.temperature + " K" : "Off")];
         }
@@ -246,9 +357,13 @@ PanelWindow {
         Runtime.closeMenu();
     }
     function activate() {
+        if (confirmation || passwordPrompt)
+            return;
         var item = filtered[list.currentIndex];
-        if (item)
+        if (item) {
             item.action();
+            focusTimer.restart();
+        }
     }
     function restoreClipboard(id) {
         if (Config.preview || clipboardBusy)
@@ -267,7 +382,10 @@ PanelWindow {
             }
         });
     }
-    onFilteredChanged: list.currentIndex = 0
+    onFilteredChanged: {
+        var index = filtered.findIndex(item => (item.id || item.title) === root.selectionKey);
+        list.currentIndex = Math.max(0, index);
+    }
     onWifiNetworksChanged: if (Runtime.menu === "wifi")
                                refresh()
     onBluetoothDevicesChanged: if (Runtime.menu === "bluetooth")
@@ -290,7 +408,14 @@ PanelWindow {
             root.pendingWifi = null;
             root.confirmation = "";
             password.text = "";
+            root.selectionKey = "";
             search.text = "";
+            if (Runtime.menu === "controls" || Runtime.menu === "display")
+                Display.refreshBrightness();
+            if (!Runtime.menu) {
+                root.trayHandle = null;
+                root.trayTitle = "";
+            }
             root.refresh();
             focusTimer.restart();
         }
@@ -436,19 +561,41 @@ PanelWindow {
         onTriggered: root.refresh()
     }
     Timer {
+        interval: 3000
+        repeat: true
+        running: root.visible && (Runtime.menu === "controls" || Runtime.menu === "display")
+        onTriggered: Display.refreshBrightness()
+    }
+    Timer {
         id: focusTimer
         interval: 40
         onTriggered: if (root.visible) {
-                         if (search.visible)
+                         if (root.confirmation)
+                             cancelPower.forceActiveFocus(Qt.TabFocusReason);
+                         else if (root.passwordPrompt)
+                             password.forceActiveFocus();
+                         else if (search.visible)
                              search.forceActiveFocus();
-                         else
-                             card.forceActiveFocus();
+                         else if (Runtime.menu === "notifications")
+                             dndButton.forceActiveFocus(Qt.TabFocusReason);
+                         else if (Runtime.menu === "calendar")
+                             calendar.focusDefault();
                      }
     }
     Shortcut {
         sequence: "Escape"
         enabled: root.visible
-        onActivated: Runtime.closeMenu()
+        onActivated: root.dismissOrBack()
+    }
+    Shortcut {
+        sequence: "Alt+Left"
+        enabled: root.visible && Runtime.menuHistory.length > 0
+        onActivated: root.dismissOrBack()
+    }
+    Shortcut {
+        sequence: "Ctrl+L"
+        enabled: root.visible && search.visible && search.enabled
+        onActivated: { search.forceActiveFocus(); search.selectAll(); }
     }
     MouseArea {
         anchors.fill: parent
@@ -472,6 +619,12 @@ PanelWindow {
             }
             spacing: 12
             RowLayout {
+                Chip {
+                    text: "‹"
+                    visible: Runtime.menuHistory.length > 0
+                    Accessible.name: "Back"
+                    onClicked: root.dismissOrBack()
+                }
                 Text {
                     text: root.heading
                     font.family: Config.theme.uiFont
@@ -492,10 +645,12 @@ PanelWindow {
             }
             TextField {
                 id: search
+                objectName: "menuSearch"
                 visible: Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
+                enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 placeholderTextColor: Config.theme.dim
-                placeholderText: Runtime.menu === "files" ? root.folderPath : "Search…"
+                placeholderText: Runtime.menu === "files" ? root.folderPath : Runtime.menu === "controls" ? "Search controls… volume, dnd, bluetooth" : "Search…"
                 color: Config.theme.text
                 font.pixelSize: 16
                 selectByMouse: true
@@ -505,10 +660,11 @@ PanelWindow {
                     border.color: search.activeFocus ? Config.theme.accent : Config.theme.border
                 }
                 onAccepted: root.activate()
-                Keys.onEscapePressed: Runtime.closeMenu()
-                Keys.onDownPressed: list.currentIndex = Math.min(root.filtered.length - 1, list.currentIndex
-                                                                 + 1)
-                Keys.onUpPressed: list.currentIndex = Math.max(0, list.currentIndex - 1)
+                onTextEdited: { root.selectionKey = ""; root.selectIndex(0); }
+                Keys.onDownPressed: root.selectIndex(list.currentIndex + 1)
+                Keys.onUpPressed: root.selectIndex(list.currentIndex - 1)
+                Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
+                Keys.onRightPressed: event => event.accepted = root.adjust(1)
             }
             Text {
                 visible: Runtime.message !== ""
@@ -535,6 +691,7 @@ PanelWindow {
                 }
                 TextField {
                     id: password
+                    objectName: "wifiPassword"
                     Layout.fillWidth: true
                     echoMode: TextInput.Password
                     color: Config.theme.text
@@ -547,12 +704,7 @@ PanelWindow {
                             root.pendingWifi.connectWithPsk(text);
                         text = "";
                         root.passwordPrompt = "";
-                    }
-                    Keys.onEscapePressed: {
-                        text = "";
-                        root.passwordPrompt = "";
-                        root.pendingWifi = null;
-                        search.forceActiveFocus();
+                        focusTimer.restart();
                     }
                 }
                 Chip {
@@ -568,10 +720,13 @@ PanelWindow {
                     Layout.fillWidth: true
                 }
                 Chip {
+                    id: cancelPower
+                    objectName: "cancelPower"
                     text: "Cancel"
-                    onClicked: root.confirmation = ""
+                    onClicked: root.dismissOrBack()
                 }
                 Chip {
+                    objectName: "confirmPower"
                     text: "Confirm"
                     onClicked: {
                         root.powerRequested(root.confirmation);
@@ -582,6 +737,8 @@ PanelWindow {
             RowLayout {
                 visible: Runtime.menu === "notifications"
                 Chip {
+                    id: dndButton
+                    objectName: "notificationDnd"
                     text: Preferences.dnd ? "DND on" : "DND off"
                     highlighted: Preferences.dnd
                     onClicked: Preferences.dnd = !Preferences.dnd
@@ -593,10 +750,18 @@ PanelWindow {
             }
             ListView {
                 id: list
+                objectName: "menuList"
                 visible: Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
+                enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                opacity: enabled ? 1 : 0.4
                 clip: true
+                keyNavigationEnabled: true
+                Keys.onReturnPressed: root.activate()
+                Keys.onEnterPressed: root.activate()
+                Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
+                Keys.onRightPressed: event => event.accepted = root.adjust(1)
                 model: root.filtered
                 spacing: 4
                 ScrollBar.vertical: ScrollBar {}
@@ -607,6 +772,7 @@ PanelWindow {
                     width: list.width
                     height: subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
+                    focusPolicy: Qt.NoFocus
                     background: Rectangle {
                         radius: 9
                         color: rowDelegate.highlighted || rowDelegate.hovered ? Config.theme.surface :
@@ -646,24 +812,33 @@ PanelWindow {
                                 Layout.fillWidth: true
                             }
                         }
+                        Text {
+                            text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
+                            color: Config.theme.accent
+                            font.family: Config.theme.uiFont
+                            font.pixelSize: 14
+                            textFormat: Text.PlainText
+                        }
                     }
-                    onClicked: modelData.action()
+                    onClicked: { root.selectIndex(index); root.activate(); }
                     onHoveredChanged: if (hovered)
-                                          list.currentIndex = index
+                                          root.selectIndex(index)
                 }
                 Label {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: search.text ? "No matches" : "Nothing here yet"
+                    text: search.text ? "No matches" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
                     color: Config.theme.dim
                 }
             }
             ScrollView {
+                id: notificationScroll
                 visible: Runtime.menu === "notifications"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
                 Column {
+                    id: notificationColumn
                     width: parent.width
                     spacing: 8
                     Repeater {
@@ -672,6 +847,16 @@ PanelWindow {
                             required property var modelData
                             width: parent.width
                             entry: modelData
+                            onFocusRequested: item => {
+                                var position = item.mapToItem(notificationColumn, 0, 0).y;
+                                var flickable = notificationScroll.contentItem as Flickable;
+                                if (!flickable)
+                                    return;
+                                if (position < flickable.contentY)
+                                    flickable.contentY = position;
+                                else if (position + item.height > flickable.contentY + flickable.height)
+                                    flickable.contentY = position + item.height - flickable.height;
+                            }
                         }
                     }
                     Text {
@@ -682,9 +867,22 @@ PanelWindow {
                 }
             }
             CalendarPanel {
+                id: calendar
+                objectName: "menuCalendar"
                 visible: Runtime.menu === "calendar"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+            }
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Config.theme.dim
+                font.family: Config.theme.uiFont
+                font.pixelSize: 12
+                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel"
+                    : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close"
+                    : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close"
+                    : "↑ ↓  Select    Enter  Open / toggle    ← →  Adjust    Esc  Back / close"
             }
         }
     }

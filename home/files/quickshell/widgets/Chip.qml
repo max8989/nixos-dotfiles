@@ -17,6 +17,8 @@ Button {
     hoverEnabled: true
     // Mouse clicks should not leave the keyboard focus ring behind.
     focusPolicy: Qt.TabFocus
+    Keys.onReturnPressed: clicked()
+    Keys.onEnterPressed: clicked()
     padding: 7
     onPressed: tipDismissed = true
     onHoveredChanged: if (!hovered)

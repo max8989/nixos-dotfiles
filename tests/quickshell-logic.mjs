@@ -25,6 +25,11 @@ assert.equal(context.restoreState([]).nightlight,false);
 assert.equal(context.restoreState("broken").temperature,4000);
 assert.deepEqual(plain(context.parseJson("broken",{})),{});
 assert.equal(context.search([{title:"中文 test",subtitle:"note"}],"中文 note").length,1);
+assert.equal(context.search([{title:"Do Not Disturb",keywords:"dnd quiet notifications"}],"DND").length,1);
+assert.equal(context.search([{title:"Volume",subtitle:"Speakers",keywords:"sound output"}],"speaker output").length,1);
+const controls = [{title:"Do Not Disturb",subtitle:"Silence notification popups; keep history"}, {title:"Notification history"}, {title:"Clear notifications",subtitle:"Dismiss saved history"}];
+assert.equal(context.search(controls,"notification history")[0].title,"Notification history");
+assert.deepEqual(plain(context.search(controls,"")),controls);
 assert.deepEqual(plain(context.clipboardEntries("17\t  keep spaces  \n16\t[[ binary data 4 KiB png 20x20 ]]\ninvalid\nX\tbad key\n15\t中文\twith tab\n")), [
     {id:"17", title:"  keep spaces  ", image:false},
     {id:"16", title:"[[ binary data 4 KiB png 20x20 ]]", image:true},

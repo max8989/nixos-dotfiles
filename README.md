@@ -413,7 +413,7 @@ after any input update and fix anything that has since moved):
 The immutable bundle contains QML and one Nix-generated JSON. Palette, layout,
 user paths and executable paths belong in `home/quickshell.nix`; QML owns the
 views and live service state. Preferences live in
-`$XDG_STATE_HOME/quickshell/desktop/`. The retired g7 host and GTK shell configs
+`$XDG_STATE_HOME/quickshell-desktop/`. The retired g7 host and GTK shell configs
 have been removed; the homeserver keeps its headless profile.
 
 ```sh
@@ -447,11 +447,27 @@ the compositor's fail-closed session lock. Test passwords exist only in the VM.
 Inspect actions with `quickshell ipc --config desktop show`. Examples:
 
 ```sh
+quickshell ipc --config desktop call menus toggle controls
 quickshell ipc --config desktop call menus toggle audio
 quickshell ipc --config desktop call display nightlight
 quickshell ipc --config desktop call session lock
 journalctl --user -u quickshell -e
 ```
+
+**Super+M** opens Desktop controls. Type to search across actions (for example
+`volume`, `dnd`, `wifi` or `restart`), use Up/Down to select, and Enter to open
+or toggle. Left/Right adjusts volume, microphone level, brightness and night
+light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
+returns to the previous menu, restoring its search and selection; Escape at
+the root closes it. Ctrl+L focuses and selects the search text.
+
+The menu also includes calendar, reminders, workspaces, media, clipboard,
+capture, system status and tray application menus. Tab/Shift+Tab and
+Enter/Space operate notification actions and confirmations. Calendar uses
+Left/Right for months and Home for today. Restart, shutdown, logout and
+hibernate require confirmation, with Cancel focused initially. Settings
+entries open source files under `settings.paths.dotfiles` (configured in
+`home/quickshell.nix`); Nix-managed changes need a rebuild.
 
 Do not restart or deploy the shell while locked. The recovery marker is scoped
 to the compositor instance, and Hyprland is configured to allow lock restoration

@@ -8,6 +8,7 @@ Singleton {
     id: root
     property string message: ""
     property string menu: ""
+    property var menuHistory: []
     property var menuScreen: null
     property real menuAnchorX: -1
     property bool locked: false
@@ -37,6 +38,7 @@ Singleton {
             return;
         menuScreen = screen || null;
         menuAnchorX = typeof anchorX === "number" ? anchorX : -1;
+        menuHistory = [];
         menu = menu === name ? "" : name;
         message = "";
     }
@@ -56,6 +58,7 @@ Singleton {
         });
     }
     function closeMenu() {
+        menuHistory = [];
         menu = "";
         message = "";
     }
