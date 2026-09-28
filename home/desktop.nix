@@ -1,245 +1,16 @@
-{ pkgs, ... }:
-let
-  font = "CaskaydiaCove Nerd Font";
-in
 {
-  # Daemons without an HM service module (launched from Hyprland exec-once) +
-  # the polkit agent. hyprlock/hypridle/hyprpaper packages come from their HM
-  # modules below.
-  home.packages = with pkgs; [
-    swayosd # `swayosd-server` / `swayosd-client`
-    wlogout
-    polkit_gnome
-  ];
-
-  # SwayNC notification daemon — systemd-managed (NOT started from the
-  # hyprland.start hook: swaync 0.12.x ships a D-Bus-activated user unit, so a
-  # hook-started instance races it at login and one of the two always fails).
-  # This module's unit shadows the packaged one and owns
-  # org.freedesktop.Notifications; empty `settings` writes `{}` = upstream
-  # defaults, `style` keeps the CSS blob in home/files/ per the two-tier rule.
-  services.swaync = {
-    enable = true;
-    style = ./files/swaync/style.css;
-  };
-
-  #########################################################################
-  ## Hyprlock — neon glass locker (blurred screenshot + cyan/green accents)
-  #########################################################################
-  programs.hyprlock = {
-    enable = true;
-    settings = {
-      general = {
-        no_fade_in = false;
-        no_fade_out = false;
-        hide_cursor = false;
-        grace = 0;
-        disable_loading_bar = true;
-      };
-
-      background = [
-        {
-          monitor = "";
-          path = "screenshot"; # frosted-glass: blur whatever was on screen
-          color = "rgba(10, 10, 18, 1.0)"; # fallback
-          blur_passes = 3;
-          blur_size = 8;
-          brightness = 0.6;
-          vibrancy = 0.2;
-        }
-      ];
-
-      # Glass center panel
-      shape = [
-        {
-          monitor = "";
-          size = "26%, 34%";
-          color = "rgba(10, 10, 18, 0.75)";
-          rounding = 18;
-          border_size = 2;
-          border_color = "rgba(3366ffee) rgba(33ccffee) 45deg"; # matches window borders
-          rotate = 0;
-          position = "0%, 0%";
-          halign = "center";
-          valign = "center";
-          shadow_passes = 2;
-          shadow_size = 6;
-          shadow_color = "rgba(0, 0, 0, 0.6)";
-        }
-      ];
-
-      # Album art (below the now-playing line) — the script prints a
-      # transparent placeholder when nothing is playing, hiding the widget.
-      image = [
-        {
-          monitor = "";
-          path = "~/.config/hypr/assets/transparent.png";
-          size = 64;
-          rounding = 12;
-          border_size = 0;
-          reload_time = 5;
-          reload_cmd = "~/.config/scripts/lockscreen-albumart.sh";
-          position = "0%, -6.5%";
-          halign = "center";
-          valign = "top";
-          shadow_passes = 2;
-          shadow_size = 4;
-          shadow_color = "rgba(0, 0, 0, 0.7)";
-        }
-      ];
-
-      input-field = [
-        {
-          monitor = "";
-          size = "21%, 5.5%";
-          outline_thickness = 2;
-          dots_size = 0.3;
-          dots_spacing = 0.3;
-          dots_center = true;
-          outer_color = "rgba(3366ffee) rgba(33ccffee) 45deg"; # matches window borders
-          inner_color = "rgba(16, 18, 28, 0.9)";
-          font_color = "rgb(d8f0ff)";
-          fade_on_empty = false;
-          placeholder_text = ''<span foreground="##66788c">請輸入密碼</span>'';
-          hide_input = true;
-          check_color = "rgb(00ff99)"; # neon green
-          fail_color = "rgb(ff3366)"; # neon magenta-red
-          fail_text = "<b>驗證失敗</b>";
-          capslock_color = "rgb(ffcc66)"; # neon amber
-          position = "0%, -4%";
-          halign = "center";
-          valign = "center";
-          rounding = 12;
-          font_size = 16;
-        }
-      ];
-
-      label = [
-        # Phrase of the day — Traditional Chinese, rendered vertically
-        # (one character per line, classical style) on the left side.
-        {
-          monitor = "";
-          text = ''cmd[update:3600000] sed -n "$(($(date +%j) % $(wc -l < ~/.config/hypr/phrases_zh.txt) + 1))p" ~/.config/hypr/phrases_zh.txt | LC_ALL=C.UTF-8 grep -o .'';
-          color = "rgb(d8f0ff)";
-          font_size = 26;
-          font_family = font;
-          text_align = "center";
-          position = "5%, 0%";
-          halign = "left";
-          valign = "center";
-          shadow_passes = 2;
-          shadow_size = 4;
-          shadow_color = "rgba(0, 0, 0, 0.85)";
-        }
-        # Time
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo "$(date +"%H:%M:%S")"'';
-          color = "rgb(33ccff)"; # neon cyan clock
-          font_size = 64;
-          font_family = "${font} Bold";
-          position = "0%, 7%";
-          halign = "center";
-          valign = "center";
-          shadow_passes = 2;
-          shadow_size = 4;
-          shadow_color = "rgba(0, 0, 0, 0.6)";
-        }
-        # Date (Chinese)
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo "$(date +"%Y年%m月%d日") $(case $(date +%u) in 1) echo "星期一";; 2) echo "星期二";; 3) echo "星期三";; 4) echo "星期四";; 5) echo "星期五";; 6) echo "星期六";; 7) echo "星期日";; esac)"'';
-          color = "rgb(d8f0ff)";
-          font_size = 18;
-          font_family = font;
-          position = "0%, 2%";
-          halign = "center";
-          valign = "center";
-        }
-        # User@host
-        {
-          monitor = "";
-          text = ''cmd[update:0] echo "$USER@$(uname -n)"'';
-          color = "rgb(d8f0ff)";
-          font_size = 18;
-          font_family = font;
-          position = "0%, -10%";
-          halign = "center";
-          valign = "center";
-        }
-        # System status (top-left)
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo "  $(uname -n) | $(uname -r)  "'';
-          color = "rgb(d8f0ff)";
-          font_size = 16;
-          font_family = font;
-          position = "1%, -3%";
-          halign = "left";
-          valign = "top";
-        }
-        # Now playing (top-center)
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo "$(~/.config/scripts/whatsong.sh)"'';
-          color = "rgb(d8f0ff)";
-          font_size = 16;
-          font_family = font;
-          position = "0%, -3%";
-          halign = "center";
-          valign = "top";
-        }
-        # Obsidian todos (right side) — lockscreen-todos.sh reads the vault's
-        # Templates/TODO.md and emits Pango markup, capped/truncated so the
-        # right-anchored block can't grow into the center panel.
-        {
-          monitor = "";
-          text = "cmd[update:60000] ~/.config/scripts/lockscreen-todos.sh";
-          color = "rgb(d8f0ff)";
-          font_size = 13;
-          font_family = font;
-          text_align = "left";
-          position = "-3%, 0%";
-          halign = "right";
-          valign = "center";
-          shadow_passes = 2;
-          shadow_size = 4;
-          shadow_color = "rgba(0, 0, 0, 0.85)";
-        }
-        # Battery + memory (top-right)
-        {
-          monitor = "";
-          text = ''cmd[update:30000] echo "  電池: $(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null || echo 'AC')% | 記憶體: $(free -h | awk '/^Mem:/ {print $3 "/" $2}')  "'';
-          color = "rgb(d8f0ff)";
-          font_size = 16;
-          font_family = font;
-          position = "-1%, -3%";
-          halign = "right";
-          valign = "top";
-        }
-        # Weather (top-right, under battery/memory) — cached wttr.in, zh-TW
-        {
-          monitor = "";
-          text = "cmd[update:900000] ~/.config/scripts/lockscreen-weather.sh";
-          color = "rgb(d8f0ff)";
-          font_size = 14;
-          font_family = font;
-          position = "-1%, -6%";
-          halign = "right";
-          valign = "top";
-        }
-      ];
-    };
-  };
-
-  #########################################################################
-  ## Hypridle — idle daemon (HM systemd user service)
-  #########################################################################
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
   services.hypridle = {
     enable = true;
     settings = {
       general = {
-        lock_cmd = "pidof hyprlock || hyprlock";
+        lock_cmd = "${lib.getExe pkgs.quickshell} ipc --config desktop call session lock";
+        inhibit_sleep = 3;
         before_sleep_cmd = "loginctl lock-session";
         after_sleep_cmd = "hyprctl dispatch dpms on";
       };
@@ -276,9 +47,9 @@ in
   ##
   ## The daemon itself is a no-op at rest: the single profile below is
   ## `identity = true`, so nothing is tinted until something asks it to be.
-  ## Control is manual, from waybar's custom/nightlight module, which talks to
+  ## Control is manual, from Quickshell, which talks to
   ## this daemon over hyprctl IPC (`hyprctl hyprsunset temperature 4000` /
-  ## `hyprctl hyprsunset identity`) — see files/waybar/scripts/nightlight.sh.
+  ## `hyprctl hyprsunset identity`) — see quickshell/services/Display.qml.
   ## The daemon must be running for those IPC calls to land at all.
   ##
   ## To make it warm up on a schedule instead, add a second profile — profiles
@@ -363,40 +134,15 @@ in
   ##
   ## Talks to the system udisks2 service enabled in hosts/common.nix and mounts
   ## drives as they are plugged in, under /run/media/$USER/<label>. `tray` puts
-  ## an eject/unmount menu in waybar's tray module — it is a StatusNotifierItem,
-  ## so it needs waybar running; the unit already Requires/After tray.target,
-  ## which HM links because waybar is WantedBy it.
+  ## an eject/unmount menu in Quickshell’s tray — it is a StatusNotifierItem,
+  ## so it needs Quickshell running; the unit already Requires/After tray.target,
+  ## which HM links because Quickshell is WantedBy it.
   #########################################################################
   services.udiskie = {
     enable = true;
     automount = true;
-    notify = true; # swaync shows the "mounted at …" pop-up
+    notify = true; # Quickshell shows the "mounted at …" pop-up
     tray = "auto"; # icon appears only while a removable device is present
-  };
-
-  #########################################################################
-  ## Wofi — app launcher (config inlined; CSS carried as in-repo files)
-  #########################################################################
-  programs.wofi = {
-    enable = true;
-    settings = {
-      width = 1200;
-      height = 600;
-      location = "center";
-      show = "drun";
-      prompt = "Search...";
-      filter_rate = 100;
-      allow_markup = true;
-      no_actions = true;
-      halign = "fill";
-      orientation = "vertical";
-      content_halign = "fill";
-      insensitive = true;
-      allow_images = true;
-      image_size = 40;
-      gtk_dark = true;
-    };
-    style = builtins.readFile ./files/wofi/style.css;
   };
 
   #########################################################################
@@ -456,20 +202,6 @@ in
   ## files live in the flake and are deployed declaratively.
   #########################################################################
   xdg.configFile = {
-    # Hyprlock assets + Chinese phrases (referenced by hyprlock.conf above).
-    "hypr/assets".source = ./files/hypr/assets;
-    "hypr/phrases_zh.txt".source = ./files/hypr/phrases_zh.txt;
-
-    # Rofi (hand-tuned rasi themes + vim/lazyvim cheatsheets).
-    "rofi".source = ./files/rofi;
-
-    # Power menu (wlogout layout + style + icons) and its extra wofi style.
-    "wlogout".source = ./files/wlogout;
-    "wofi/power-menu.css".source = ./files/wofi/power-menu.css;
-
-    # SwayOSD on-screen-display styling.
-    "swayosd/style.css".source = ./files/swayosd/style.css;
-
     # Wallpapers (referenced by services.hyprpaper above).
     "backgrounds".source = ./files/backgrounds;
   };

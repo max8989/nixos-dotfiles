@@ -6,6 +6,7 @@
 --
 -- Docs: https://wiki.hypr.land/Configuring/Basics/Binds/
 
+local shell = require("shell_commands")
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
 -- Programs
@@ -13,7 +14,7 @@ local editor      = "zed"
 local terminal    = "kitty"
 local fileManager = "superfile" -- TUI file manager; nixpkgs names the binary
                                 -- `superfile`, Arch's AUR package called it `spf`
-local menu        = "pidof rofi && killall rofi || rofi -show drun"
+local menu        = shell.apps
 local browser     = "zen-beta" -- wrapper binary name from the zen-browser flake
 local screenshot  = "~/.config/scripts/screenshot.sh"
 
@@ -22,10 +23,10 @@ hl.bind(mainMod .. " + return", hl.dsp.exec_cmd(terminal), { description = "laun
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(terminal .. " -e " .. fileManager), { description = "launch file manager" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exec_cmd(terminal .. " -e btop"))
 
--- Rofi menus
+-- Quickshell menus
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind("ALT + space", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd('rofi -show fb -modi "fb:~/.config/scripts/rofi-fb-official.sh"'))
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(shell.files))
 
 -- NOTE: no wallpaper switcher (was SUPER+CTRL+W). The script rewrote
 -- ~/.config/hypr/hyprpaper.conf, which Home Manager makes a read-only Nix
@@ -33,8 +34,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd('rofi -show fb -modi "fb:~/.config/sc
 -- services.hyprpaper in home/desktop.nix and rebuilding.
 
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(
-    'pidof rofi && killall rofi || cliphist list | rofi -dmenu -window-title "Clipboard" -drun-use-desktop-cache | cliphist decode | wl-copy'))
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(shell.clipboard))
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + C", hl.dsp.window.float({ action = "toggle" }))
@@ -56,11 +56,9 @@ hl.bind(mainMod .. " + Tab", hl.dsp.group.next())
 hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.group.prev())
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.window.move({ out_of_group = true }))
 
--- Vim Helper
-hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(
-    "cat ~/.config/rofi/vimcheat | rofi -dmenu -p \"Vim action\" -i -theme-str 'window {width: 98%; height: 75%;}' -theme-str 'window {location: center;}'"))
-hl.bind(mainMod .. " + period", hl.dsp.exec_cmd(
-    "cat ~/.config/rofi/lazyvimcheat | rofi -dmenu -p \"LazyVim action\" -i -theme-str 'window {width: 98%; height: 75%;}' -theme-str 'window {location: center;}'"))
+-- Searchable reference panels
+hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(shell.vim))
+hl.bind(mainMod .. " + period", hl.dsp.exec_cmd(shell.lazyvim))
 
 -- Move focus with mainMod + arrow keys / vim keys
 local focusDirs = { left = "left", right = "right", up = "up", down = "down", h = "left", l = "right", k = "up", j = "down" }
@@ -75,7 +73,7 @@ hl.bind("ALT + 3", hl.dsp.exec_cmd(screenshot .. " -m active -m output -z"))
 hl.bind("ALT + 4", hl.dsp.exec_cmd("~/.config/scripts/screen_record.sh"))
 
 -- Power menu
-hl.bind(mainMod .. " + n", hl.dsp.exec_cmd("~/.config/waybar/scripts/power-menu.sh"))
+hl.bind(mainMod .. " + n", hl.dsp.exec_cmd(shell.power))
 
 -- Switch workspaces with mainMod + [0-9]
 -- Move active window to a workspace with mainMod + SHIFT + [0-9]
@@ -148,32 +146,25 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true, descr
 hl.bind(mainMod .. " + Z", hl.dsp.window.drag(),   { mouse = true, description = "hold to move window" })
 hl.bind(mainMod .. " + X", hl.dsp.window.resize(), { mouse = true, description = "hold to resize window" })
 
--- Laptop multimedia keys for volume and LCD brightness with SwayOSD
+-- Laptop multimedia keys for volume and LCD brightness with Quickshell
 local osd = { locked = true, repeating = true }
-hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("swayosd-client --output-volume raise --max-volume 150"), osd)
-hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("swayosd-client --output-volume lower --max-volume 150"), osd)
-hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("swayosd-client --output-volume mute-toggle"), osd)
-hl.bind("XF86AudioMicMute",      hl.dsp.exec_cmd("swayosd-client --input-volume mute-toggle"), osd)
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("swayosd-client --brightness raise"), osd)
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("swayosd-client --brightness lower --min-brightness 0"), osd)
+hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd(shell.volumeUp), osd)
+hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd(shell.volumeDown), osd)
+hl.bind("XF86AudioMute",         hl.dsp.exec_cmd(shell.mute), osd)
+hl.bind("XF86AudioMicMute",      hl.dsp.exec_cmd(shell.muteMicrophone), osd)
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(shell.brightnessUp), osd)
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(shell.brightnessDown), osd)
 
--- Requires playerctl
-hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
-hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+-- MPRIS controls
+hl.bind("XF86AudioNext",  hl.dsp.exec_cmd(shell.mediaNext),       { locked = true })
+hl.bind("XF86AudioPause", hl.dsp.exec_cmd(shell.mediaToggle), { locked = true })
+hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd(shell.mediaToggle), { locked = true })
+hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd(shell.mediaPrevious),   { locked = true })
 
 -- Microphone volume control
-hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"))
-hl.bind(mainMod .. " + SHIFT + Up",   hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%+"), { locked = true, repeating = true })
-hl.bind(mainMod .. " + SHIFT + Down", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-"), { locked = true, repeating = true })
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd(shell.muteMicrophone))
+hl.bind(mainMod .. " + SHIFT + Up",   hl.dsp.exec_cmd(shell.microphoneUp), { locked = true, repeating = true })
+hl.bind(mainMod .. " + SHIFT + Down", hl.dsp.exec_cmd(shell.microphoneDown), { locked = true, repeating = true })
 
--- Audio output selector (rofi menu; replaces hyprwat, which is AUR-only and
--- not packaged for NixOS)
-hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("~/.config/waybar/scripts/audio-menu.sh"))
-
--- Close rofi menus on any left click outside them (rofi 2.0's wayland
--- backend can't see clicks outside its own surface). Non-consuming: the
--- click still reaches whatever was clicked. The script skips clicks inside
--- waybar, whose module scripts toggle rofi themselves.
-hl.bind("mouse:272", hl.dsp.exec_cmd("~/.config/scripts/rofi-close-outside.sh"), { non_consuming = true })
+-- Audio output selector
+hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd(shell.audio))

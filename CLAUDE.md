@@ -5,9 +5,9 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (Catppuccin **Mocha**) plus a headless home server. Three hosts:
-`thinkpad-x1-carbon-g7` (7th Gen) and `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
-Intel Core Ultra 5 125U / Meteor Lake, btrfs root), both desktops; and
+desktop (neon glass shell, Catppuccin **Mocha** apps) plus a headless home server. Two hosts:
+`thinkpad-x1-carbon-g12` (Gen 12, 21KC —
+Intel Core Ultra 5 125U / Meteor Lake, btrfs root), desktop; and
 `homeserver` (Gigabyte H81M-HD2, i5-4460 Haswell, RTX 3070) — headless, runs the
 Docker Compose media stack (Traefik, Jellyfin, *arr, qBittorrent+PIA VPN,
 SABnzbd, Homepage) unchanged on NixOS-provided Docker + NVIDIA container
@@ -42,7 +42,7 @@ hosts/<hostname>/disko.nix                 # declarative disk layout (disko) —
 hosts/<hostname>/hardware-configuration.nix # detected hardware ONLY (no filesystems) — regenerated at install with --no-filesystems, never hand-edit to "fix"
 home/*.nix                        # Home Manager modules (home.nix = desktop profile; server.nix = minimal headless profile — both import shell.nix)
 home/starship.toml                # imported via lib.importTOML
-home/files/                       # opaque blobs (CSS, rasi, scripts, icons, backgrounds, kanata)
+home/files/                       # opaque blobs (QML, CSS, scripts, icons, backgrounds, kanata)
 ```
 
 **Identity is parameterized.** `username` and `fullName` are defined once in the
@@ -85,13 +85,13 @@ installed with the two-step route; README "Install from the target itself" has
 it, plus the signature scrub needed when reinstalling over LVM.
 
 **Two-tier rule for configs:**
-1. **Structured config → native Nix attribute sets.** Waybar modules,
-   hyprlock/hypridle/hyprpaper, wofi, kitty, starship all live as
+1. **Structured config → native Nix attribute sets.** Desktop settings,
+   hypridle/hyprpaper, kitty, starship and Quickshell settings all live as
    `settings = { … }` / list-of-attrs in the `.nix` files. New config of this
    kind goes here, not into a raw file. **Hyprland is the exception** — see
    below.
 2. **Opaque blobs → `home/files/`,** referenced from Nix via
-   `builtins.readFile` / `.source` / `lib.importTOML`. CSS, rofi `.rasi`,
+   `builtins.readFile` / `.source` / `lib.importTOML`. QML, CSS,
    kanata `.kbd`, shell scripts, and images have no meaningful attribute-set
    form — keep them as real files (still pure: they're inside the flake).
 
@@ -113,39 +113,36 @@ flakes only see git-tracked files inside the flake root.
   - Under the Lua backend, hyprlang `$variables` are invalid — `"$mainMod" =
     "SUPER"` renders as `hl.$mainMod("SUPER")` and Lua rejects it. Use Lua
     `local`s (as `keybindings.lua` does) or `settings.<name>._var`.
-  - Paths outside the Nix store don't exist. The polkit agent is substituted
-    into the Lua via a `@polkitAgent@` placeholder in `home/hyprland.nix`; add
-    more the same way rather than hard-coding `/usr/...`.
+  - Shell action commands are generated in `shell_commands.lua` from Nix with
+    absolute executable paths; import that table instead of embedding store paths.
 - **Script shebangs must be `#!/usr/bin/env bash`.** NixOS has no `/bin/bash`
   and no `/bin/env` — `/bin` contains only `sh`, `/usr/bin` only `env`. A script
   in `home/files/**` with an Arch-style `#!/bin/bash` deploys fine and then dies
-  at runtime with `bad interpreter`, which surfaces as a keybind or waybar
-  module that silently does nothing. Check with
+  at runtime with `bad interpreter`, which surfaces as a keybind
+  that silently does nothing. Check with
   `grep -rn '^#!' home/files --include='*.sh' | grep -v '#!/usr/bin/env'`
   after copying anything in from the Arch dotfiles.
 - **Scripts must create their own output dirs.** `$HOME` is not pre-populated on
   a fresh install (no `~/Pictures/Screenshots`, etc.), and the tools these
   scripts wrap generally do not `mkdir -p` for you.
-- **Single theme.** Mocha is baked in. There is no runtime theme switcher (it
-  was dropped because the Nix store is immutable). To change theme you edit Nix
-  and rebuild.
-- **Daemon autostart is split three ways:** `hyprpaper` / `hypridle` /
-  `hyprsunset` / `waybar` / `swaync` are HM systemd user services on
-  `graphical-session.target` (`swaync` via `services.swaync` — its package
-  ships a D-Bus-activated unit, so a hook-started instance races it at login;
-  never start it from the hook); **`kanata` is a HM
-  systemd user service on `default.target`** (evdev-level, so it must not depend
-  on the compositor); `swayosd-server` / cliphist / the polkit agent
-  are started from the `hyprland.start` hook in `home/files/hypr/hyprland.lua`.
-  Don't also start the systemd-managed ones from the hook (double instances).
-  - Anything started from that hook is lost if the Hyprland config fails to
-    parse — the hook never registers. Same for `graphical-session.target`, so a
-    config error takes waybar/hyprpaper/hypridle down with it. If a daemon is
-    missing, check `systemctl --user is-active graphical-session.target` before
-    suspecting the daemon.
-- **Audio output selection (SUPER+F12, waybar audio click) is
-  `waybar/scripts/audio-menu.sh`** — a rofi sink selector (pactl + jq). It
-  replaced `hyprwat`, which is AUR-only and not in nixpkgs.
+- **Static themes.** Applications retain Mocha; the shell uses the neon glass
+  palette in `home/quickshell.nix`. There is no runtime theme switcher. Edit Nix
+  and rebuild to change the palette.
+- **Quickshell owns the desktop shell.** `home/quickshell.nix` generates the
+  immutable settings/QML bundle. Runtime state goes under XDG state/runtime
+  directories. Never write into the bundle. Keep shared services in singletons
+  with directory imports and qmldir entries; do not use `root:/` imports.
+- **Desktop daemons are systemd user services.** Quickshell, hypridle, hyprpaper,
+  and hyprsunset follow `graphical-session.target`; kanata follows `default.target`.
+  Only clipboard capture is started in the compositor hook. Do not duplicate
+  notification, polkit or tray ownership in a preview instance.
+- **Locking is security-sensitive.** PAM success is the only unlock path. Never
+  add an unlock IPC method or test credentials to the production bundle. Use the
+  isolated VM test; never lock the developer's desktop for automated tests.
+- **Validation:** `nix flake check` runs QML, Lua, pure-logic and integration
+  checks. QML metadata exceptions are narrowly listed in `tests/quickshell-lint.py`
+  for upstream 0.3.1 defects; do not disable import/property checks globally.
+  `nix build .#quickshell-vm-test` tests authentication in an isolated NixOS VM.
 - **Alt-Tab comes from `services.hyprshell`** (`home/desktop.nix`), not from a
   bind in `keybindings.lua` — hyprshell claims ALT+TAB itself through Hyprland's
   global-shortcuts protocol. Its `settings` are validated strictly (an unknown
@@ -166,7 +163,7 @@ flakes only see git-tracked files inside the flake root.
 
 ```sh
 nix flake check                                   # always run after edits (checks both hosts)
-sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # apply on the machine (or -g7)
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # apply on the machine
 nix build .#nixosConfigurations.thinkpad-x1-carbon-g12.config.system.build.vm  # optional VM test
 nixfmt **/*.nix                                   # formatting (RFC-style, 2-space; flake has no `formatter` output)
 ```

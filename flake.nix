@@ -76,9 +76,6 @@
       # config (home/home.nix); false → headless, minimal shell-only Home
       # Manager config (home/server.nix).
       hosts = {
-        "thinkpad-x1-carbon-g7" = {
-          desktop = true;
-        }; # ThinkPad X1 Carbon 7th Gen
         "thinkpad-x1-carbon-g12" = {
           desktop = true;
         }; # ThinkPad X1 Carbon Gen 12 (21KC, Meteor Lake)
@@ -123,5 +120,38 @@
     in
     {
       nixosConfigurations = nixpkgs.lib.mapAttrs mkHost hosts;
+      packages.${system} = {
+        quickshell-config =
+          self.nixosConfigurations.thinkpad-x1-carbon-g12.config.home-manager.users.${username}.programs.quickshell.configs.desktop;
+        quickshell-vm-test = import ./tests/quickshell-vm.nix {
+          pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;
+          bundle = self.packages.${system}.quickshell-config;
+        };
+      };
+      checks.${system} = import ./tests/quickshell.nix {
+        pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;
+        inherit self system username;
+      };
+      devShells.${system}.quickshell =
+        let
+          pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;
+        in
+        pkgs.mkShell {
+          packages = [
+            pkgs.quickshell
+            pkgs.qt6.qtdeclarative
+            pkgs.lua
+            pkgs.nixfmt
+            pkgs.nodejs
+            pkgs.python3
+            pkgs.sway
+            pkgs.grim
+            pkgs.wtype
+            pkgs.wl-clipboard
+            pkgs.dbus
+          ];
+          QML_IMPORT_PATH = "${pkgs.quickshell}/lib/qt-6/qml:${pkgs.qt6.qtdeclarative}/lib/qt-6/qml";
+          QT_QUICK_CONTROLS_STYLE = "Basic";
+        };
     };
 }

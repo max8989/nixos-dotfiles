@@ -1,0 +1,7 @@
+singleton Metrics 1.0 Metrics.qml
+singleton Audio 1.0 Audio.qml
+singleton Display 1.0 Display.qml
+singleton Reminders 1.0 Reminders.qml
+singleton Battery 1.0 Battery.qml
+singleton Media 1.0 Media.qml
+singleton Notifications 1.0 Notifications.qml

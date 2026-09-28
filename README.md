@@ -1,11 +1,10 @@
 # nixos-dotfiles
 
 Fully declarative **NixOS + Home Manager** configuration for a Hyprland desktop,
-themed **Catppuccin Mocha**. Migrated from an Arch/Hyprland dotfiles setup and
+with a self-authored **Quickshell neon glass desktop** and **Catppuccin Mocha** applications. Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
 **Hosts:**
-- `thinkpad-x1-carbon-g7` — ThinkPad X1 Carbon (7th Gen). Desktop.
 - `thinkpad-x1-carbon-g12` — ThinkPad X1 Carbon (Gen 12, 21KC; Intel Core Ultra 5
   125U / Meteor Lake, btrfs root). Desktop.
 - `homeserver` — Gigabyte H81M-HD2 (i5-4460 Haswell, 16 GB, RTX 3070). Headless
@@ -32,16 +31,15 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | System (boot, nix, network, user, SSH, Docker, …) | `hosts/common.nix` (every host) + `hosts/<host>/configuration.nix` | NixOS options |
 | Desktop system (audio, login, fonts, fcitx5, fingerprint, …) | `hosts/desktop.nix` (graphical hosts only) | NixOS options |
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
-| Status bar | `home/waybar.nix` | `programs.waybar.settings` + `readFile style.css` |
-| Lock / idle / wallpaper | `home/desktop.nix` | `programs.hyprlock` · `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
-| Launcher / menus / OSD | `home/desktop.nix` | `programs.wofi` + rofi/wlogout/swayosd files |
+| Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
+| Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
 | Terminal | `home/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
-| Scripts + timers | `home/scripts.nix` | in-repo scripts + systemd user timers |
+| Independent scripts | `home/scripts.nix` | Screenshot, recording and RSS tools |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
 Structured configs are converted to native Nix attribute sets. Opaque blobs that
-have no attribute-set form — CSS, rofi `.rasi`, kanata `.kbd`, the starship TOML,
+have no attribute-set form — QML, CSS, kanata `.kbd`, the starship TOML,
 shell scripts, images — live under `home/files/` and are referenced from
 Nix (`readFile` / `.source` / `importTOML`). That keeps the repo self-contained
 and the deployment fully declarative.
@@ -59,10 +57,6 @@ flake.nix                      # inputs + per-user vars + `hosts` set (with desk
 hosts/
   common.nix                   # role-agnostic system config (imported by every host)
   desktop.nix                  # desktop-only system config (imported by graphical hosts)
-  thinkpad-x1-carbon-g7/
-    configuration.nix          # imports ../common.nix + ../desktop.nix + disko + hardware
-    disko.nix                  # declarative disk layout (partitioning + fileSystems)
-    hardware-configuration.nix # detected hardware only — regenerated at install
   thinkpad-x1-carbon-g12/
     configuration.nix          # ../common.nix + ../desktop.nix + disko + Meteor Lake iGPU video stack
     disko.nix                  # declarative disk layout (partitioning + fileSystems)
@@ -74,7 +68,7 @@ hosts/
 home/
   home.nix                     # full desktop HM profile (desktop hosts)
   server.nix                   # minimal HM profile: shell + CLI only (headless hosts)
-  hyprland.nix  waybar.nix  kitty.nix  shell.nix
+  hyprland.nix  quickshell.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
   starship.toml
   files/                       # CSS, rasi, hypr/*.lua, scripts, icons, backgrounds, …
@@ -91,7 +85,6 @@ username = "maxime";       # your login name → home dir becomes /home/<usernam
 fullName = "Maxime Gagne"; # account description
 
 hosts = {
-  "thinkpad-x1-carbon-g7" = { desktop = true; };
   "thinkpad-x1-carbon-g12" = { desktop = true; };
   "homeserver" = { desktop = false; };   # headless — no Hyprland, minimal HM profile
   # "<your-hostname>" = { desktop = …; } # ← add yours; create a matching hosts/<your-hostname>/
@@ -121,8 +114,7 @@ another machine** — it partitions and formats per the disko layout, generates
 the real `hardware-configuration.nix` back into your working tree, installs the
 flake, and reboots. No manual `parted`/`mkfs`, no `nixos-enter`.
 
-Commands assume the **Gen 12** (`thinkpad-x1-carbon-g12`); set
-`HOST=thinkpad-x1-carbon-g7` for the 7th Gen.
+Commands assume the **Gen 12** (`thinkpad-x1-carbon-g12`).
 
 > ⚠️ **The install erases the device named in `hosts/$HOST/disko.nix`**
 > (`/dev/nvme0n1`). Confirm with `lsblk` on the target — the disko layout, not
@@ -198,7 +190,7 @@ Review before installing:
 Then install:
 
 ```sh
-HOST=thinkpad-x1-carbon-g12        # or: thinkpad-x1-carbon-g7
+HOST=thinkpad-x1-carbon-g12
 
 nix run github:nix-community/nixos-anywhere -- \
   --generate-hardware-config nixos-generate-config ./hosts/$HOST/hardware-configuration.nix \
@@ -322,7 +314,7 @@ for the repo and rebuild from it consistently (the examples below use
 ```sh
 cd ~/repos/nixos-dotfiles
 nix flake check                                              # evaluate both hosts first
-sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12   # or .#thinkpad-x1-carbon-g7
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 ```
 
 `switch` builds the new generation and activates it immediately. Use
@@ -365,7 +357,7 @@ Then evaluate and apply:
 cd ~/repos/nixos-dotfiles
 nix flake check                                             # catch typos/renamed attrs early
 nixfmt **/*.nix                                             # keep formatting consistent
-sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12  # or -g7
+sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 ```
 
 Notes:
@@ -388,11 +380,10 @@ after any input update and fix anything that has since moved):
 - `pkgs.catppuccin-gtk` — recent nixpkgs may expose it as `pkgs.catppuccin.gtkTheme`.
 - `pkgs.figtree` — may live under `google-fonts`.
 - `pkgs.nerd-fonts.caskaydia-cove` / `pkgs.nerd-fonts.jetbrains-mono` (post nerd-fonts restructure).
-- `pkgs.zed-editor`, `pkgs.swayosd`, `pkgs.swaynotificationcenter`.
+- `pkgs.zed-editor`, `pkgs.quickshell` (currently 0.3.1).
 - `i18n.inputMethod.type = "fcitx5"` (newer form; older nixpkgs used `enabled = "fcitx5"`).
 - HM service modules used here: `services.hypridle`, `services.hyprpaper`,
-  `services.hyprsunset`, `programs.hyprlock`, `programs.wofi`,
-  `programs.waybar.systemd`.
+  `services.hyprsunset`, `programs.quickshell`.
 - `inputs.zen-browser.packages.<system>.default`.
 - `programs.kitty.themeFile = "Catppuccin-Mocha"` (name from `pkgs.kitty-themes`).
 - `wayland.windowManager.hyprland.configType` — defaults to `"lua"` from
@@ -403,8 +394,8 @@ after any input update and fix anything that has since moved):
 
 - **Single theme.** The Arch setup had a runtime 6-theme switcher (it copied
   config files into place). Pure Nix puts configs in the immutable store, so the
-  switcher is dropped — **Catppuccin Mocha** is baked in declaratively. The other
-  themes' CSS/jsonc were not ported.
+  switcher is dropped. Applications retain **Catppuccin Mocha**; Quickshell uses
+  the neon glass palette in `home/quickshell.nix`. The other themes were not ported.
 - **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
   changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
   back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd
@@ -412,18 +403,65 @@ after any input update and fix anything that has since moved):
   protocol, so there is no bind in `keybindings.lua`. Hold ALT, tap TAB
   (SHIFT+TAB or grave to go backwards), release ALT to focus. The SUPER overview
   / launcher half of hyprshell is left off.
-- **Audio output selection** (SUPER+F12 / waybar audio click) is a rofi menu,
-  `waybar/scripts/audio-menu.sh` (pactl + jq). It replaced `hyprwat`, which is
-  AUR-only and not in nixpkgs.
-- **Night light.** `services.hyprsunset` runs as a no-op daemon (one `identity`
-  profile); waybar's `custom/nightlight` module toggles it over hyprctl IPC via
-  `waybar/scripts/nightlight.sh` — click to warm the screen, scroll to adjust.
-- **Daemon autostart.** `hyprpaper` / `hypridle` / `hyprsunset` / `waybar` run as Home Manager
-  systemd user services (on `graphical-session.target`); `swaync` / `swayosd-server`
-  are still launched from Hyprland `exec-once`. If something doesn't start, check
-  `systemctl --user status <name>`.
-- **`wlogout/layout`** actions point at `~/.config/hypr/scripts/power.sh` (a path
-  inherited from the Arch dotfiles); the scripts tree deploys to `~/.config/scripts`.
-  Adjust if you use the wlogout menu directly.
-- **`system-update.sh`** is Arch-only and self-exits on NixOS (harmless).
+- **Audio output selection** (SUPER+F12 / bar click) uses Quickshell's native PipeWire service.
+- **Night light** uses the retained hyprsunset daemon, controlled by Quickshell. Preferences persist outside the Nix store.
+- **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.
 - **Neovim is out of scope** (no longer used — not ported).
+
+## Quickshell development and validation
+
+The immutable bundle contains QML and one Nix-generated JSON. Palette, layout,
+user paths and executable paths belong in `home/quickshell.nix`; QML owns the
+views and live service state. Preferences live in
+`$XDG_STATE_HOME/quickshell/desktop/`. The retired g7 host and GTK shell configs
+have been removed; the homeserver keeps its headless profile.
+
+```sh
+nix develop .#quickshell
+nix build .#quickshell-config --no-link
+nix flake check
+nix build .#quickshell-vm-test --no-link
+nix build .#nixosConfigurations.thinkpad-x1-carbon-g12.config.system.build.toplevel --no-link
+```
+
+After installation, run `quickshell-dev /path/to/nixos-dotfiles` to preview the
+working tree with live reload and separate preferences. It puts the bar at the
+bottom and does not register notifications, a tray host, polkit, or a session
+lock. The packaged service has file watching disabled and restarts when its
+bundle's store path changes. A preview is also available before installation:
+build the bundle, set `QS_SETTINGS` to its `generated.json`, set `QS_PREVIEW=1`
+and `QS_DEV=1`, and run `quickshell --path home/files/quickshell/shell.qml` from
+the development shell. Give `QS_STATE_DIR` a separate writable directory.
+
+The developer shell includes Sway, grim and wtype for the isolated UI harness:
+
+```sh
+python3 tests/quickshell-smoke.py /nix/store/…-quickshell-desktop /tmp/quickshell-smoke
+```
+
+The harness uses its own compositor, D-Bus session, clipboard cache and fixture
+files. Screenshots and results are written to the supplied directory. The VM
+test exercises real PAM password authentication, rejection, notifications, and
+the compositor's fail-closed session lock. Test passwords exist only in the VM.
+
+Inspect actions with `quickshell ipc --config desktop show`. Examples:
+
+```sh
+quickshell ipc --config desktop call menus toggle audio
+quickshell ipc --config desktop call display nightlight
+quickshell ipc --config desktop call session lock
+journalctl --user -u quickshell -e
+```
+
+Do not restart or deploy the shell while locked. The recovery marker is scoped
+to the compositor instance, and Hyprland is configured to allow lock restoration
+after a crash. If recovery fails, use a TTY to restart the user service; if the
+compositor cannot restore the lock, terminate that graphical session and log in
+again. Never disable the lock to recover it.
+
+The implementation is build-only until explicitly activated. For the first
+rollout, switch while unlocked and start a fresh graphical session so previously
+running startup-hook daemons exit. Retain the previous NixOS generation for
+rollback. Physical fingerprint enrollment, suspend/resume, dock hotplug,
+Bluetooth pairing and device-specific battery/brightness behavior require a
+live acceptance pass. See `HANDOFF-quickshell.md` for current verification.

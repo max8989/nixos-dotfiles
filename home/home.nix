@@ -6,7 +6,7 @@
 {
   imports = [
     ./hyprland.nix
-    ./waybar.nix
+    ./quickshell.nix
     ./kitty.nix
     ./shell.nix
     ./desktop.nix
@@ -65,10 +65,6 @@
     zed-editor # `zed` editor binary
     btop
 
-    # --- launchers / menus ---
-    rofi # rofi-wayland was merged into rofi
-    wofi
-
     # --- clipboard ---
     cliphist
     wl-clipboard # wl-copy / wl-paste
@@ -85,21 +81,18 @@
     wf-recorder
     swappy
 
-    # --- script + waybar-module dependencies ---
+    # --- independent script dependencies ---
     jq
     yad
     libnotify # notify-send
-    bluez # bluetoothctl (bluetooth-menu.sh)
     pavucontrol
     (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
     curl
     # NixOS has no global /usr/bin, so these must be requested explicitly —
     # each is called by name from a script or keybind and would otherwise
     # fail silently at runtime.
-    psmisc # killall — rofi toggle in keybindings.lua, power-menu.sh
-    lm_sensors # sensors — waybar/scripts/cpu-temp.sh
-    xdg-utils # xdg-open — scripts/rofi-fb-official.sh
-    pulseaudio # pactl — waybar/scripts/volume-control.sh (talks to pipewire-pulse)
+    psmisc # process inspection and recording helpers
+    xdg-utils # xdg-open — desktop file/URI actions
 
     # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
     firefox
@@ -168,7 +161,5 @@
     jetbrains.datagrip
   ];
 
-  # NOTE: audio output selection (SUPER+F12 and the waybar pulseaudio
-  # on-click) is waybar/scripts/audio-menu.sh — a rofi sink selector using
-  # pactl + jq. It replaced `hyprwat`, which is AUR-only and not in nixpkgs.
+  # Shell menus, sound, notifications and locking are owned by quickshell.nix.
 }

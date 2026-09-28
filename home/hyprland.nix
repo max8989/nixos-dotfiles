@@ -1,6 +1,7 @@
 {
   inputs,
   pkgs,
+  lib,
   ...
 }:
 {
@@ -28,14 +29,95 @@
     # generated hyprland.lua, so hyprland.lua must not require it itself.
     extraLuaFiles.keybindings = ./files/hypr/keybindings.lua;
 
-    # Appended verbatim to the generated hyprland.lua. The polkit agent has no
-    # fixed path on NixOS, so it is substituted in from the Nix store here
-    # rather than hard-coded in the Lua.
-    extraConfig = builtins.replaceStrings
-      [ "@polkitAgent@" ]
-      [ "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1" ]
-      (builtins.readFile ./files/hypr/hyprland.lua);
+    extraConfig = builtins.readFile ./files/hypr/hyprland.lua;
+
   };
+
+  xdg.configFile."hypr/shell_commands.lua".text =
+    let
+      ipc =
+        args:
+        lib.escapeShellArgs (
+          [
+            (lib.getExe pkgs.quickshell)
+            "ipc"
+            "--config"
+            "desktop"
+            "call"
+          ]
+          ++ args
+        );
+      menu =
+        name:
+        ipc [
+          "menus"
+          "toggle"
+          name
+        ];
+      commands = {
+        apps = menu "apps";
+        files = menu "files";
+        clipboard = menu "clipboard";
+        vim = menu "vim";
+        lazyvim = menu "lazyvim";
+        power = menu "power";
+        audio = menu "audio";
+        volumeUp = ipc [
+          "audio"
+          "volume"
+          "5"
+        ];
+        volumeDown = ipc [
+          "audio"
+          "volume"
+          "-5"
+        ];
+        microphoneUp = ipc [
+          "audio"
+          "microphone"
+          "5"
+        ];
+        microphoneDown = ipc [
+          "audio"
+          "microphone"
+          "-5"
+        ];
+        mute = ipc [
+          "audio"
+          "mute"
+        ];
+        muteMicrophone = ipc [
+          "audio"
+          "muteMicrophone"
+        ];
+        brightnessUp = ipc [
+          "display"
+          "brightness"
+          "5"
+        ];
+        brightnessDown = ipc [
+          "display"
+          "brightness"
+          "-5"
+        ];
+        mediaNext = ipc [
+          "media"
+          "control"
+          "next"
+        ];
+        mediaPrevious = ipc [
+          "media"
+          "control"
+          "previous"
+        ];
+        mediaToggle = ipc [
+          "media"
+          "control"
+          "toggle"
+        ];
+      };
+    in
+    "return " + lib.generators.toLua { } commands;
 
   ##########################################################################
   ## kanata (caps-lock vim nav + j/k Escape chord).

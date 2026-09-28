@@ -1,7 +1,6 @@
 # Commands
 
-Run from the repo root (`cd ~/repos/nixos-dotfiles`). Swap
-`thinkpad-x1-carbon-g12` for `thinkpad-x1-carbon-g7` on the 7th Gen.
+Run from the repo root (`cd ~/repos/nixos-dotfiles`).
 `git add` new files before rebuilding — a flake only sees git-tracked files.
 
 ## Check and rebuild
@@ -62,6 +61,15 @@ advance one package alone, give it its own flake input (as `superfile` and
 — `superfile` is on `v1.6.0` — ignores this command; edit the tag in
 `flake.nix` instead.
 
+### Validate the desktop shell
+
+```
+nix flake check
+nix build .#quickshell-vm-test --no-link
+```
+
+Restart Quickshell only while unlocked.
+
 ### Syntax-check Hyprland Lua
 
 Run before rebuilding; a parse error can cause a session with no key bindings.
@@ -89,13 +97,13 @@ nix shell nixpkgs#ripgrep
 For example: Waybar, Hyprpaper, Hypridle, or Kanata.
 
 ```
-systemctl --user restart waybar
+systemctl --user restart quickshell
 ```
 
 ### View daemon logs
 
 ```
-journalctl --user -u waybar -e
+journalctl --user -u quickshell -e
 ```
 
 ### Check the session target

@@ -5,7 +5,7 @@
 #
 # Everything here exists to serve the Hyprland session: the compositor itself,
 # login manager, audio, input, portals, fonts, and the laptop peripherals the
-# desktop scripts/waybar modules talk to.
+# desktop shell and retained utilities talk to.
 ###############################################################################
 {
   inputs,
@@ -106,15 +106,18 @@
   ##########################################################################
   # ThinkPad fingerprint reader. Enroll with `fprintd-enroll`.
   services.fprintd.enable = true;
-  # Power profile switcher — backs waybar's `power-profiles-daemon` module.
+  # Separate conversations allow password entry while fingerprint auth waits.
+  security.pam.services.quickshell.fprintAuth = false;
+  security.pam.services.quickshell-fingerprint = {
+    unixAuth = false;
+    fprintAuth = true;
+  };
+  # Power profiles and battery data are consumed by Quickshell over D-Bus.
   services.power-profiles-daemon.enable = true;
-  # Battery daemon — the `upower` CLI in battery-level.sh (low-battery
-  # notifications) talks to this over D-Bus; without it every timer run dies
-  # with "org.freedesktop.DBus.Error.ServiceUnknown".
   services.upower.enable = true;
-  # Brightness control without root (hypridle / swayosd via brightnessctl).
+  # Brightness control without root (hypridle / Quickshell via brightnessctl).
   services.udev.packages = [ pkgs.brightnessctl ];
-  # Bluetooth (waybar bluetooth-menu.sh / bluetoothctl).
+  # Bluetooth devices and the advanced pairing UI.
   hardware.bluetooth.enable = true;
   services.blueman.enable = true; # GUI bluetooth manager
   # Removable media. Without udisks2 nothing mounts a USB stick — it shows up in
@@ -138,10 +141,10 @@
     fontDir.enable = true;
     packages = with pkgs; [
       nerd-fonts.caskaydia-cove # kitty (CaskaydiaCove Nerd Font Mono)
-      nerd-fonts.jetbrains-mono # waybar style.css (JetBrainsMono Nerd Font)
-      figtree # rofi (Figtree)
-      font-awesome # icon glyphs (waybar / general)
-      # CJK — hyprlock phrases_zh.txt + fcitx5 Chinese input candidates.
+      nerd-fonts.jetbrains-mono # shell icons and monospace text
+      figtree # shell UI
+      font-awesome # general icon glyphs
+      # CJK — lock screen phrases and fcitx5 Chinese input candidates.
       noto-fonts-cjk-sans
       noto-fonts-cjk-serif
       source-han-sans # Adobe CJK sans (was adobe-source-han-sans-otc)
