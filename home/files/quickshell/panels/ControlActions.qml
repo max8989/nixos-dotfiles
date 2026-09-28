@@ -75,7 +75,7 @@ QtObject {
     readonly property var connections: [
         page("wifi", "Wi-Fi and network", Networking.wifiEnabled ? "Wi-Fi enabled" : "Wi-Fi disabled", "wifi internet ethernet connections"),
         page("bluetooth", "Bluetooth", Bluetooth.devices.values.filter(d => d.connected).length + " connected devices", "wireless headphones"),
-        page("powerProfiles", "Power profile", profile, "battery saver balanced performance"),
+        page("battery", "Battery and power profile", profile, "battery saver balanced performance health charge cycles"),
         page("tray", "System tray", "Open applications and their menus", "icons applets")
     ]
     readonly property var media: [
@@ -130,12 +130,12 @@ QtObject {
     readonly property var home: [
         page("audio", "Sound", audioValue(Audio.sink) + " · speakers and microphone", "volume audio"),
         notificationActions[0], notificationActions[1],
-        page("display", "Display", "Brightness, night light and presentation", "screen"),
+        page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"),
         ...connections,
         page("desktop", "Desktop", "Calendar, reminders, workspaces and media", "utilities"),
         page("capture", "Capture", "Screenshots and screen recording", "video"),
         page("settings", "Settings and shortcuts", "Configuration files and keyboard references", "help"),
         page("power", "Power and session", "Lock, suspend, restart or shut down", "logout")
     ]
-    readonly property var all: audio.concat(notificationActions, display, connections, desktop, capture, settings, power)
+    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, connections, desktop, capture, settings, power)
 }

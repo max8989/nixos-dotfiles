@@ -20,6 +20,7 @@ Singleton {
                        })
     property string networkRate: ""
     property var previousNetwork: ({})
+    property var networkDevices: ({})
     property double previousTime: Date.now()
     property var temperatures: ({})
     readonly property var temperature: Object.keys(temperatures).length ? Math.max(...Object.values(
@@ -86,6 +87,14 @@ Singleton {
             var now = Date.now();
             root.networkRate = Logic.networkRate(root.previousNetwork, sample, (now - root.previousTime)
                                                  / 1000);
+            var devices = {}, seconds = (now - root.previousTime) / 1000;
+            Object.keys(sample).forEach(name => {
+                var previous = root.previousNetwork[name], current = sample[name];
+                devices[name] = {rx: current.rx, tx: current.tx,
+                    receiving: previous && seconds > 0 ? Math.max(0, current.rx - previous.rx) / seconds : 0,
+                    sending: previous && seconds > 0 ? Math.max(0, current.tx - previous.tx) / seconds : 0};
+            });
+            root.networkDevices = devices;
 
             root.previousNetwork = sample;
             root.previousTime = now;

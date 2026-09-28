@@ -461,6 +461,26 @@ light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
 returns to the previous menu, restoring its search and selection; Escape at
 the root closes it. Ctrl+L focuses and selects the search text.
 
+The four settings panels open beside the top bar and are also available from
+Super+M or their bar icons:
+
+| Shortcut | Panel | Controls |
+|---|---|---|
+| Super+Ctrl+A | Audio | Output/input volume, mute, device selection and optional live microphone test |
+| Super+Ctrl+W | Wi-Fi | Radio, saved/available networks, password entry, traffic, IP/gateway, DHCP/Cloudflare/Google DNS |
+| Super+Ctrl+D | Display | Laptop brightness, panel text size, per-monitor scale, night light, keep awake |
+| Super+Ctrl+P | Battery | Charge, capacity, health, cycles, charge limit and power profiles |
+
+Use Tab/Shift+Tab to move, Left/Right on sliders, and Enter/Space to select.
+The night-light bar icon opens Display; right-click still toggles night light.
+Scale changes revert after 15 seconds unless confirmed, or when the panel closes.
+Confirmed scales follow the display description and are restored after login,
+monitor reconnection and Hyprland configuration reload. DNS presets update the
+active saved connection and roll back its settings if NetworkManager rejects
+the change. Custom DNS and hidden networks open in nmtui. Battery charge limits
+are displayed as reported by the kernel; this panel does not change thresholds.
+Panel text size applies to these four panels. Use monitor scale to resize apps.
+
 The menu also includes calendar, reminders, workspaces, media, clipboard,
 capture, system status and tray application menus. Tab/Shift+Tab and
 Enter/Space operate notification actions and confirmations. Calendar uses

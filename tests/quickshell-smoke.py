@@ -55,6 +55,7 @@ def interaction_checks():
     notification ownership are disabled; no production diagnostic IPC is added.
     """
     fixture = output / "interactions.qml"
+    shutil.copy(Path(__file__).with_name("SettingsFixtures.qml"), output / "SettingsFixtures.qml")
     fixture_bundle = output / "bundle"
     if fixture_bundle.is_symlink():
         fixture_bundle.unlink()
@@ -74,6 +75,7 @@ ShellRoot {
     Bar.Bar { id: bar; modelData: Quickshell.screens[0] }
     property string requestedPower: ""
     Panels.Menus { id: menus; onPowerRequested: action => root.requestedPower = action }
+    SettingsFixtures { id: hardware }
     Panels.Overlays {}
     TestEvent { id: mouseEvents }
     function find(item, name) {
@@ -125,8 +127,30 @@ ShellRoot {
                                    calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
                                    dnd: Desktop.Preferences.dnd,
                                    notificationCount: Services.Notifications.entries.length,
+                                   outputVolume: hardware.audio.sink.audio.volume,
+                                   outputName: hardware.audio.sink.name,
+                                   outputMuted: hardware.audio.sink.audio.muted,
+                                   inputVolume: hardware.audio.source.audio.volume,
+                                   wifiEnabled: hardware.network.enabled,
+                                   wifiPassword: hardware.network.guest.passwordReceived,
+                                   dnsPreset: hardware.network.details.preset,
+                                   powerProfile: hardware.battery.profile,
+                                   panelTextSize: Desktop.Preferences.panelTextSize,
+                                   scaleBusy: Services.Display.scaleBusy,
+                                   scaleSeconds: Services.Display.scaleSeconds,
+                                   savedScale: Desktop.Preferences.monitorScales["QA display"] || 1,
+                                   focused: menus.contentItem.Window.window?.activeFocusItem?.objectName || "",
                                    osdProgress: Desktop.Runtime.osdProgress});
         }
+        function openPanel(name: string): void {
+            root.find(menus.contentItem, "audioPanel").audio = hardware.audio;
+            root.find(menus.contentItem, "wifiPanel").network = hardware.network;
+            root.find(menus.contentItem, "batteryPanel").battery = hardware.battery;
+            root.find(menus.contentItem, "displayPanel").monitorModel = [{name: "HEADLESS-1", description: "QA display", width: 1920, height: 1200, scale: 1, focused: true}];
+            Desktop.Runtime.toggleMenu(name, null);
+        }
+        function focusControl(name: string): void { root.find(menus.contentItem, name).forceActiveFocus(Qt.TabFocusReason); }
+        function selectGuestWifi(): void { menus.connectNetwork(hardware.network.guest); }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function addNotification(): void {
             Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
@@ -155,12 +179,26 @@ state = pathlib.Path(__file__).with_suffix('.state')
 value = int(state.read_text()) if state.exists() else 50
 if 'set' in sys.argv:
     change = sys.argv[-1]
-    value = max(0, min(100, value + int(change[:-2]) * (1 if change[-1] == '+' else -1)))
+    value = max(1, min(100, value + int(change[:-2]) * (1 if change[-1] == '+' else -1) if change[-1] in '+-' else int(change[:-1])))
     state.write_text(str(value))
 print(f'qa_backlight,backlight,{value},{value}%,100')
 ''')
     brightness.chmod(0o700)
     settings["bin"]["brightnessctl"] = str(brightness)
+    # Exercise the production QML Process/stdin confirmation protocol without
+    # contacting Hyprland. The Python helper's rollback is tested separately.
+    settings_helper = output / "settings-helper"
+    settings_helper.write_text("#!" + sys.executable + "\n" + '''import json, select, sys
+if sys.argv[1] == 'preview-scale':
+    print(json.dumps({'state': 'preview', 'seconds': 15}), flush=True)
+    readable, _, _ = select.select([sys.stdin], [], [], 15)
+    answer = sys.stdin.readline().strip() if readable else ''
+    print(json.dumps({'state': 'kept' if answer == 'keep' else 'reverted'}), flush=True)
+elif sys.argv[1] == 'battery-info':
+    print('{}')
+''')
+    settings_helper.chmod(0o700)
+    settings["bin"]["settings"] = str(settings_helper)
     (output / "settings.json").write_text(json.dumps(settings))
     env["QS_PREVIEW"] = "0"
     # Exercise the real state-path fallback, including an existing Quickshell
@@ -311,6 +349,99 @@ print(f'qa_backlight,backlight,{value},{value}%,100')
     wait(lambda: inspect()["requestedPower"] == "reboot" and inspect()["menu"] == "")
     print("Controls search, live DND/brightness, submenu history, calendar, notification focus and power confirmation passed")
 
+    # The actual panel controls run against private service fixtures; keyboard
+    # input exercises sliders, routing, radio, credentials and power profiles.
+    qa("openPanel", "audio")
+    wait(lambda: inspect()["menu"] == "audio")
+    time.sleep(0.2)
+    key("Right")
+    wait(lambda: abs(inspect()["outputVolume"] - 0.55) < .001)
+    key("Tab")
+    key("Return")
+    wait(lambda: inspect()["outputMuted"])
+    key("Tab")
+    key("Tab")
+    key("Return")
+    wait(lambda: inspect()["outputName"] == "qa-headphones")
+    key("Tab")
+    key("Left")
+    wait(lambda: abs(inspect()["inputVolume"] - 0.75) < .001)
+    capture("settings-audio")
+    key("Escape")
+
+    qa("openPanel", "wifi")
+    wait(lambda: inspect()["menu"] == "wifi")
+    time.sleep(0.2)
+    key("Return")
+    wait(lambda: not inspect()["wifiEnabled"])
+    key("Return")
+    wait(lambda: inspect()["wifiEnabled"])
+    key("Tab")
+    key("Tab")
+    key("Return")
+    wait(lambda: inspect()["dnsPreset"] == "cloudflare")
+    capture("settings-wifi")
+    qa("selectGuestWifi")
+    wait(lambda: inspect()["focused"] == "wifiPassword")
+    key("Escape")
+    assert inspect()["menu"] == "wifi" and not inspect()["wifiPassword"]
+    qa("selectGuestWifi")
+    wait(lambda: inspect()["focused"] == "wifiPassword")
+    run(["wtype", "-s", "150", "test-password", "-k", "Return"])
+    wait(lambda: inspect()["wifiPassword"])
+    key("Escape")
+
+    qa("openPanel", "battery")
+    wait(lambda: inspect()["menu"] == "battery")
+    time.sleep(0.2)
+    key("Tab")
+    key("Return")
+    wait(lambda: inspect()["powerProfile"] == 2)
+    assert inspect()["menu"] == "battery", "Profile selection unexpectedly closed the panel"
+    capture("settings-battery")
+    key("Escape")
+
+    qa("openPanel", "display")
+    wait(lambda: inspect()["menu"] == "display")
+    time.sleep(0.2)
+    key("Right")
+    wait(lambda: (output / "brightnessctl.state").read_text() == "60")
+    key("Tab")
+    key("Right")
+    wait(lambda: inspect()["panelTextSize"] == 15)
+    key("Left")
+    wait(lambda: inspect()["panelTextSize"] == 14)
+    capture("settings-display")
+    key("Tab")  # selected monitor
+    key("Tab")  # 1x
+    key("Tab")  # 1.25x
+    key("Return")
+    wait(lambda: inspect()["scaleBusy"] and inspect()["focused"] == "revertScale")
+    key("Return")  # initial focus is Revert
+    wait(lambda: not inspect()["scaleBusy"])
+    assert inspect()["savedScale"] == 1
+    # Start another preview through keyboard navigation, then explicitly keep.
+    wait(lambda: inspect()["focused"] == "displayBrightnessSlider")
+    key("Tab")
+    key("Tab")
+    key("Tab")
+    key("Tab")
+    key("Return")
+    wait(lambda: inspect()["scaleBusy"] and inspect()["focused"] == "revertScale")
+    key("Tab")
+    key("Return")
+    wait(lambda: not inspect()["scaleBusy"] and inspect()["savedScale"] == 1.25)
+    key("Escape")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x768"])
+    qa("openPanel", "audio")
+    time.sleep(0.2)
+    for _ in range(8):
+        key("Tab")
+    capture("settings-compact-keyboard")
+    key("Escape")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1920x1080"])
+    print("Audio sliders/routing, Wi-Fi radio/DNS/passwords, battery profiles and display keyboard controls passed")
+
     # Decode actual text and PNG history entries through the UI and packaged helper.
     payloads = [("text", "  Clipboard 中文 regression\nsecond line  \n".encode()),
                 ("image", (output / "apps.png").read_bytes())]
@@ -373,7 +504,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
@@ -407,7 +538,7 @@ try:
     shell.terminate()
     shell.wait(timeout=5)
     interaction_checks()
-    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
+    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
     print(f"{len(menu_names)} menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
 except Exception:
     fixture_path = output / "interactions.qml"

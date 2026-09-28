@@ -9,6 +9,12 @@
 local shell = require("shell_commands")
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
+-- Settings panels (also available from Super+M and the top bar).
+hl.bind(mainMod .. " + CTRL + A", hl.dsp.exec_cmd(shell.audio), { description = "audio settings" })
+hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd(shell.wifi), { description = "Wi-Fi settings" })
+hl.bind(mainMod .. " + CTRL + D", hl.dsp.exec_cmd(shell.display), { description = "display settings" })
+hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd(shell.battery), { description = "battery and power profile" })
+
 -- Programs
 local editor      = "zed"
 local terminal    = "kitty"

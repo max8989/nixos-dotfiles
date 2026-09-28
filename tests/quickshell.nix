@@ -24,6 +24,7 @@ in
       ''
         python3 ${./quickshell-lint.py} ${bundle} ${pkgs.quickshell}/lib/qt-6/qml ${pkgs.qt6.qtdeclarative}/lib/qt-6/qml lint.json
         node ${./quickshell-logic.mjs} ${../home/files/quickshell/Logic.js}
+        python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}
         luac -p ${../home/files/hypr/hyprland.lua} ${../home/files/hypr/keybindings.lua}
         luac -p ${home.xdg.configFile."hypr/shell_commands.lua".source}
         mkdir -p "$out"

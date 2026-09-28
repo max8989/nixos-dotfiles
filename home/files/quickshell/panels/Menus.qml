@@ -32,7 +32,9 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-menu"
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     readonly property bool fromBar: Runtime.menuAnchorX >= 0
-    color: fromBar ? "transparent" : "#44000000"
+    readonly property bool settingsPanel: ["audio", "wifi", "display", "battery"].indexOf(Runtime.menu) >= 0
+    readonly property var settingsPanelItem: Runtime.menu === "audio" ? audioPanel : Runtime.menu === "wifi" ? wifiPanel : Runtime.menu === "display" ? displayPanel : Runtime.menu === "battery" ? batteryPanel : null
+    color: fromBar || settingsPanel ? "transparent" : "#44000000"
     property var rows: []
     readonly property var pageRows: {
         switch (Runtime.menu) {
@@ -74,7 +76,7 @@ PanelWindow {
                                folderPath = Preferences.folder
     property int requestSerial: 0
     property bool clipboardBusy: false
-    readonly property var wifiNetworks: Networking.devices.values.reduce((all, d) => all.concat(
+    readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(
                                                                                          d.networks.values),
     [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
@@ -93,7 +95,8 @@ PanelWindow {
                                            vim: "Vim reference",
                                            lazyvim: "LazyVim reference",
                                            todos: "Reminders",
-                                           audio: "Audio devices",
+                                           audio: "Audio",
+                                           battery: "Battery",
                                            wifi: "Wi-Fi",
                                            bluetooth: "Bluetooth",
                                            power: "Power",
@@ -175,7 +178,9 @@ PanelWindow {
         focusTimer.restart();
     }
     function dismissOrBack() {
-        if (passwordPrompt) {
+        if (Runtime.menu === "display" && Display.scaleBusy) {
+            Display.revertScale();
+        } else if (passwordPrompt) {
             password.text = "";
             passwordPrompt = "";
             pendingWifi = null;
@@ -580,6 +585,14 @@ PanelWindow {
                              dndButton.forceActiveFocus(Qt.TabFocusReason);
                          else if (Runtime.menu === "calendar")
                              calendar.focusDefault();
+                         else if (Runtime.menu === "audio")
+                             audioPanel.focusDefault();
+                         else if (Runtime.menu === "wifi")
+                             wifiPanel.focusDefault();
+                         else if (Runtime.menu === "display")
+                             displayPanel.focusDefault();
+                         else if (Runtime.menu === "battery")
+                             batteryPanel.focusDefault();
                      }
     }
     Shortcut {
@@ -603,10 +616,10 @@ PanelWindow {
     }
     Glass {
         id: card
-        width: Math.min(root.fromBar ? 480 : 720, root.width - 32)
-        height: Math.min(root.fromBar ? 560 : 650, root.height - 80)
-        x: root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
-        y: root.fromBar ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
+        width: Math.min(root.settingsPanel ? 540 : root.fromBar ? 480 : 720, root.width - 32)
+        height: Math.min(root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : root.fromBar ? 560 : 650, root.height - 80)
+        x: root.settingsPanel ? root.width - width - 16 : root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
+        y: root.fromBar || root.settingsPanel ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
         color: Config.theme.solid
         transformOrigin: root.fromBar ? (Config.preview ? Item.Bottom : Item.Top) : Item.Center
         MouseArea {
@@ -643,10 +656,26 @@ PanelWindow {
                 color: Config.theme.warning
                 font.pixelSize: 12
             }
+            RowLayout {
+                visible: root.settingsPanel
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: [{id: "audio", title: "Audio"}, {id: "wifi", title: "Wi-Fi"}, {id: "display", title: "Display"}, {id: "battery", title: "Battery"}]
+                    SettingsButton {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        text: modelData.title
+                        selected: Runtime.menu === modelData.id
+                        enabled: !Display.scaleBusy && !root.passwordPrompt
+                        onClicked: Runtime.menu = modelData.id
+                    }
+                }
+            }
             TextField {
                 id: search
                 objectName: "menuSearch"
-                visible: Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
+                visible: !root.settingsPanel && Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 placeholderTextColor: Config.theme.dim
@@ -751,7 +780,7 @@ PanelWindow {
             ListView {
                 id: list
                 objectName: "menuList"
-                visible: Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
+                visible: !root.settingsPanel && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -831,6 +860,36 @@ PanelWindow {
                     color: Config.theme.dim
                 }
             }
+            AudioPanel {
+                id: audioPanel
+                objectName: "audioPanel"
+                visible: Runtime.menu === "audio"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+            WifiPanel {
+                id: wifiPanel
+                objectName: "wifiPanel"
+                visible: Runtime.menu === "wifi"
+                enabled: !root.passwordPrompt
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                onConnectRequested: network => root.connectNetwork(network)
+            }
+            DisplayPanel {
+                id: displayPanel
+                objectName: "displayPanel"
+                visible: Runtime.menu === "display"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+            BatteryPanel {
+                id: batteryPanel
+                objectName: "batteryPanel"
+                visible: Runtime.menu === "battery"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
             ScrollView {
                 id: notificationScroll
                 visible: Runtime.menu === "notifications"
@@ -880,6 +939,7 @@ PanelWindow {
                 font.family: Config.theme.uiFont
                 font.pixelSize: 12
                 text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel"
+                    : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close"
                     : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close"
                     : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close"
                     : "↑ ↓  Select    Enter  Open / toggle    ← →  Adjust    Esc  Back / close"

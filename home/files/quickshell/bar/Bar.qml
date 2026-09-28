@@ -221,9 +221,11 @@ PanelWindow {
                 text: Preferences.nightlight ? "󰖔" : "󰖙"
                 highlighted: Preferences.nightlight
                 tipTitle: "Night light · " + (Preferences.nightlight ? "On" : "Off")
-                tip: Preferences.temperature + " K · scroll to adjust\nClick to toggle warmer colors"
+                tip: Preferences.temperature + " K · scroll to adjust\nClick for display settings · right-click for night light"
                 visible: root.width > 1450
-                onClicked: Display.toggleNightlight()
+                selected: root.menuSelected("display")
+                onClicked: root.open("display", this)
+                onRightClicked: Display.toggleNightlight()
                 onScrolled: direction => Display.adjustNightlight(direction * 500)
             }
             Chip {
@@ -238,16 +240,16 @@ PanelWindow {
                 text: PowerProfiles.profile === PowerProfile.PowerSaver ? "󰾆" : PowerProfiles.profile === PowerProfile.Performance ? "󰓅" : "󰾅"
                 tipTitle: "Power profile"
                 tip: PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
-                selected: root.menuSelected("powerProfiles")
-                onClicked: root.open("powerProfiles", this)
+                selected: root.menuSelected("battery")
+                onClicked: root.open("battery", this)
             }
             Chip {
                 text: Battery.present ? (UPower.onBattery ? "󰁹 " : "󰂄 ") + Battery.percent + "%" : "AC"
                 foreground: Battery.band === "critical" ? Config.theme.urgent : Battery.band === "low" ? Config.theme.warning : Config.theme.text
                 tipTitle: "Battery · " + Battery.percent + "%"
-                tip: Battery.band + "\nClick for system status"
-                selected: root.menuSelected("status")
-                onClicked: root.open("status", this)
+                tip: Battery.summary + "\nClick for battery and power settings"
+                selected: root.menuSelected("battery")
+                onClicked: root.open("battery", this)
             }
             Chip {
                 text: root.language

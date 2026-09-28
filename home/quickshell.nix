@@ -74,8 +74,15 @@ let
       curl = lib.getExe pkgs.curl;
       grim = lib.getExe pkgs.grim;
       remove = "${pkgs.coreutils}/bin/rm";
+      settings = lib.getExe settingsHelper;
     };
   };
+  settingsHelper = pkgs.writeScriptBin "quickshell-settings" (
+    builtins.replaceStrings
+      [ "@python@" "@nmcli@" "@hyprctl@" ]
+      [ "${pkgs.python3}/bin/python3" "${pkgs.networkmanager}/bin/nmcli" "${hyprland}/bin/hyprctl" ]
+      (builtins.readFile ./files/scripts/quickshell-settings.py)
+  );
   clipboard = pkgs.writeShellApplication {
     name = "quickshell-clipboard";
     runtimeInputs = [

@@ -15,6 +15,10 @@ Singleton {
         objects: [root.sink, root.source].filter(Boolean)
     }
     function change(microphone, delta) {
+        var node = microphone ? source : sink;
+        setVolume(microphone, (node?.audio?.volume || 0) * 100 + delta);
+    }
+    function setVolume(microphone, percent) {
         if (Config.preview)
             return;
         var node = microphone ? source : sink;
@@ -22,7 +26,7 @@ Singleton {
             Runtime.report("No audio device available");
             return;
         }
-        node.audio.volume = Math.max(0, Math.min(microphone ? 1 : 1.5, node.audio.volume + delta / 100));
+        node.audio.volume = Math.max(0, Math.min(microphone ? 1 : 1.5, percent / 100));
         Runtime.showOsd(microphone ? "Microphone" : "Volume", node.audio.volume);
     }
     function mute(microphone) {
@@ -41,8 +45,10 @@ Singleton {
         if (node.isSink) {
             Pipewire.preferredDefaultAudioSink = node;
             Preferences.audioSink = node.name;
-        } else
+        } else {
             Pipewire.preferredDefaultAudioSource = node;
+            Preferences.audioSource = node.name;
+        }
     }
     function restore() {
         if (!Config.preview && Preferences.initialized && Preferences.audioSink) {
@@ -50,8 +56,14 @@ Singleton {
             if (match)
                 Pipewire.preferredDefaultAudioSink = match;
         }
+        if (!Config.preview && Preferences.initialized && Preferences.audioSource) {
+            var input = sources.find(n => n.name === Preferences.audioSource);
+            if (input)
+                Pipewire.preferredDefaultAudioSource = input;
+        }
     }
     onSinksChanged: restore()
+    onSourcesChanged: restore()
     Connections {
         target: Preferences
         function onInitializedChanged() {

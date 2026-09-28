@@ -13,6 +13,9 @@ Singleton {
     property bool dnd: false
     property bool barHidden: false
     property string audioSink: ""
+    property string audioSource: ""
+    property int panelTextSize: 14
+    property var monitorScales: ({})
     property string folder: ""
     function save() {
         if (initialized)
@@ -23,6 +26,9 @@ Singleton {
     onDndChanged: save()
     onBarHiddenChanged: save()
     onAudioSinkChanged: save()
+    onAudioSourceChanged: save()
+    onPanelTextSizeChanged: save()
+    onMonitorScalesChanged: save()
     onFolderChanged: save()
     FileView {
         id: file
@@ -38,6 +44,9 @@ Singleton {
             root.dnd = state.dnd;
             root.barHidden = state.barHidden;
             root.audioSink = state.audioSink;
+            root.audioSource = state.audioSource;
+            root.panelTextSize = state.panelTextSize;
+            root.monitorScales = state.monitorScales;
             root.folder = state.folder;
             root.initialized = true;
         }
@@ -53,6 +62,9 @@ Singleton {
                                                      dnd: root.dnd,
                                                      barHidden: root.barHidden,
                                                      audioSink: root.audioSink,
+                                                     audioSource: root.audioSource,
+                                                     panelTextSize: root.panelTextSize,
+                                                     monitorScales: root.monitorScales,
                                                      folder: root.folder
                                                  }))
     }

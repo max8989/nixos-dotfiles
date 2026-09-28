@@ -45,6 +45,9 @@ function restoreState(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) value = {};
     return { nightlight: value.nightlight === true, temperature: Math.max(2500,Math.min(6000,Number(value.temperature)||4000)), dnd: value.dnd === true,
         barHidden: value.barHidden === true, audioSink: typeof value.audioSink === "string" ? value.audioSink : "",
+        audioSource: typeof value.audioSource === "string" ? value.audioSource : "",
+        panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 14))),
+        monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         folder: typeof value.folder === "string" ? value.folder : "" };
 }
 function parseJson(text, fallback) { try { return JSON.parse(text); } catch (error) { return fallback; } }

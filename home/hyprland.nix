@@ -63,6 +63,9 @@
         lazyvim = menu "lazyvim";
         power = menu "power";
         audio = menu "audio";
+        wifi = menu "wifi";
+        display = menu "display";
+        battery = menu "battery";
         volumeUp = ipc [
           "audio"
           "volume"
