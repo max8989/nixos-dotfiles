@@ -157,6 +157,12 @@
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
+      # Zen handles web links and saved web pages.
+      "x-scheme-handler/http" = [ "zen-beta.desktop" ];
+      "x-scheme-handler/https" = [ "zen-beta.desktop" ];
+      "text/html" = [ "zen-beta.desktop" ];
+      "application/xhtml+xml" = [ "zen-beta.desktop" ];
+
       "inode/directory" = [ "org.kde.dolphin.desktop" ];
 
       # Okular ships one desktop entry per format; org.kde.okular.desktop

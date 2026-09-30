@@ -1,10 +1,49 @@
 # Handoff — custom Quickshell desktop
 
 **Updated:** 2026-09-28
-**Status:** Desktop controls are active on `thinkpad-x1-carbon-g12`. The running
-bundle matches the tested source, Super+M is registered, and the active NixOS
-system generation matches the completed build. The writable preference directory
-and saved state file were verified live (0700 and 0600 respectively).
+**Status:** Desktop controls and the four settings panels are active in the g12
+user session. The running bundle matches the tested source and all four direct
+shortcuts are registered. The final system generation is built; its activation
+requires the user's sudo password. Preferences remain outside the Nix store.
+
+## Settings panels
+
+- Super+Ctrl+A/W/D/P opens Audio/Wi-Fi/Display/Battery. Super+M and the bar
+  reach the same panels. Night-light left-click opens Display; right-click
+  retains its toggle. Battery and power-profile bar buttons open Battery.
+- Panels support Tab/Shift+Tab, Left/Right sliders, Enter/Space, Escape and
+  automatic scrolling to keyboard focus. Their height follows the content.
+- Native PipeWire controls output/input volume, mute and devices; both default
+  device choices persist. The microphone meter runs only after selecting Test
+  mic and stops when the panel closes.
+- Wi-Fi uses the native network model for radio, scanning and connection/password
+  handling. The small packaged Python helper reads IP/gateway/DNS/band data and
+  applies IPv4+IPv6 DNS presets through NetworkManager. Failed reapply restores
+  the saved profile. Hidden networks/custom DNS remain accessible in nmtui.
+- Display offers laptop backlight, panel font size, supported scale presets,
+  night light and keep-awake. An independent helper reverts scale on timeout,
+  closed stdin or termination. Confirmed values persist by display description
+  and are reapplied after login, monitor addition and compositor config reload.
+  Revert receives initial confirmation focus; normal focus returns afterwards.
+- Battery shows native UPower state and kernel capacity, health, cycles and
+  charge thresholds. Power profile buttons remain in the panel after selection.
+  Charge thresholds are read-only; panel font size affects these four panels.
+- Final bundle: `/nix/store/wkyl27i3lpys7wbxjqgs363q3841d4bk-quickshell-desktop`.
+  Final system: `/nix/store/2ydvq4dmc9mr1xxsf3m01ilvpjlnihz1-nixos-system-thinkpad-x1-carbon-g12-26.11.20260907.dc5d91f`.
+- Validation: flake checks and complete system/user builds pass; 10 helper
+  regressions cover DNS rollback, IPv6, scale validation/quoting, timeout/EOF
+  rollback and confirmed persistence. The full isolated UI suite passes all
+  22 menus, settings keyboard interactions, Wi-Fi credentials, scale confirmation,
+  compact layouts and existing clipboard/notification/power regressions.
+  Results: `/tmp/quickshell-settings-final-qa/result.json`.
+- Real hardware readers confirmed 53.4 Wh capacity, 94% health, 121 cycles,
+  a 100% charge limit, current Wi-Fi details, and valid eDP-1 scale presets.
+  UI tests use isolated fixtures; they do not change physical DNS, audio routing,
+  display scale, or power profiles.
+- Live activation verified the exact final bundle, Super+Ctrl+A/W/D/P registration,
+  an active user service, and no Hyprland configuration errors. Audio and Wi-Fi
+  rendered correctly with physical devices; the current shell invocation has no
+  QML errors. The existing desktop-portal registration warning remains unrelated.
 
 ## Desktop controls
 
