@@ -132,6 +132,9 @@ ShellRoot {
                                    outputMuted: hardware.audio.sink.audio.muted,
                                    inputVolume: hardware.audio.source.audio.volume,
                                    wifiEnabled: hardware.network.enabled,
+                                   wifiRadioEnabled: root.find(menus.contentItem, "wifiRadio").enabled,
+                                   wifiBackendWarning: root.find(menus.contentItem, "wifiBackendWarning").visible,
+                                   wifiHardwareWarning: root.find(menus.contentItem, "wifiHardwareWarning").visible,
                                    wifiPassword: hardware.network.guest.passwordReceived,
                                    dnsPreset: hardware.network.details.preset,
                                    powerProfile: hardware.battery.profile,
@@ -151,6 +154,10 @@ ShellRoot {
         }
         function focusControl(name: string): void { root.find(menus.contentItem, name).forceActiveFocus(Qt.TabFocusReason); }
         function selectGuestWifi(): void { menus.connectNetwork(hardware.network.guest); }
+        function networkState(available: bool, hardwareEnabled: bool): void {
+            hardware.network.available = available;
+            hardware.network.hardwareEnabled = hardwareEnabled;
+        }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function addNotification(): void {
             Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
@@ -376,6 +383,17 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: not inspect()["wifiEnabled"])
     key("Return")
     wait(lambda: inspect()["wifiEnabled"])
+    qa("networkState", "false", "false")
+    state = inspect()
+    assert state["wifiBackendWarning"] and not state["wifiHardwareWarning"]
+    assert not state["wifiRadioEnabled"]
+    capture("settings-wifi-backend-unavailable")
+    qa("networkState", "true", "false")
+    state = inspect()
+    assert state["wifiHardwareWarning"] and not state["wifiBackendWarning"]
+    assert not state["wifiRadioEnabled"]
+    qa("networkState", "true", "true")
+    qa("focusControl", "wifiRadio")
     key("Tab")
     key("Tab")
     key("Return")

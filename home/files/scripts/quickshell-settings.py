@@ -9,6 +9,7 @@ import select
 import signal
 import subprocess
 import sys
+import time
 
 NMCLI = "@nmcli@"
 HYPRCTL = "@hyprctl@"
@@ -29,6 +30,23 @@ def command(args):
 
 def nm(*args):
     return command([NMCLI, "--wait", "15", "--escape", "no", *args])
+
+
+def network_ready(timeout=10):
+    """Wait for the daemon, not connectivity (offline desktops must still start)."""
+    deadline = time.monotonic() + timeout
+    while (remaining := deadline - time.monotonic()) > 0:
+        try:
+            result = subprocess.run(
+                [NMCLI, "-g", "RUNNING", "general"], text=True, capture_output=True,
+                timeout=min(1, remaining), env={**os.environ, "LC_ALL": "C"},
+            )
+            if result.returncode == 0 and result.stdout.strip() == "running":
+                return {"ready": True}
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(min(0.2, max(0, deadline - time.monotonic())))
+    raise RuntimeError("NetworkManager did not become ready before desktop startup")
 
 
 def fields(output):
@@ -213,7 +231,9 @@ def emit(value):
 
 def main():
     action, *args = sys.argv[1:]
-    if action == "network-info" and len(args) == 1:
+    if action == "network-ready" and not args:
+        emit(network_ready())
+    elif action == "network-info" and len(args) == 1:
         emit(network_info(args[0]))
     elif action == "dns" and len(args) == 2:
         emit(set_dns(*args))

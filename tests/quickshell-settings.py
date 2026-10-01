@@ -1,6 +1,7 @@
 """Hardware-independent regressions for DNS transactions and scale recovery."""
 import importlib.util
 import io
+import itertools
 import json
 from pathlib import Path
 import sys
@@ -14,6 +15,29 @@ spec.loader.exec_module(settings)
 
 
 class SettingsTests(unittest.TestCase):
+    def test_network_ready_retries_missing_and_unresponsive_daemon(self):
+        replies = [settings.subprocess.CompletedProcess([], 1, "unknown\n"),
+                   settings.subprocess.TimeoutExpired("nmcli", 1),
+                   settings.subprocess.CompletedProcess([], 0, "running\n")]
+        with patch.object(settings.subprocess, "run", side_effect=replies) as run, patch.object(settings.time, "sleep"):
+            self.assertEqual(settings.network_ready(), {"ready": True})
+        self.assertEqual(run.call_count, 3)
+        self.assertEqual(run.call_args.args[0], [settings.NMCLI, "-g", "RUNNING", "general"])
+
+    def test_network_ready_does_not_wait_for_wifi_or_internet(self):
+        with patch.object(settings.subprocess, "run", return_value=settings.subprocess.CompletedProcess([], 0, "running\n")) as run, patch.object(settings.time, "sleep") as sleep:
+            self.assertEqual(settings.network_ready(), {"ready": True})
+        run.assert_called_once()
+        sleep.assert_not_called()
+
+    def test_network_ready_has_a_bounded_deadline(self):
+        with patch.object(settings.subprocess, "run", return_value=settings.subprocess.CompletedProcess([], 0, "not running\n")) as run, patch.object(settings.time, "monotonic", side_effect=itertools.count(0, 0.1)), patch.object(settings.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "did not become ready"):
+                settings.network_ready(timeout=0.5)
+        self.assertGreater(run.call_count, 0)
+        self.assertLess(run.call_count, 5)
+        self.assertTrue(all(0 < call.kwargs["timeout"] <= 0.5 for call in run.call_args_list))
+
     def setUp(self):
         self.monitor = dict(name="DP-1", description="Test display", width=1920, height=1200,
                             refreshRate=60.026, x=-1920, y=0, scale=1, transform=2,

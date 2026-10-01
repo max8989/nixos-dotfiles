@@ -20,20 +20,28 @@ SettingsScroll {
         Layout.fillWidth: true
         ColumnLayout {
             Layout.fillWidth: true
-            SettingsText { text: root.network.active?.name || (root.network.enabled ? "Not connected" : "Wi-Fi off"); Layout.fillWidth: true }
-            SettingsText { text: root.network.active ? Math.round(root.network.active.signalStrength * 100) + "% signal" + (root.network.details.band ? " · " + root.network.details.band : "") : "Select a network below"; caption: true }
+            SettingsText { text: !root.network.available ? "Network service unavailable" : root.network.active?.name || (root.network.enabled ? "Not connected" : "Wi-Fi off"); Layout.fillWidth: true }
+            SettingsText { visible: root.network.available; text: root.network.active ? Math.round(root.network.active.signalStrength * 100) + "% signal" + (root.network.details.band ? " · " + root.network.details.band : "") : "Select a network below"; caption: true }
         }
         SettingsButton {
             id: radio
             objectName: "wifiRadio"
             text: root.network.enabled ? "Turn off" : "Turn on"
-            enabled: root.network.hardwareEnabled && !root.network.changingDns
+            enabled: root.network.available && root.network.hardwareEnabled && !root.network.changingDns
             selected: root.network.enabled
             onClicked: root.network.toggle()
         }
     }
     SettingsText {
-        visible: !root.network.hardwareEnabled
+        objectName: "wifiBackendWarning"
+        visible: !root.network.available
+        text: "The desktop could not connect to NetworkManager. Restart the desktop shell after NetworkManager is running."
+        Layout.fillWidth: true
+        color: Config.theme.warning
+    }
+    SettingsText {
+        objectName: "wifiHardwareWarning"
+        visible: root.network.available && !root.network.hardwareEnabled
         text: "Wi-Fi is blocked by the hardware switch or airplane mode."
         Layout.fillWidth: true
         color: Config.theme.warning
@@ -96,6 +104,7 @@ SettingsScroll {
             id: group
             required property bool modelData
             Layout.fillWidth: true
+            visible: root.network.available
             spacing: 7
             SettingsText { text: group.modelData ? "KNOWN NETWORKS" : "OTHER NETWORKS"; caption: true }
             Repeater {

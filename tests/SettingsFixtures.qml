@@ -35,6 +35,7 @@ QtObject {
     }
     property QtObject network: QtObject {
         id: wifi
+        property bool available: true
         property bool enabled: true
         property bool hardwareEnabled: true
         property bool changingDns: false

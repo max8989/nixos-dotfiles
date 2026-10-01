@@ -146,6 +146,10 @@ in
       ConditionEnvironment = "WAYLAND_DISPLAY";
     };
     Service = {
+      # Quickshell 0.3.1 selects its network backend only once. During a rebuild
+      # the user service can start before the system NetworkManager service.
+      # Bound the wait and allow failure so networking cannot prevent locking.
+      ExecStartPre = "-${lib.getExe settingsHelper} network-ready";
       ExecStart = lib.mkForce "${lib.getExe pkgs.quickshell} --config desktop --no-color";
       Environment = [
         "QT_QUICK_CONTROLS_STYLE=Basic"

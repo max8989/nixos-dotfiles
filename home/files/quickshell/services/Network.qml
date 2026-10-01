@@ -8,6 +8,7 @@ import "../Logic.js" as Logic
 
 Singleton {
     id: root
+    readonly property bool available: Networking.backend !== NetworkBackendType.None
     readonly property bool enabled: Networking.wifiEnabled
     readonly property bool hardwareEnabled: Networking.wifiHardwareEnabled
     readonly property var devices: Networking.devices.values.filter(d => d.type === DeviceType.Wifi)
@@ -20,7 +21,7 @@ Singleton {
     property bool changingDns: false
     readonly property var traffic: Metrics.networkDevices[deviceName] || ({})
     function toggle() {
-        if (!Config.preview)
+        if (!Config.preview && available && hardwareEnabled)
             Networking.wifiEnabled = !Networking.wifiEnabled;
     }
     function refresh() {
