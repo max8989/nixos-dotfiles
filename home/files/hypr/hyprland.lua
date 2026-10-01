@@ -263,9 +263,17 @@ hl.config({
     },
 })
 
----------------------
----- LAYER RULES ----
----------------------
+----------------------
+---- WINDOW RULES ----
+----------------------
+
+-- Keep new windows in the tiling layout when apps request maximization.
+-- Explicit Super+D / Super+F actions still work.
+hl.window_rule({
+    name = "suppress-maximize-events",
+    match = { class = ".*" },
+    suppress_event = "maximize",
+})
 
 ---------------
 ---- INPUT ----
