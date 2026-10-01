@@ -7,6 +7,9 @@ import "../services"
 Glass {
     id: root
     required property var entry
+    property bool expandable: false
+    property bool expanded: false
+    objectName: "notificationCard"
     signal focusRequested(var item)
     implicitHeight: content.implicitHeight + 24
     ColumnLayout {
@@ -19,6 +22,7 @@ Glass {
         }
         spacing: 6
         RowLayout {
+            Layout.fillWidth: true
             Text {
                 text: root.entry.notification ? root.entry.notification.appName : root.entry.app
                 color: Config.theme.dim
@@ -27,6 +31,12 @@ Glass {
                 textFormat: Text.PlainText
                 Layout.fillWidth: true
                 elide: Text.ElideRight
+            }
+            Text {
+                text: root.entry.time ? Qt.formatTime(new Date(root.entry.time), "hh:mm") : ""
+                color: Config.theme.dim
+                font.family: Config.theme.uiFont
+                font.pixelSize: 12
             }
             Chip {
                 text: "×"
@@ -37,6 +47,7 @@ Glass {
             }
         }
         Text {
+            id: summary
             text: root.entry.notification ? root.entry.notification.summary : root.entry.title
             color: Config.theme.text
             font.bold: true
@@ -44,18 +55,34 @@ Glass {
             font.pixelSize: 16
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
+            maximumLineCount: root.expanded ? 2147483647 : 3
+            elide: Text.ElideRight
             Layout.fillWidth: true
         }
         Text {
+            id: body
             text: root.entry.notification ? root.entry.notification.body : root.entry.body
+            visible: text.length > 0
             color: Config.theme.text
             font.family: Config.theme.uiFont
             font.pixelSize: 14
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
-            maximumLineCount: 8
+            maximumLineCount: root.expanded ? 2147483647 : 6
             elide: Text.ElideRight
             Layout.fillWidth: true
+        }
+        Chip {
+            objectName: "notificationExpand"
+            visible: root.expandable && (root.expanded || summary.truncated || body.truncated)
+            text: root.expanded ? "Show less" : "Show more"
+            foreground: Config.theme.accent
+            onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
+            onClicked: {
+                root.expanded = !root.expanded;
+                if (!root.expanded)
+                    Qt.callLater(() => root.focusRequested(this));
+            }
         }
         Image {
             source: root.entry.image || ""

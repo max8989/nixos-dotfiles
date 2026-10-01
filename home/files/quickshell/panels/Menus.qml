@@ -892,20 +892,24 @@ PanelWindow {
             }
             ScrollView {
                 id: notificationScroll
+                objectName: "notificationScroll"
                 visible: Runtime.menu === "notifications"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+                contentWidth: availableWidth
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 Column {
                     id: notificationColumn
-                    width: parent.width
+                    width: notificationScroll.availableWidth
                     spacing: 8
                     Repeater {
                         model: Notifications.entries
                         NotificationCard {
                             required property var modelData
-                            width: parent.width
+                            width: notificationColumn.width
                             entry: modelData
+                            expandable: true
                             onFocusRequested: item => {
                                 var position = item.mapToItem(notificationColumn, 0, 0).y;
                                 var flickable = notificationScroll.contentItem as Flickable;
