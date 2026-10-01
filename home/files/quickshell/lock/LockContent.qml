@@ -16,9 +16,9 @@ Item {
 
     readonly property bool compact: height < 700
     readonly property int inset: width < 700 ? 24 : 48
-    readonly property color ink: "#edf3ee"
-    readonly property color muted: "#a7bbb4"
-    readonly property color jade: "#b8d9c5"
+    readonly property color ink: Config.theme.text
+    readonly property color muted: Config.theme.dim
+    readonly property color jade: Config.theme.accent
     readonly property string phrase: {
         var lines = Reminders.phrases.trim().split("\n").filter(line => line.trim().length > 0);
         var day = Math.floor((clock.date - new Date(clock.date.getFullYear(), 0, 0)) / 86400000);

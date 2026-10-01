@@ -70,7 +70,12 @@ requires the user's sudo password. Preferences remain outside the Nix store.
 ## Decisions and scope
 
 - Full shell: bar, menus, OSD, notifications, tray, polkit and session locking.
-- Keep the neon glass palette, Chinese lock content and existing keyboard shortcuts.
+- Keep the jade palette, Chinese lock content and existing keyboard shortcuts.
+  `home/palette.nix` shares colours across Quickshell, Hyprland, Kitty, Starship,
+  fzf, Superfile and the GTK/Qt themes. The desktop wallpaper is rendered from
+  `home/files/backgrounds/jade-landscape.svg`. KDE needs both the Qt palette and
+  `kdeglobals`' `UiSettings.ColorScheme` default; otherwise KColorSchemeManager
+  can replace the colours with Breeze while Kvantum still draws dark widgets.
   The shell palette is defined in Nix; other applications keep their existing theme.
 - Use the flake's pinned nixpkgs Quickshell **0.3.1**, with no third-party shell
   configuration or additional flake input. Both `quickshell` and `qs` are present.

@@ -1,5 +1,6 @@
 { pkgs, inputs, ... }:
 let
+  palette = import ./palette.nix;
   tomlFormat = pkgs.formats.toml { };
 
   # Upstream flake package (see the superfile input in flake.nix — nixpkgs is
@@ -10,10 +11,11 @@ let
   # file:// URI pushed as text/uri-list via wl-copy — so the hovered file
   # pastes as a real file into browsers and GUI apps. Details and regeneration
   # notes in the patch header.
-  superfile =
-    (inputs.superfile.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+  superfile = (
+    inputs.superfile.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
       patches = (old.patches or [ ]) ++ [ ./files/superfile-system-clipboard.patch ];
-    }));
+    })
+  );
 
   # Fire-and-forget Dolphin launcher for superfile's `e` key.
   #
@@ -50,7 +52,7 @@ in
   home.packages = [ superfile ];
 
   xdg.configFile."superfile/config.toml".source = tomlFormat.generate "superfile-config.toml" {
-    theme = "arctic";
+    theme = "jade";
 
     # `e` (open_file_with_editor) appends the hovered file's path; `E`
     # (open_current_directory_with_editor) appends the panel's directory.
@@ -141,6 +143,50 @@ in
     metadata = false;
     enable_md5_checksum = false;
     zoxide_support = true;
+  };
+
+  xdg.configFile."superfile/theme/jade.toml".source = tomlFormat.generate "superfile-jade.toml" {
+    code_syntax_highlight = "github-dark";
+    file_panel_border = palette.border;
+    sidebar_border = palette.base;
+    footer_border = palette.border;
+    file_panel_border_active = palette.accent;
+    sidebar_border_active = palette.accent;
+    footer_border_active = palette.accent;
+    modal_border_active = palette.accent;
+    full_screen_bg = palette.background;
+    file_panel_bg = palette.background;
+    sidebar_bg = palette.base;
+    footer_bg = palette.base;
+    modal_bg = palette.surface;
+    full_screen_fg = palette.text;
+    file_panel_fg = palette.text;
+    sidebar_fg = palette.text;
+    footer_fg = palette.text;
+    modal_fg = palette.text;
+    cursor = palette.accent;
+    correct = palette.green;
+    error = palette.urgent;
+    hint = palette.teal;
+    cancel = palette.warning;
+    gradient_color = [
+      palette.accent
+      palette.teal
+    ];
+    file_panel_top_directory_icon = palette.accent;
+    file_panel_top_path = palette.muted;
+    file_panel_item_selected_fg = palette.text;
+    file_panel_item_selected_bg = palette.raised;
+    sidebar_title = palette.accent;
+    sidebar_item_selected_fg = palette.text;
+    sidebar_item_selected_bg = palette.raised;
+    sidebar_divider = palette.border;
+    modal_cancel_fg = palette.base;
+    modal_cancel_bg = palette.urgent;
+    modal_confirm_fg = palette.base;
+    modal_confirm_bg = palette.accent;
+    help_menu_hotkey = palette.accent;
+    help_menu_title = palette.yellow;
   };
 
   # Tuned to match ~/.config/nvim — vim motions plus nvim-tree conventions.

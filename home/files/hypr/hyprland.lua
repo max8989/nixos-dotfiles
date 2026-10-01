@@ -1,3 +1,11 @@
+local theme = require("theme")
+local function rgba(color, alpha)
+    return "rgba(" .. color:sub(2) .. (alpha or "ff") .. ")"
+end
+local function argb(color, alpha)
+    return tonumber((alpha or "ff") .. color:sub(2), 16)
+end
+
 -- Hyprland configuration (Lua).
 --
 -- Deployed by home/hyprland.nix as `extraConfig`, which Home Manager appends
@@ -74,9 +82,9 @@ hl.config({
         border_size = 2,
 
         col = {
-            -- Hyprland-signature cyan→green gradient; borderangle below slowly rotates it.
-            active_border   = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 },
-            inactive_border = "rgba(1a1f2eaa)",
+            -- A quiet sage border identifies the focused window.
+            active_border   = rgba(theme.accent, "dd"),
+            inactive_border = rgba(theme.border, "88"),
         },
 
         resize_on_border = false,
@@ -100,7 +108,7 @@ hl.config({
             enabled      = true,
             range        = 3,
             render_power = 3,
-            color        = 0x1033ccff, -- barely-there cyan tint under the active window (ARGB)
+            color        = argb(theme.background, "55"),
         },
 
         blur = {
@@ -139,7 +147,7 @@ hl.config({
             -- fontconfig family name, so it cannot be shared from there
             -- (generated shell commands live in a separate Lua module). Empty
             -- would fall back to misc:font_family.
-            font_family = "CaskaydiaCove Nerd Font",
+            font_family = "Figtree",
             font_size = 11,           -- was 8
             font_weight_active = 600, -- the focused tab leads on weight...
             font_weight_inactive = 400,
@@ -167,15 +175,15 @@ hl.config({
             -- ...and on brightness. Both stay well clear of the dim grey that
             -- made these unreadable to begin with; inactive is subordinate,
             -- not invisible.
-            text_color = 0xffe6f4ff,
+            text_color = argb(theme.text),
             -- Explicit because -1 (the default) means "reuse text_color".
-            text_color_inactive = 0xff8296a8,
+            text_color_inactive = argb(theme.muted),
             col = {
-                -- Desaturated teal-navy: clearly lighter than the inactive
+                -- Muted jade: clearly lighter than the inactive
                 -- plate, without reading as a coloured band.
-                active = { colors = { "rgba(1d3a4ce0)", "rgba(0e1a26e0)" }, angle = 45 },
+                active = { colors = { rgba(theme.raised, "ee"), rgba(theme.surface, "ee") }, angle = 45 },
                 -- 0.70 alpha over the Waybar island background colour.
-                inactive = "rgba(0a0a12b3)",
+                inactive = rgba(theme.base, "dd"),
             },
         },
     },
@@ -205,10 +213,8 @@ hl.animation({ leaf = "fadeSwitch",  enabled = false, speed = 1,    bezier = "ea
 hl.animation({ leaf = "fadeShadow",  enabled = true,  speed = 10,   bezier = "almostLinear" })
 hl.animation({ leaf = "fadeDim",     enabled = true,  speed = 4.03, bezier = "almostLinear" })
 hl.animation({ leaf = "border",      enabled = true,  speed = 0.81, bezier = "easeOutQuint" })
--- Slow continuous rotation of the cyan→green border gradient. NOTE: `loop`
--- keeps the compositor rendering at refresh rate — speed 100 (10 s/turn)
--- keeps the cost low; disable this line first if battery life matters more.
-hl.animation({ leaf = "borderangle", enabled = true,  speed = 100,  bezier = "linear",        style = "loop" })
+-- A static border avoids continuous rendering while the desktop is idle.
+hl.animation({ leaf = "borderangle", enabled = false })
 hl.animation({ leaf = "workspaces",  enabled = true,  speed = 0.8,  bezier = "easeOutQuint",  style = "slidefade" })
 -- Special workspace (SUPER+S scratchpad): same slidefade as before, but with
 -- the overshot curve so it bounces into place like moving windows do.

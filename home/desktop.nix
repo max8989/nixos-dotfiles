@@ -4,6 +4,13 @@
   pkgs,
   ...
 }:
+let
+  palette = import ./palette.nix;
+  jadeWallpaper = pkgs.runCommand "jade-wallpaper" { nativeBuildInputs = [ pkgs.librsvg ]; } ''
+    mkdir -p "$out"
+    rsvg-convert ${./files/backgrounds/jade-landscape.svg} -o "$out/jade-landscape.png"
+  '';
+in
 {
   services.hypridle = {
     enable = true;
@@ -87,7 +94,7 @@
       wallpaper = [
         {
           monitor = "";
-          path = "~/.config/backgrounds/nixos-cool-wallpaper.png";
+          path = "${jadeWallpaper}/jade-landscape.png";
         }
       ];
     };
@@ -118,6 +125,20 @@
   #########################################################################
   services.hyprshell = {
     enable = true;
+    style = ''
+      :root {
+        --border-color: ${palette.border};
+        --border-color-active: ${palette.accent};
+        --bg-color: ${palette.base};
+        --bg-color-hover: ${palette.raised};
+        --bg-window-color: ${palette.background};
+        --text-color: ${palette.text};
+        --border-radius: 14px;
+        --border-size: 2px;
+        --border-style: solid;
+      }
+      .window { font-family: Figtree; }
+    '';
     settings = {
       version = 4;
       windows = {

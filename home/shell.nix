@@ -1,5 +1,6 @@
 { config, lib, ... }:
 let
+  palette = import ./palette.nix;
   # Shared by bash and zsh — the set from the Arch ~/.zshrc.
   shellAliases = {
     # eza-based listings
@@ -81,6 +82,20 @@ in
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
+    colors = {
+      "bg" = palette.background;
+      "bg+" = palette.surface;
+      "fg" = palette.muted;
+      "fg+" = palette.text;
+      "hl" = palette.accent;
+      "hl+" = palette.accent;
+      "border" = palette.border;
+      "prompt" = palette.accent;
+      "pointer" = palette.accent;
+      "marker" = palette.green;
+      "spinner" = palette.teal;
+      "info" = palette.muted;
+    };
   };
 
   # `z`/`zi` frecency jumping — replaces `eval "$(zoxide init zsh)"`.
@@ -102,14 +117,26 @@ in
   programs.bash.shellAliases = shellAliases;
   programs.zsh.shellAliases = shellAliases;
 
-  # Starship prompt. The complex Catppuccin-Mocha starship.toml (nerd-font
-  # glyphs, palettes) is imported as-is via importTOML — pure (the file lives in
-  # the flake) and lossless, which hand-transcribing the unicode glyphs is not.
+  # Keep the prompt's structure in TOML and its colours in the shared palette.
   programs.starship = {
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
-    settings = lib.importTOML ./starship.toml;
+    settings = (lib.importTOML ./starship.toml) // {
+      palette = "jade";
+      palettes.jade = {
+        s1 = palette.base;
+        s2 = palette.surface;
+        text = palette.text;
+        muted = palette.muted;
+        dim = palette.dim;
+        cyan = palette.accent;
+        blue = palette.blue;
+        green = palette.green;
+        red = palette.urgent;
+        amber = palette.warning;
+      };
+    };
   };
 
   ##########################################################################

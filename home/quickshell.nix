@@ -8,20 +8,21 @@
   ...
 }:
 let
+  palette = import ./palette.nix;
   hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   settings = {
     theme = {
-      background = "#b80a0a12";
-      solid = "#0a0a12";
-      surface = "#151c2a";
-      text = "#d8f0ff";
-      dim = "#8998ae";
-      blue = "#3366ff";
-      accent = "#33ccff";
-      success = "#00ff99";
-      warning = "#ffcc66";
-      urgent = "#ff3366";
-      border = "#4d788caa";
+      background = "#e6102824";
+      solid = palette.base;
+      surface = palette.surface;
+      text = palette.text;
+      dim = palette.muted;
+      blue = palette.blue;
+      accent = palette.accent;
+      success = palette.green;
+      warning = palette.warning;
+      urgent = palette.urgent;
+      border = "#805d7369";
       font = "JetBrainsMono Nerd Font";
       uiFont = "Figtree";
       fontSize = 14;

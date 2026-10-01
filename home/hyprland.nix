@@ -33,6 +33,8 @@
 
   };
 
+  xdg.configFile."hypr/theme.lua".text = "return " + lib.generators.toLua { } (import ./palette.nix);
+
   xdg.configFile."hypr/shell_commands.lua".text =
     let
       ipc =
