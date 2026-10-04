@@ -128,6 +128,7 @@
     alsa-utils # alsamixer / aplay (was `alsa-utils`)
     zip
     stow
+    nchat # terminal chat client (Telegram, WhatsApp)
 
     # --- dev block ---
     docker-compose
