@@ -16,7 +16,13 @@ Singleton {
     property string audioSource: ""
     property int panelTextSize: 14
     property var monitorScales: ({})
+    property var appLaunchCounts: Object.create(null)
     property string folder: ""
+    function recordAppLaunch(id) {
+        var counts = Object.assign(Object.create(null), appLaunchCounts);
+        counts[id] = Math.min(Number.MAX_SAFE_INTEGER, (counts[id] || 0) + 1);
+        appLaunchCounts = counts;
+    }
     function save() {
         if (initialized)
             saveTimer.restart();
@@ -29,6 +35,7 @@ Singleton {
     onAudioSourceChanged: save()
     onPanelTextSizeChanged: save()
     onMonitorScalesChanged: save()
+    onAppLaunchCountsChanged: save()
     onFolderChanged: save()
     FileView {
         id: file
@@ -47,6 +54,7 @@ Singleton {
             root.audioSource = state.audioSource;
             root.panelTextSize = state.panelTextSize;
             root.monitorScales = state.monitorScales;
+            root.appLaunchCounts = state.appLaunchCounts;
             root.folder = state.folder;
             root.initialized = true;
         }
@@ -65,6 +73,7 @@ Singleton {
                                                      audioSource: root.audioSource,
                                                      panelTextSize: root.panelTextSize,
                                                      monitorScales: root.monitorScales,
+                                                     appLaunchCounts: root.appLaunchCounts,
                                                      folder: root.folder
                                                  }))
     }

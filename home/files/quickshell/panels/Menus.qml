@@ -222,12 +222,18 @@ PanelWindow {
         var menu = Runtime.menu;
         var items = [];
         if (menu === "apps") {
-            items = DesktopEntries.applications.values.filter(a => !a.noDisplay).map(a => row(a.name, () => {
-                if (!Config.preview)
-                    a.execute();
-                Runtime.closeMenu();
-            }, a.genericName || a.comment, a.icon));
-            items.sort((a, b) => a.title.localeCompare(b.title));
+            items = Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay),
+                                           Preferences.appLaunchCounts).map(a => {
+                var item = row(a.name, () => {
+                    if (!Config.preview) {
+                        a.execute();
+                        Preferences.recordAppLaunch(a.id);
+                    }
+                    Runtime.closeMenu();
+                }, a.genericName || a.comment, a.icon);
+                item.id = a.id;
+                return item;
+            });
         } else if (menu === "clipboard") {
             var serial = ++requestSerial;
             rows = [];
@@ -460,6 +466,10 @@ PanelWindow {
     }
     Connections {
         target: Preferences
+        function onAppLaunchCountsChanged() {
+            if (Runtime.menu === "apps")
+                root.refresh();
+        }
         function onInitializedChanged() {
             if (Preferences.folder)
                 root.folderPath = Preferences.folder;

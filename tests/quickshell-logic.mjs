@@ -27,6 +27,24 @@ assert.equal(context.restoreState({panelTextSize:9000}).panelTextSize,20);
 assert.equal(context.restoreState({panelTextSize:"broken"}).panelTextSize,14);
 assert.equal(context.restoreState({audioSource:42}).audioSource,"");
 assert.deepEqual(plain(context.restoreState({monitorScales:[]}).monitorScales),{});
+for (const value of [undefined, null, [], "broken", 42]) {
+    assert.deepEqual(plain(context.restoreState({appLaunchCounts:value}).appLaunchCounts),{});
+}
+const appCounts = context.restoreState({appLaunchCounts:{zen:8, editor:3, archive:3,
+    negative:-2, fractional:1.5, text:"7", infinite:Infinity, unsafe:2 ** 53, zero:0}}).appLaunchCounts;
+assert.deepEqual(plain(appCounts),{zen:8, editor:3, archive:3});
+const apps = [{id:"editor",name:"Editor"}, {id:"unused",name:"Alpha"},
+    {id:"archive",name:"Archive"}, {id:"zen",name:"Zen"}];
+const rankedApps = context.rankApplications(apps, appCounts);
+assert.deepEqual(plain(rankedApps).map(app => app.id),["zen","archive","editor","unused"]);
+assert.deepEqual(apps.map(app => app.id),["editor","unused","archive","zen"]);
+assert.deepEqual(plain(context.rankApplications(apps, context.restoreState({}).appLaunchCounts)).map(app => app.id),
+    ["unused","archive","editor","zen"]);
+assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({appLaunchCounts:appCounts}))).appLaunchCounts),
+    plain(appCounts));
+const appRows = rankedApps.map(app => ({...app,title:app.name,subtitle:"Application"}));
+assert.equal(context.search(appRows,"editor")[0].id,"editor");
+assert.deepEqual(plain(context.search(appRows,"application")).map(app => app.id),["zen","archive","editor","unused"]);
 assert.deepEqual(plain(context.parseJson("broken",{})),{});
 assert.equal(context.search([{title:"中文 test",subtitle:"note"}],"中文 note").length,1);
 assert.equal(context.search([{title:"Do Not Disturb",keywords:"dnd quiet notifications"}],"DND").length,1);

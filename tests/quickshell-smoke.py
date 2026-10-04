@@ -20,6 +20,9 @@ runtime.mkdir(exist_ok=True, mode=0o700)
 for directory in ("state", "cache", "home", "data/applications", "config/quickshell"):
     (output / directory).mkdir(exist_ok=True, parents=True)
 (output / "data/applications/quickshell-qa.desktop").write_text("[Desktop Entry]\nType=Application\nName=Quickshell QA Fixture\nExec=false\n")
+for name in ("Alpha", "Zebra"):
+    (output / f"data/applications/quickshell-qa-{name.lower()}.desktop").write_text(
+        f"[Desktop Entry]\nType=Application\nName={name} QA Fixture\nExec=true\n")
 config_link = output / "config/quickshell/desktop"
 if config_link.is_symlink():
     config_link.unlink()
@@ -126,6 +129,7 @@ ShellRoot {
                                    dndFocused: root.find(menus.contentItem, "notificationDnd").activeFocus,
                                    calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
                                    dnd: Desktop.Preferences.dnd,
+                                   appLaunchCounts: Desktop.Preferences.appLaunchCounts,
                                    notificationCount: Services.Notifications.entries.length,
                                    outputVolume: hardware.audio.sink.audio.volume,
                                    outputName: hardware.audio.sink.name,
@@ -159,6 +163,7 @@ ShellRoot {
             hardware.network.hardwareEnabled = hardwareEnabled;
         }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
+        function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
         function addNotification(): void {
             Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
         }
@@ -281,6 +286,40 @@ elif sys.argv[1] == 'battery-info':
         # sending modifiers, just as the other wtype calls do.
         run(["wtype", "-s", "150", "-M", "ctrl", "-k", "l", "-m", "ctrl", "-s", "80", "-k", "BackSpace", "-d", "10", text])
         wait(lambda: inspect()["query"] == text)
+
+    qa("openApps")
+    wait(lambda: len(inspect()["rows"]) == 3)
+    assert [r["title"] for r in inspect()["rows"]] == ["Alpha QA Fixture", "Quickshell QA Fixture", "Zebra QA Fixture"]
+    app_ids = {r["title"].split()[0]: r["id"] for r in inspect()["rows"]}
+    key("Escape")
+    # Launch from search, check frequency ordering and alphabetical ties, and
+    # ensure reopening the menu selects the new top app for Enter.
+    for name, top in [("Zebra", "Zebra"), ("Alpha", "Alpha"), ("Zebra", "Zebra")]:
+        qa("openApps")
+        query(name + " QA Fixture")
+        key("Return")
+        wait(lambda: inspect()["menu"] == "")
+        qa("openApps")
+        wait(lambda: inspect()["rows"][0]["id"] == app_ids[top])
+        assert inspect()["selected"] == app_ids[top]
+        key("Escape")
+    saved_preferences = preference_dir / "state.json"
+    expected_counts = {app_ids["Alpha"]: 1, app_ids["Zebra"]: 2}
+    wait(lambda: saved_preferences.exists() and json.loads(saved_preferences.read_text()).get("appLaunchCounts") == expected_counts)
+    # Restart the real QML components to verify saved usage is restored.
+    process.terminate()
+    process.wait(timeout=5)
+    process = subprocess.Popen(["quickshell", "--path", str(fixture), "--no-color"], env=env,
+                               stdout=log_file, stderr=subprocess.STDOUT)
+    processes.append(process)
+    wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    wait(lambda: inspect()["appLaunchCounts"] == expected_counts)
+    qa("openApps")
+    wait(lambda: inspect()["rows"][0]["id"] == app_ids["Zebra"])
+    capture("apps-frequency")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["appLaunchCounts"][app_ids["Zebra"]] == 3)
+    print("Application launch frequency, alphabetical ties, Enter selection and restart persistence passed")
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
@@ -532,6 +571,9 @@ try:
     ipc("call", "menus", "toggle", "apps")
     run(["wtype", "-s", "150", "-d", "20", "QA Fixture", "-k", "Return"])
     wait(lambda: ipc("call", "menus", "current").stdout.strip()=="")
+    preview_state = output / "state/state.json"
+    if preview_state.exists():
+        assert not json.loads(preview_state.read_text()).get("appLaunchCounts"), "Preview launches changed application usage"
     ipc("call", "menus", "toggle", "apps")
     run(["wtype", "-s", "150", "-d", "20", "zz-no-app-matches-zz"])
     run(["wtype", "-s", "150", "-k", "Return"])
@@ -556,7 +598,7 @@ try:
     shell.terminate()
     shell.wait(timeout=5)
     interaction_checks()
-    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
+    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "appFrequency": True, "appFrequencyPersistence": True, "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
     print(f"{len(menu_names)} menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
 except Exception:
     fixture_path = output / "interactions.qml"

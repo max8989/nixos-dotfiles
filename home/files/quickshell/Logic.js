@@ -48,7 +48,23 @@ function restoreState(value) {
         audioSource: typeof value.audioSource === "string" ? value.audioSource : "",
         panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 14))),
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
+        appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
         folder: typeof value.folder === "string" ? value.folder : "" };
+}
+function restoreAppLaunchCounts(value) {
+    var counts = Object.create(null);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+        Object.keys(value).forEach(function(id) {
+            if (Number.isSafeInteger(value[id]) && value[id] > 0) counts[id] = value[id];
+        });
+    }
+    return counts;
+}
+function rankApplications(items, counts) {
+    return items.slice().sort(function(a, b) {
+        return (counts[b.id] || 0) - (counts[a.id] || 0)
+            || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    });
 }
 function parseJson(text, fallback) { try { return JSON.parse(text); } catch (error) { return fallback; } }
 function clipboardEntries(text) {
