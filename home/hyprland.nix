@@ -7,29 +7,31 @@
 let
   hyprlandPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
 
-  # Ctrl+Space: us -> ca -> pinyin -> us. Hyprland owns the xkb layouts and
-  # fcitx5 owns Pinyin, so one script steps both. Pinyin types over the us
-  # layout, which is why leaving it returns to layout 0.
+  # Ctrl+Space: us -> ca -> pinyin -> us. fcitx5 holds the state (all three
+  # are fcitx5 IMs, so each switch shows its popup); Hyprland's layout is kept
+  # in step so keys typed outside a text field and the bar's chip match.
+  # Pinyin types over the us layout.
   cycleInput = pkgs.writeShellApplication {
     name = "cycle-input";
     runtimeInputs = [
       hyprlandPackage
       pkgs.fcitx5
-      pkgs.jq
     ];
     text = ''
-      if [[ "$(fcitx5-remote -n)" == pinyin ]]; then
-        fcitx5-remote -s keyboard-us
-        hyprctl switchxkblayout all 0
-        exit 0
-      fi
-      keymap=$(hyprctl -j devices | jq -r '[.keyboards[] | select(.main)][0].active_keymap // ""')
-      if [[ "$keymap" == *Canadian* || "$keymap" == *French* ]]; then
-        hyprctl switchxkblayout all 0
-        fcitx5-remote -s pinyin
-      else
-        hyprctl switchxkblayout all 1
-      fi
+      case "$(fcitx5-remote -n)" in
+        keyboard-us)
+          fcitx5-remote -s keyboard-ca
+          hyprctl switchxkblayout all 1
+          ;;
+        keyboard-ca)
+          fcitx5-remote -s pinyin
+          hyprctl switchxkblayout all 0
+          ;;
+        *)
+          fcitx5-remote -s keyboard-us
+          hyprctl switchxkblayout all 0
+          ;;
+      esac
     '';
   };
 in

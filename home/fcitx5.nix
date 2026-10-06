@@ -86,8 +86,8 @@ let
 in
 {
   xdg.configFile = {
-    # keyboard-us + pinyin. cycle-input (home/hyprland.nix) relies on
-    # "pinyin" being in this group.
+    # keyboard-us, keyboard-ca, pinyin — the three steps of cycle-input
+    # (home/hyprland.nix), which relies on these exact names.
     "fcitx5/profile" = {
       force = true;
       text = toINI {
@@ -97,8 +97,40 @@ in
           DefaultIM = "keyboard-us";
         };
         "Groups/0/Items/0".Name = "keyboard-us";
-        "Groups/0/Items/1".Name = "pinyin";
+        # French as an fcitx5 IM (not only a Hyprland layout) so switching to
+        # it shows the same input-method popup as English and Pinyin.
+        "Groups/0/Items/1".Name = "keyboard-ca";
+        "Groups/0/Items/2".Name = "pinyin";
         GroupOrder."0" = "Default";
+      };
+    };
+
+    # One input method for every window. fcitx5's default keeps a separate
+    # state per window, which drifts from Hyprland's single global layout.
+    "fcitx5/config" = {
+      force = true;
+      text = toINI {
+        Behavior.ShareInputState = "All";
+      };
+    };
+
+    # Enter picks the highlighted candidate instead of typing the raw
+    # letters; Shift/Ctrl+Enter still commit the raw pinyin.
+    "fcitx5/conf/pinyin.conf" = {
+      force = true;
+      text = withGlobals { FirstRun = "False"; } {
+        CurrentCandidate = {
+          "0" = "space";
+          "1" = "KP_Space";
+          "2" = "Return";
+          "3" = "KP_Enter";
+        };
+        CommitRawInput = {
+          "0" = "Shift+Return";
+          "1" = "Shift+KP_Enter";
+          "2" = "Control+Return";
+          "3" = "Control+KP_Enter";
+        };
       };
     };
 
