@@ -45,6 +45,20 @@ QtObject {
     }
     readonly property string profile: PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver"
         : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
+    readonly property var profiles: PowerProfiles.hasPerformanceProfile
+        ? [PowerProfile.PowerSaver, PowerProfile.Balanced, PowerProfile.Performance]
+        : [PowerProfile.PowerSaver, PowerProfile.Balanced]
+    function stepProfile(direction, wrap) {
+        var next = profiles.indexOf(PowerProfiles.profile) + direction;
+        if (wrap)
+            next = (next + profiles.length) % profiles.length;
+        if (next >= 0 && next < profiles.length)
+            Battery.setProfile(profiles[next]);
+    }
+    readonly property var presentation: action("presentation", "Presentation mode", () => Runtime.presentation = !Runtime.presentation,
+        "Keep the screen awake", "idle sleep inhibit caffeine", Runtime.presentation ? "On" : "Off")
+    readonly property var powerProfile: action("power-profile", "Power profile", () => stepProfile(1, true),
+        "Enter cycles · ←/→ steps", "battery saver balanced performance", profile, direction => stepProfile(direction, false))
     readonly property var audio: [
         action("volume", "Volume", () => Audio.mute(false), Audio.sink?.description || "No output device",
             "sound speaker output mute unmute", audioValue(Audio.sink), direction => Audio.change(false, direction * 5)),
@@ -67,8 +81,7 @@ QtObject {
         action("temperature", "Colour temperature", () => Display.toggleNightlight(), "Night light · lower values are warmer",
             "display color nightlight kelvin", Preferences.nightlight ? Preferences.temperature + " K" : "Off",
             direction => Display.adjustNightlight(direction * 500)),
-        action("presentation", "Presentation mode", () => Runtime.presentation = !Runtime.presentation,
-            "Keep the screen awake", "idle sleep inhibit caffeine", Runtime.presentation ? "On" : "Off"),
+        presentation,
         action("bar", "Show top bar", () => Preferences.barHidden = !Preferences.barHidden,
             "Toggle bar visibility", "waybar panel hide show", Preferences.barHidden ? "Off" : "On")
     ]
@@ -128,6 +141,7 @@ QtObject {
         }, workspace ? workspace.toplevels.values.length + " windows" : "Empty workspace", "desktop", workspace?.focused ? "Active" : "");
     })
     readonly property var home: [
+        presentation, powerProfile,
         page("audio", "Sound", audioValue(Audio.sink) + " · speakers and microphone", "volume audio"),
         notificationActions[0], notificationActions[1],
         page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"),
@@ -137,5 +151,5 @@ QtObject {
         page("settings", "Settings and shortcuts", "Configuration files and keyboard references", "help"),
         page("power", "Power and session", "Lock, suspend, restart or shut down", "logout")
     ]
-    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, connections, desktop, capture, settings, power)
+    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, [powerProfile], connections, desktop, capture, settings, power)
 }

@@ -393,10 +393,6 @@ PanelWindow {
             }
         });
     }
-    onFilteredChanged: {
-        var index = filtered.findIndex(item => (item.id || item.title) === root.selectionKey);
-        list.currentIndex = Math.max(0, index);
-    }
     onWifiNetworksChanged: if (Runtime.menu === "wifi")
                                refresh()
     onBluetoothDevicesChanged: if (Runtime.menu === "bluetooth")
@@ -802,6 +798,9 @@ PanelWindow {
                 Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
                 Keys.onRightPressed: event => event.accepted = root.adjust(1)
                 model: root.filtered
+                // Assigning a new model resets currentIndex to 0, so restore the
+                // selection after the reset rather than on root.filteredChanged.
+                onModelChanged: currentIndex = Math.max(0, root.filtered.findIndex(item => (item.id || item.title) === root.selectionKey))
                 spacing: 4
                 ScrollBar.vertical: ScrollBar {}
                 delegate: ItemDelegate {

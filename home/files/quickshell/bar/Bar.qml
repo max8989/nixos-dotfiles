@@ -34,7 +34,6 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-bar"
     exclusionMode: Config.preview ? ExclusionMode.Ignore : ExclusionMode.Auto
     readonly property var monitor: Hyprland.monitorFor(screen)
-    property string language: "EN"
     readonly property var connection: Networking.devices.values.find(d => d.connected)
     readonly property var wifi: connection?.networks.values.find(n => n.connected)
     readonly property string networkTip: (wifi ? wifi.name + " · " + Math.round(wifi.signalStrength * 100) + "%" : connection ? connection.name : "Disconnected") + (connection ? " · " + connection.address : "") + "\n" + Metrics.networkRate
@@ -59,13 +58,6 @@ PanelWindow {
             return;
         var relative = direction > 0 ? "m-1" : "m+1";
         Hyprland.dispatch(Hyprland.usingLua ? 'hl.dsp.focus({ workspace = "' + relative + '" })' : "workspace " + relative);
-    }
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            if (event.name === "activelayout")
-                root.language = event.data.indexOf("French") >= 0 ? "FR" : event.data.indexOf("Canadian") >= 0 ? "CA" : "EN";
-        }
     }
     SystemClock {
         id: clock
@@ -239,9 +231,9 @@ PanelWindow {
             Chip {
                 text: PowerProfiles.profile === PowerProfile.PowerSaver ? "󰾆" : PowerProfiles.profile === PowerProfile.Performance ? "󰓅" : "󰾅"
                 tipTitle: "Power profile"
-                tip: PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
-                selected: root.menuSelected("battery")
-                onClicked: root.open("battery", this)
+                tip: (PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced") + "\nClick to cycle"
+                onClicked: Battery.setProfile(PowerProfiles.profile === PowerProfile.PowerSaver ? PowerProfile.Balanced
+                    : PowerProfiles.profile === PowerProfile.Balanced && PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver)
             }
             Chip {
                 text: Battery.present ? (UPower.onBattery ? "󰁹 " : "󰂄 ") + Battery.percent + "%" : "AC"
@@ -250,12 +242,6 @@ PanelWindow {
                 tip: Battery.summary + "\nClick for battery and power settings"
                 selected: root.menuSelected("battery")
                 onClicked: root.open("battery", this)
-            }
-            Chip {
-                text: root.language
-                visible: root.width > 1700
-                tipTitle: "Keyboard layout"
-                tip: "Ctrl+Space cycles us, ca and pinyin"
             }
             Loader {
                 active: !Config.preview
