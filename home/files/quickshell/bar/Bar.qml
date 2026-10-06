@@ -63,6 +63,13 @@ PanelWindow {
         id: clock
         precision: SystemClock.Minutes
     }
+    Connections {
+        target: Runtime
+        function onResumed() {
+            clock.enabled = false;
+            clock.enabled = true;
+        }
+    }
     IdleInhibitor {
         window: root
         enabled: Runtime.presentation && !Config.preview && !Runtime.locked

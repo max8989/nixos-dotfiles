@@ -17,6 +17,11 @@ Singleton {
     property real osdValue: 0
     property bool osdVisible: false
     property bool osdProgress: true
+    // QML timers run on the monotonic clock, which stops during suspend, so a
+    // SystemClock keeps showing the pre-suspend minute after waking. Emitted
+    // when wall time jumps past the watchdog interval so clocks can resync.
+    signal resumed
+    property real lastTick: Date.now()
     function showOsd(label, value) {
         osdLabel = label;
         osdValue = value;
@@ -100,6 +105,17 @@ Singleton {
         id: osdTimer
         interval: 1800
         onTriggered: root.osdVisible = false
+    }
+    Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        onTriggered: {
+            var now = Date.now();
+            if (now - root.lastTick > interval + 10000)
+                root.resumed();
+            root.lastTick = now;
+        }
     }
     Timer {
         id: messageTimer

@@ -34,6 +34,13 @@ Item {
         id: clock
         precision: SystemClock.Minutes
     }
+    Connections {
+        target: Runtime
+        function onResumed() {
+            clock.enabled = false;
+            clock.enabled = true;
+        }
+    }
 
     // A self-contained landscape also covers startup and missing snapshots.
     // Only repaint on resize; the resting lock screen has no animation loop.
