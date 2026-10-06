@@ -48,9 +48,9 @@ let
       dotfiles = "${config.home.homeDirectory}/repos/nixos-dotfiles";
       screenshot = "${config.xdg.configHome}/scripts/screenshot.sh";
       screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
-      todo = "${config.home.homeDirectory}/Documents/obsidian/Templates/TODO.md";
+      todo = "${config.home.homeDirectory}/Documents/obsidian/00 Home/00 Todos.md";
       vault = "obsidian";
-      todoNote = "Templates/TODO";
+      todoNote = "00 Home/00 Todos";
       homeNote = "00 Home/Home";
       phrases = "${./files/quickshell/assets/phrases_zh.txt}";
       vim = "${./files/quickshell/assets/vim.txt}";

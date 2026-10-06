@@ -27,7 +27,7 @@ config_link = output / "config/quickshell/desktop"
 if config_link.is_symlink():
     config_link.unlink()
 config_link.symlink_to(bundle, target_is_directory=True)
-(output / "home" / "TODO.md").write_text("- [ ] Review shell\n- [ ] [[note|中文測試]]\n- [x] Completed\n")
+(output / "home" / "TODO.md").write_text("- [ ] Review shell\n- [ ] [[note|中文測試]]\n- [ ] Overdue task 📅 2020-01-01 09:00\n- [x] Completed\n")
 settings = json.loads((bundle / "generated.json").read_text())
 settings["paths"].update(home=str(output / "home"), todo=str(output / "home" / "TODO.md"))
 (output / "settings.json").write_text(json.dumps(settings))

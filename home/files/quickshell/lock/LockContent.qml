@@ -359,31 +359,33 @@ Item {
         }
         width: Math.min(280, root.width * 0.25)
         spacing: 12
-        visible: !root.compact && root.width > 1000 && Reminders.items.length > 0
+        visible: !root.compact && root.width > 1000 && Reminders.tasks.length > 0
         Text {
-            text: "待辦事項  ·  " + Reminders.items.length
+            text: "待辦事項  ·  " + Reminders.tasks.length + (Reminders.overdue.length ? "  ·  逾期 " + Reminders.overdue.length : "")
             color: root.muted
             font.family: Config.theme.uiFont
             font.pixelSize: 12
             font.letterSpacing: 2
         }
         Repeater {
-            model: Reminders.items.slice(0, 3)
+            model: Reminders.overdue.concat(Reminders.tasks.filter(t => !Reminders.isOverdue(t))).slice(0, 3)
             RowLayout {
-                required property string modelData
+                id: task
+                required property var modelData
+                readonly property color tint: Reminders.isOverdue(modelData) ? Config.theme.urgent : root.jade
                 width: parent.width
                 spacing: 10
                 Rectangle {
                     implicitWidth: 4
                     implicitHeight: 4
                     radius: 2
-                    color: root.jade
+                    color: task.tint
                     opacity: 0.65
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: modelData
-                    color: root.jade
+                    text: task.modelData.label ? task.modelData.text + "  · " + task.modelData.label : task.modelData.text
+                    color: task.tint
                     font.family: Config.theme.uiFont
                     font.pixelSize: 14
                     elide: Text.ElideRight

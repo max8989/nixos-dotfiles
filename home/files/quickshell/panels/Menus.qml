@@ -266,7 +266,7 @@ PanelWindow {
             "Reference"));
 
         } else if (menu === "todos") {
-            items = Reminders.items.map(task => row(task, () => {
+            items = Reminders.tasks.map((task, i) => row((Reminders.isOverdue(task) ? "⚠ " : "") + Reminders.items[i], () => {
                 Reminders.openNote(Config.paths.todoNote);
                 Runtime.closeMenu();
             }));
@@ -437,6 +437,10 @@ PanelWindow {
     Connections {
         target: Reminders
         function onItemsChanged() {
+            if (Runtime.menu === "todos")
+                root.refresh();
+        }
+        function onOverdueChanged() {
             if (Runtime.menu === "todos")
                 root.refresh();
         }

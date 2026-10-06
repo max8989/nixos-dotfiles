@@ -134,6 +134,14 @@ PanelWindow {
                 selected: root.menuSelected("todos")
                 onClicked: root.open("todos", this)
             }
+            Chip {
+                visible: Reminders.overdue.length > 0
+                text: String(Reminders.overdue.length)
+                foreground: Config.theme.urgent
+                tipTitle: "Past due"
+                tip: Reminders.overdue.slice(0, 8).map(t => t.text + "  · " + t.label).join("\n")
+                onClicked: root.open("todos", this)
+            }
         }
     }
     Glass {

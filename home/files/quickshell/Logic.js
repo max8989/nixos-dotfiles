@@ -1,8 +1,30 @@
 .pragma library
-function todos(text) {
+var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function pad2(value) { return (value < 10 ? "0" : "") + value; }
+// Obsidian Tasks due date: "📅 2026-10-07" or "📅 2026-10-07 14:00"; date-only is due at end of day.
+function tasks(text) {
     return text.split(/\r?\n/).filter(function(line) { return /^\s*[-*] \[ \]\s*\S/.test(line); })
-        .map(function(line) { return line.replace(/^\s*[-*] \[ \]\s*/, "").replace(/\[\[(?:[^\]|]*\|)?([^\]]+)\]\]/g, "$1").trim(); });
+        .map(function(line) {
+            var body = line.replace(/^\s*[-*] \[ \]\s*/, "").replace(/\[\[(?:[^\]|]*\|)?([^\]]+)\]\]/g, "$1");
+            var m = /📅\s*(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/.exec(body);
+            var due = null, label = "";
+            if (m) {
+                var timed = m[4] !== undefined;
+                var date = timed ? new Date(+m[1], m[2]-1, +m[3], +m[4], +m[5]) : new Date(+m[1], m[2]-1, +m[3], 23, 59, 59, 999);
+                if (!isNaN(date.getTime())) {
+                    due = date.getTime();
+                    label = MONTHS[date.getMonth()] + " " + date.getDate() + (timed ? " " + pad2(date.getHours()) + ":" + pad2(date.getMinutes()) : "");
+                }
+                body = body.replace(m[0], "");
+            }
+            return { text: body.replace(/\s+/g, " ").trim(), due: due, label: label };
+        })
+        .filter(function(task) { return task.text.length > 0; });
 }
+function todos(text) { return tasks(text).map(function(task) { return task.text; }); }
+function overdue(list, now) { return list.filter(function(task) { return task.due !== null && task.due <= now; }); }
+function taskKey(task) { return task.text + "|" + task.due; }
+function dayKey(date) { return date.getFullYear() + "-" + pad2(date.getMonth()+1) + "-" + pad2(date.getDate()); }
 function cpuSample(text) {
     var fields = (text.split("\n")[0] || "").trim().split(/\s+/).slice(1, 9).map(Number);
     return { total: fields.reduce(function(a, b) { return a+b; }, 0), idle: (fields[3] || 0) + (fields[4] || 0) };
