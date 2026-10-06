@@ -167,6 +167,32 @@ in
   };
 
   #########################################################################
+  ## LocalSend — always reachable on the LAN (port 53317 opened in common.nix)
+  ##
+  ## `--hidden` starts it straight into Quickshell's tray instead of opening
+  ## the window; LocalSend's own "start on login" toggle writes an XDG
+  ## autostart file, which Hyprland doesn't process. Same tray.target ordering
+  ## as udiskie so the StatusNotifierItem has a host to register with.
+  #########################################################################
+  systemd.user.services.localsend = {
+    Unit = {
+      Description = "LocalSend file sharing";
+      Requires = [ "tray.target" ];
+      After = [
+        "graphical-session.target"
+        "tray.target"
+      ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${lib.getExe' pkgs.localsend "localsend_app"} --hidden";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  #########################################################################
   ## Default applications — Dolphin is the main file manager.
   ##
   ## inode/directory is the only type Dolphin's desktop file declares, and it
