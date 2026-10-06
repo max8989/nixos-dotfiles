@@ -10,6 +10,7 @@
     ./kitty.nix
     ./shell.nix
     ./desktop.nix
+    ./fcitx5.nix
     ./scripts.nix
     ./theming.nix
     ./zen.nix
