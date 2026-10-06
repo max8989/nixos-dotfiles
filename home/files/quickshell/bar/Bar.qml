@@ -255,7 +255,7 @@ PanelWindow {
                 text: root.language
                 visible: root.width > 1700
                 tipTitle: "Keyboard layout"
-                tip: "Ctrl+Space to switch input method"
+                tip: "Ctrl+Space cycles us, ca and pinyin"
             }
             Loader {
                 active: !Config.preview

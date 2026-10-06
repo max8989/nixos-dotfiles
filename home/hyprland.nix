@@ -4,6 +4,35 @@
   lib,
   ...
 }:
+let
+  hyprlandPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+
+  # Ctrl+Space: us -> ca -> pinyin -> us. Hyprland owns the xkb layouts and
+  # fcitx5 owns Pinyin, so one script steps both. Pinyin types over the us
+  # layout, which is why leaving it returns to layout 0.
+  cycleInput = pkgs.writeShellApplication {
+    name = "cycle-input";
+    runtimeInputs = [
+      hyprlandPackage
+      pkgs.fcitx5
+      pkgs.jq
+    ];
+    text = ''
+      if [[ "$(fcitx5-remote -n)" == pinyin ]]; then
+        fcitx5-remote -s keyboard-us
+        hyprctl switchxkblayout all 0
+        exit 0
+      fi
+      keymap=$(hyprctl -j devices | jq -r '[.keyboards[] | select(.main)][0].active_keymap // ""')
+      if [[ "$keymap" == *Canadian* || "$keymap" == *French* ]]; then
+        hyprctl switchxkblayout all 0
+        fcitx5-remote -s pinyin
+      else
+        hyprctl switchxkblayout all 1
+      fi
+    '';
+  };
+in
 {
   wayland.windowManager.hyprland = {
     enable = true;
@@ -17,7 +46,7 @@
     configType = "lua";
 
     # Same Hyprland package the system enables (from the flake input).
-    package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+    package = hyprlandPackage;
 
     # Nothing here: under configType = "lua" each attribute would become an
     # `hl.<name>(...)` call, and the Lua files below already make those calls
@@ -68,6 +97,7 @@
         wifi = menu "wifi";
         display = menu "display";
         battery = menu "battery";
+        cycleInput = lib.getExe cycleInput;
         volumeUp = ipc [
           "audio"
           "volume"

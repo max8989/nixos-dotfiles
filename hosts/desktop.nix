@@ -34,9 +34,9 @@
   nixpkgs.config.permittedInsecurePackages = [ "electron-39.8.10" ];
 
   ##########################################################################
-  ## Input methods — Chinese input via fcitx5. The us/ca layout toggle
-  ## (Ctrl+Space) and the fcitx5 toggle (Ctrl+Alt+Space) live in the Hyprland
-  ## keybindings.
+  ## Input methods — Chinese input via fcitx5. Ctrl+Space cycles us -> ca ->
+  ## pinyin (the cycle-input script in home/hyprland.nix); Ctrl+Alt+Space
+  ## toggles fcitx5 alone. Both binds live in the Hyprland keybindings.
   ##########################################################################
   i18n.inputMethod = {
     enable = true;
@@ -45,6 +45,18 @@
       qt6Packages.fcitx5-chinese-addons
       fcitx5-gtk
     ];
+    # Pinyin typing, Traditional (Taiwan) output: chttrans converts the
+    # Simplified candidates through OpenCC's s2twp profile (Taiwan standard
+    # characters + Taiwan phrasing). Toggle conversion with Ctrl+Shift+F.
+    # The IM list (keyboard-us + pinyin) is NOT set here: fcitx5 saves its own
+    # ~/.config/fcitx5/profile, which shadows /etc/xdg, so Home Manager owns
+    # that file instead (home/desktop.nix).
+    fcitx5.settings = {
+      addons.chttrans.globalSection = {
+        Engine = "OpenCC";
+        OpenCCS2TProfile = "s2twp.json";
+      };
+    };
   };
 
   ##########################################################################

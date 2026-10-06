@@ -136,6 +136,8 @@ for key, dir in pairs(moveDirs) do
     hl.bind(mainMod .. " + CTRL + SHIFT + " .. key, hl.dsp.window.move({ direction = dir, group_aware = true }))
 end
 
+-- us -> ca -> pinyin -> us (script steps both Hyprland's layout and fcitx5).
+hl.bind("CTRL + space", hl.dsp.exec_cmd(shell.cycleInput), { description = "cycle us / ca / pinyin" })
 hl.bind("CTRL + ALT + space", hl.dsp.exec_raw("fcitx5-remote -t"))
 
 -- NOTE: there is no Alt-Tab bind here on purpose. The switcher is hyprshell

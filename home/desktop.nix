@@ -231,5 +231,23 @@ in
   xdg.configFile = {
     # Wallpapers (referenced by services.hyprpaper above).
     "backgrounds".source = ./files/backgrounds;
+
+    # fcitx5 input methods: keyboard-us + pinyin. fcitx5 rewrites this file
+    # itself and the user copy overrides /etc/xdg, so it must live here; force
+    # replaces whatever fcitx5 saved. cycle-input (home/hyprland.nix) relies on
+    # "pinyin" being in this group.
+    "fcitx5/profile" = {
+      force = true;
+      text = lib.generators.toINI { } {
+        "Groups/0" = {
+          Name = "Default";
+          "Default Layout" = "us";
+          DefaultIM = "keyboard-us";
+        };
+        "Groups/0/Items/0".Name = "keyboard-us";
+        "Groups/0/Items/1".Name = "pinyin";
+        GroupOrder."0" = "Default";
+      };
+    };
   };
 }

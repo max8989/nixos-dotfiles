@@ -284,7 +284,7 @@ hl.config({
         kb_layout  = "us,ca",
         kb_variant = "",
         kb_model   = "",
-        kb_options = "grp:ctrl_space_toggle",
+        kb_options = "",
         kb_rules   = "",
 
         follow_mouse = 1,
