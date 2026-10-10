@@ -35,6 +35,21 @@ Go back to the previous generation.
 sudo nixos-rebuild switch --rollback
 ```
 
+### Switch desktop theme
+
+Open **Style → Theme** with Super+M, or open the theme menu directly with
+Super+Ctrl+Shift+Space. From a terminal:
+
+```
+desktop-theme list
+desktop-theme current
+desktop-theme set catppuccin-latte
+desktop-theme set tokyo-night
+```
+
+The choice persists across rebuilds. Some applications need reopening to read
+their new colors.
+
 ## Update and troubleshoot
 
 ### Update flake inputs

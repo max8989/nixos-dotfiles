@@ -13,6 +13,7 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 hl.bind(mainMod .. " + CTRL + A", hl.dsp.exec_cmd(shell.audio), { description = "audio settings" })
 hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd(shell.wifi), { description = "Wi-Fi settings" })
 hl.bind(mainMod .. " + CTRL + D", hl.dsp.exec_cmd(shell.display), { description = "display settings" })
+hl.bind(mainMod .. " + CTRL + SHIFT + Space", hl.dsp.exec_cmd(shell.themes), { description = "desktop theme selector" })
 hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd(shell.battery), { description = "battery and power profile" })
 
 -- Programs

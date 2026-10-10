@@ -12,7 +12,8 @@ Singleton {
     readonly property string stateDirectory: Quickshell.env("QS_STATE_DIR") || ((Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/quickshell-desktop")
     readonly property var data: Logic.parseJson(file.text(), {}) || ({})
     readonly property bool valid: !!(data.theme && data.bin && data.paths && data.features)
-    readonly property var theme: data.theme || ({
+    property string selectedTheme: "tokyo-night"
+    readonly property var theme: data.themes?.[selectedTheme] || data.theme || ({
             text: "#a9b1d6",
             solid: "#1a1b26",
             background: "#1a1b26",
@@ -93,5 +94,16 @@ Singleton {
         path: Quickshell.env("QS_SETTINGS") || Qt.resolvedUrl("generated.json")
         blockLoading: true
         onLoadFailed: console.error("Could not read generated shell settings")
+    }
+    FileView {
+        id: selectedFile
+        path: root.data.paths?.themeState || ""
+        printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            var name = text().trim();
+            if (root.data.themes?.[name]) root.selectedTheme = name;
+        }
     }
 }

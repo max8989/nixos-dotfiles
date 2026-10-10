@@ -1,3 +1,4 @@
+package.loaded.theme = nil -- Reload the selected palette on hyprctl reload.
 local theme = require("theme")
 local function rgba(color, alpha)
     return "rgba(" .. color:sub(2) .. (alpha or "ff") .. ")"
@@ -83,7 +84,7 @@ hl.config({
 
         col = {
             active_border   = rgba(theme.accent),
-            inactive_border = "rgba(595959aa)",
+            inactive_border = theme.mode == "light" and rgba(theme.border) or "rgba(595959aa)",
         },
 
         resize_on_border = false,
@@ -99,8 +100,8 @@ hl.config({
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
 
-        -- Focus pop: slightly dim whatever isn't focused.
-        dim_inactive = true,
+        -- Keep the captured focus dimming in Tokyo Night; leave Latte bright.
+        dim_inactive = theme.mode ~= "light",
         dim_strength = 0.08,
 
         shadow = {
@@ -113,7 +114,7 @@ hl.config({
             enabled    = true,
             size       = 8,
             passes     = 2,
-            brightness = 0.80,
+            brightness = theme.mode == "light" and 1.0 or 0.80,
             contrast   = 0.90,
             vibrancy   = 0.1696,
         },

@@ -8,11 +8,11 @@
   ...
 }:
 let
-  palette = import ./omarchy-palette.nix;
-  capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
-  hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-  settings = {
-    theme = {
+  palettes = config.localTheme.palettes;
+  themeSettings =
+    palette:
+    {
+      mode = palette.mode;
       background = palette.background;
       solid = palette.background;
       surface = palette.surface;
@@ -30,6 +30,11 @@ let
       radius = 12;
     }
     // import ./omarchy-shell-style.nix { inherit palette; };
+  capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
+  hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+  settings = {
+    theme = themeSettings palettes.tokyo-night;
+    themes = lib.mapAttrs (_: themeSettings) palettes;
     bar = {
       height = 38;
       margin = 6;
@@ -49,6 +54,7 @@ let
     paths = {
       home = config.home.homeDirectory;
       dotfiles = "${config.home.homeDirectory}/repos/nixos-dotfiles";
+      themeState = "${config.localTheme.stateDir}/selected";
       screenshot = lib.getExe capture.screenshot;
       editScreenshot = lib.getExe capture.edit;
       screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
@@ -81,6 +87,7 @@ let
       grim = lib.getExe pkgs.grim;
       remove = "${pkgs.coreutils}/bin/rm";
       settings = lib.getExe settingsHelper;
+      theme = lib.getExe config.localTheme.switcher;
     };
   };
   settingsHelper = pkgs.writeScriptBin "quickshell-settings" (

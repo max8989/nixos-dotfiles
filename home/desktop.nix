@@ -4,9 +4,6 @@
   pkgs,
   ...
 }:
-let
-  palette = import ./omarchy-palette.nix;
-in
 {
   services.hypridle = {
     enable = true;
@@ -90,7 +87,7 @@ in
       wallpaper = [
         {
           monitor = "";
-          path = "${./files/backgrounds/nixos-cool-wallpaper.png}";
+          path = "${config.localTheme.currentDir}/wallpaper.png";
         }
       ];
     };
@@ -121,20 +118,7 @@ in
   #########################################################################
   services.hyprshell = {
     enable = true;
-    style = ''
-      :root {
-        --border-color: ${palette.border};
-        --border-color-active: ${palette.accent};
-        --bg-color: ${palette.base};
-        --bg-color-hover: ${palette.raised};
-        --bg-window-color: ${palette.background};
-        --text-color: ${palette.text};
-        --border-radius: 14px;
-        --border-size: 2px;
-        --border-style: solid;
-      }
-      .window { font-family: Figtree; }
-    '';
+    style = ''@import url("file://${config.localTheme.currentDir}/hyprshell.css");'';
     settings = {
       version = 4;
       windows = {

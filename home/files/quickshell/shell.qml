@@ -60,6 +60,12 @@ ShellRoot {
         }
     }
     IpcHandler {
+        target: "theme"
+        function set(name: string): void {
+            if (Config.data.themes?.[name]) Config.selectedTheme = name;
+        }
+    }
+    IpcHandler {
         target: "audio"
         function volume(delta: int): void {
         Audio.change(false, delta);

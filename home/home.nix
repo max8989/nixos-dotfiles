@@ -5,6 +5,7 @@
 }:
 {
   imports = [
+    ./theme.nix
     ./hyprland.nix
     ./quickshell.nix
     ./kitty.nix

@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   pkgs,
   lib,
@@ -66,8 +67,8 @@ in
 
   };
 
-  xdg.configFile."hypr/theme.lua".text =
-    "return " + lib.generators.toLua { } (import ./omarchy-palette.nix);
+  xdg.configFile."hypr/theme.lua".source =
+    config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/hypr-theme.lua";
 
   xdg.configFile."hypr/shell_commands.lua".text =
     let
@@ -104,6 +105,7 @@ in
         audio = menu "audio";
         wifi = menu "wifi";
         display = menu "display";
+        themes = menu "theme";
         battery = menu "battery";
         cycleInput = lib.getExe cycleInput;
         volumeUp = ipc [

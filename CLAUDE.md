@@ -5,7 +5,7 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (Quickshell styled from the captured Omarchy **Tokyo Night** theme)
+desktop (Quickshell styled from Omarchy **Tokyo Night** and **Catppuccin Latte**)
 plus a headless home server. Two hosts:
 `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
 Intel Core Ultra 5 125U / Meteor Lake, btrfs root), desktop; and
@@ -126,12 +126,14 @@ flakes only see git-tracked files inside the flake root.
 - **Scripts must create their own output dirs.** `$HOME` is not pre-populated on
   a fresh install (no `~/Pictures/Screenshots`, etc.), and the tools these
   scripts wrap generally do not `mkdir -p` for you.
-- **Static themes.** Desktop apps and Quickshell use `home/omarchy-palette.nix`;
-  captured shell tokens live in `home/omarchy-shell-style.nix`. The desktop flag
-  is passed into Home Manager so shared shell.nix keeps the server's original
-  palette. There is no runtime theme switcher. Preserve the snapshot provenance
-  and license in `home/files/omarchy/`. Neovim is owned by a separate repository
-  and must remain untouched by this desktop migration.
+- **Runtime desktop themes.** `home/theme-data.nix` preserves the captured
+  Tokyo Night palette and maps the Omarchy Catppuccin Latte palette.
+  `home/theme.nix` builds immutable app assets for both; `desktop-theme`
+  selects one through XDG state, with Home Manager activation reconciling
+  the selection after rebuilds. Quickshell follows that state; the desktop
+  flag keeps the headless server's original Jade palette. Preserve asset
+  provenance and licenses in `home/files/omarchy/`. Neovim is owned by a
+  separate repository and remains untouched.
 - **Capture helpers are packaged.** `home/capture-tools.nix` supplies explicit
   runtime dependencies and is shared by Quickshell and generated Hyprland
   commands. Use the mode arguments, not the retired hyprshot flags. Captures

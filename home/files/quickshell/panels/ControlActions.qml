@@ -48,6 +48,16 @@ QtObject {
     function edit(relativePath) {
         launch([Config.bin.editor, Config.paths.dotfiles + "/" + relativePath]);
     }
+    function setTheme(name) {
+        if (Config.preview) return;
+        Runtime.run([Config.bin.theme, "set", name], function(code) {
+            if (code) Runtime.report("Theme could not be changed");
+            else {
+                Config.selectedTheme = name;
+                Runtime.closeMenu();
+            }
+        });
+    }
     function audioValue(node) {
         return node?.audio ? Math.round(node.audio.volume * 100) + "%" + (node.audio.muted ? " · muted" : "") : "Unavailable";
     }
@@ -72,6 +82,8 @@ QtObject {
                 Runtime.run([Config.bin.inputMethod, "-t"], null);
         }, "Toggle the current Fcitx input method", "keyboard language chinese english layout"), page("apps", "Applications", "Launch an application", "launcher programs"), page("files", "Files", "Browse your home directory", "folders file manager"), page("clipboard", "Clipboard history", "Restore text or images", "copy paste")].concat(media)
     readonly property var capture: [action("screenshot-region", "Screenshot region", () => launch([Config.paths.screenshot, "region"]), "Select an area to capture", "capture snip screen"), action("screenshot-window", "Screenshot window", () => launch([Config.paths.screenshot, "windows"]), "Pick a window; Tab or arrows change the selection", "capture screen"), action("screenshot-screen", "Screenshot screen", () => launch([Config.paths.screenshot, "fullscreen"]), "Capture the current monitor", "capture display"), action("screenshot-edit", "Edit latest screenshot", () => launch([Config.paths.editScreenshot]), "Open the latest capture in Swappy", "capture edit annotate"), action("record", "Start / stop screen recording", () => launch([Config.paths.screenRecord]), "Record the current monitor", "capture video screencast")]
+    readonly property var themes: [action("theme-tokyo-night", "Tokyo Night", () => setTheme("tokyo-night"), "Current dark theme", "dark omarchy", Config.selectedTheme === "tokyo-night" ? "Selected" : ""), action("theme-catppuccin-latte", "Catppuccin Latte", () => setTheme("catppuccin-latte"), "Light theme and wallpaper", "light bright", Config.selectedTheme === "catppuccin-latte" ? "Selected" : "")]
+    readonly property var style: [page("theme", "Theme", "Choose Tokyo Night or Catppuccin Latte", "style light dark appearance")]
     readonly property var settings: [action("keybindings", "Keyboard shortcuts", () => edit("home/files/hypr/keybindings.lua"), "Edit shortcuts in your dotfiles", "hotkeys bindings settings"), action("hyprland-settings", "Hyprland settings", () => edit("home/files/hypr/hyprland.lua"), "Edit monitor, input and window settings", "display keyboard mouse resolution scale layout"), action("shell-settings", "Bar and shell appearance", () => edit("home/quickshell.nix"), "Edit colours, fonts and shell settings", "theme settings waybar quickshell"), action("desktop-settings", "Wallpaper and idle settings", () => edit("home/desktop.nix"), "Edit the Nix configuration; rebuild to apply", "background sleep settings"), page("vim", "Vim reference", "Search editing shortcuts", "help keyboard"), page("lazyvim", "LazyVim reference", "Search editor shortcuts", "help keyboard")]
     readonly property var power: ["Lock", "Suspend", "Hibernate", "Logout", "Reboot", "Shutdown"].map(title => action("session-" + title.toLowerCase(), title, () => root.powerRequested(title.toLowerCase()), "Session and power", title === "Reboot" ? "restart" : title === "Shutdown" ? "power off turn off" : ""))
     readonly property var workspaces: Array.from({
@@ -89,6 +101,6 @@ QtObject {
             Runtime.closeMenu();
         }, workspace ? workspace.toplevels.values.length + " windows" : "Empty workspace", "desktop", workspace?.focused ? "Active" : "");
     })
-    readonly property var home: [presentation, powerProfile, page("audio", "Sound", audioValue(Audio.sink) + " · speakers and microphone", "volume audio"), notificationActions[0], notificationActions[1], page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"), ...connections, page("desktop", "Desktop", "Calendar, reminders, workspaces and media", "utilities"), page("capture", "Capture", "Screenshots and screen recording", "video"), page("settings", "Settings and shortcuts", "Configuration files and keyboard references", "help"), page("power", "Power and session", "Lock, suspend, restart or shut down", "logout")]
-    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, [powerProfile], connections, desktop, capture, settings, power)
+    readonly property var home: [presentation, powerProfile, page("audio", "Sound", audioValue(Audio.sink) + " · speakers and microphone", "volume audio"), notificationActions[0], notificationActions[1], page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"), page("style", "Style", "Theme and appearance", "theme light dark"), ...connections, page("desktop", "Desktop", "Calendar, reminders, workspaces and media", "utilities"), page("capture", "Capture", "Screenshots and screen recording", "video"), page("settings", "Settings and shortcuts", "Configuration files and keyboard references", "help"), page("power", "Power and session", "Lock, suspend, restart or shut down", "logout")]
+    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, [powerProfile], style, themes, connections, desktop, capture, settings, power)
 }

@@ -1,89 +1,9 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 let
-  palette = import ./omarchy-palette.nix;
-  rgb =
-    color:
-    lib.concatStringsSep "," (
-      map (offset: toString (lib.fromHexString (builtins.substring offset 2 color))) [
-        1
-        3
-        5
-      ]
-    );
-  kdeColors =
-    background: foreground:
-    lib.mapAttrs (_: rgb) {
-      BackgroundNormal = background;
-      BackgroundAlternate = palette.surface;
-      ForegroundNormal = foreground;
-      ForegroundInactive = palette.muted;
-      ForegroundActive = palette.accent;
-      ForegroundLink = palette.teal;
-      ForegroundVisited = palette.lavender;
-      ForegroundNegative = palette.urgent;
-      ForegroundNeutral = palette.warning;
-      ForegroundPositive = palette.green;
-      DecorationFocus = palette.accent;
-      DecorationHover = palette.green;
-    };
-  kdeScheme = {
-    # On qt6ct, KColorSchemeManager otherwise substitutes Breeze based on the
-    # portal's light/dark hint. This shared default also reaches KDE apps.
-    UiSettings.ColorScheme = palette.name;
-    General = {
-      Name = palette.name;
-      ColorScheme = palette.name;
-    };
-    "Colors:View" = kdeColors palette.background palette.text;
-    "Colors:Window" = kdeColors palette.base palette.text;
-    "Colors:Button" = kdeColors palette.surface palette.text;
-    "Colors:Selection" = kdeColors palette.selection palette.brightText;
-    "Colors:Tooltip" = kdeColors palette.surface palette.text;
-    "Colors:Complementary" = kdeColors palette.base palette.text;
-    "Colors:Header" = kdeColors palette.background palette.text;
-    KDE.contrast = 4;
-    Icons.Theme = "Yaru-magenta";
-  };
-  # QPalette roles in Qt's enum order, including PlaceholderText and Accent.
-  qtColors =
-    text:
-    lib.concatStringsSep ", " (
-      map (color: "#ff" + lib.removePrefix "#" color) [
-        text
-        palette.surface
-        palette.raised
-        palette.border
-        palette.background
-        palette.border
-        text
-        palette.text
-        text
-        palette.background
-        palette.base
-        palette.background
-        palette.selection
-        palette.brightText
-        palette.teal
-        palette.lavender
-        palette.surface
-        text
-        palette.surface
-        text
-        palette.muted
-        palette.accent
-      ]
-    );
-  qtScheme = pkgs.writeText "tokyo-night-qt.colors" (
-    lib.generators.toINI { } {
-      ColorScheme = {
-        active_colors = qtColors palette.text;
-        inactive_colors = qtColors palette.text;
-        disabled_colors = qtColors palette.dim;
-      };
-    }
-  );
-  # GTK follows the captured Adwaita dark preference. Preserve the working Qt
-  # widget integration and recolor its complete Kvantum assets to Tokyo Night.
+  palette = config.localTheme.palettes.tokyo-night;
+  active = name: config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/${name}";
+
+  # Preserve the exact Tokyo Night Kvantum recolor used before switching.
   baseKvantum = pkgs.catppuccin-kvantum.override {
     variant = "mocha";
     accent = "blue";
@@ -119,114 +39,51 @@ let
       "#f5e0dc" = palette.text;
     }
   );
-  tokyoKvantum =
-    pkgs.runCommand "tokyo-night-kvantum-theme" { nativeBuildInputs = [ pkgs.python3 ]; }
-      ''
-        mkdir -p "$out/share/Kvantum/${palette.name}"
-        cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
-        cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
-        chmod -R u+w "$out"
-        python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap} Catppuccin-Mocha-Blue ${palette.name}
-      '';
-
+  tokyoKvantum = pkgs.runCommand "tokyo-night-kvantum-theme" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+    mkdir -p "$out/share/Kvantum/${palette.name}"
+    cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
+    cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
+    chmod -R u+w "$out"
+    python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap} Catppuccin-Mocha-Blue ${palette.name}
+  '';
+  latteKvantum = pkgs.catppuccin-kvantum.override {
+    variant = "latte";
+    accent = "blue";
+  };
 in
 {
-  # Cursor — the Hyprland exec-once sets `catppuccin-frappe-dark-cursors`.
   home.pointerCursor = {
     enable = true;
     name = "catppuccin-frappe-dark-cursors";
     package = pkgs.catppuccin-cursors.frappeDark;
     size = 24;
-    gtk.enable = true;
     hyprcursor.enable = true;
   };
 
-  gtk = {
-    enable = true;
-    colorScheme = "dark";
-    font = {
-      name = "Figtree";
-      size = 11;
-    };
-    theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
-    };
-    iconTheme = {
-      name = "Yaru-magenta";
-      package = pkgs.yaru-theme;
-    };
-    # YAD names its window explicitly; scope these colors to its dialogs.
-    # The sudo askpass helper inherits this without changing password handling.
-    gtk3.extraCss = ''
-      #yad-dialog-window {
-        background-color: ${palette.background};
-        color: ${palette.text};
-        font-family: "Figtree";
-        font-size: 11pt;
-      }
-      #yad-dialog-window label { color: ${palette.text}; }
-      #yad-dialog-window entry {
-        background-image: none;
-        background-color: ${palette.surface};
-        color: ${palette.brightText};
-        border: 1px solid ${palette.border};
-        border-radius: 9px;
-        padding: 8px 10px;
-        box-shadow: none;
-      }
-      #yad-dialog-window entry:focus { border-color: ${palette.accent}; }
-      #yad-dialog-window entry selection {
-        background-color: ${palette.selection};
-        color: ${palette.brightText};
-      }
-      #yad-dialog-window button {
-        background-image: none;
-        background-color: ${palette.surface};
-        color: ${palette.text};
-        border: 1px solid ${palette.border};
-        border-radius: 9px;
-        padding: 6px 14px;
-        text-shadow: none;
-        box-shadow: none;
-      }
-      #yad-dialog-window button:hover,
-      #yad-dialog-window button:focus {
-        background-color: ${palette.raised};
-        border-color: ${palette.accent};
-        color: ${palette.brightText};
-      }
-      #yad-dialog-window button:active { background-color: ${palette.selection}; }
-    '';
+  home.packages = [
+    pkgs.gnome-themes-extra
+    pkgs.yaru-theme
+  ];
+
+  # Home Manager links these to a stable XDG state path. The switcher changes
+  # only the state link, so both themes stay reproducible in the Nix store.
+  xdg.configFile = {
+    "gtk-3.0/settings.ini".source = lib.mkForce (active "gtk3-settings.ini");
+    "gtk-4.0/settings.ini".source = lib.mkForce (active "gtk4-settings.ini");
+    "gtk-3.0/gtk.css".source = lib.mkForce (active "gtk.css");
+    "kdeglobals".source = active "kdeglobals";
+    "qt6ct/qt6ct.conf".source = lib.mkForce (active "qt6ct.conf");
+    "qt5ct/qt5ct.conf".source = lib.mkForce (active "qt5ct.conf");
+    "Kvantum/kvantum.kvconfig".source = lib.mkForce (active "kvantum.kvconfig");
+  };
+  xdg.dataFile = {
+    "color-schemes/Tokyo-Night.colors".source = "${config.localTheme.themeDirs.tokyo-night}/kdeglobals";
+    "color-schemes/Catppuccin-Latte.colors".source = "${config.localTheme.themeDirs.catppuccin-latte}/kdeglobals";
   };
 
-  dconf.settings."org/gnome/desktop/interface" = {
-    color-scheme = "prefer-dark";
-    accent-color = "blue";
-  };
-
-  # KDE's KColorScheme reads kdeglobals independently of the widget style.
-  xdg.configFile."kdeglobals".text = lib.generators.toINI { } kdeScheme;
-  xdg.dataFile."color-schemes/${palette.name}.colors".text = lib.generators.toINI { } kdeScheme;
-
-  # Qt theming. Everything that looked unstyled — Dolphin, Okular, Kate,
-  # Gwenview, Ark, Filelight — is Qt6; the GTK apps were always fine.
-  #
-  # Neither "gtk" nor "gtk3" could ever have worked here. Home Manager turns
-  # both into QT_QPA_PLATFORMTHEME=gtk3, and nixpkgs' Qt6 qtbase ships no gtk3
-  # platform-theme plugin, so Qt found nothing to load and fell back to bare
-  # Fusion with no icon theme — small icons, wrong colours, default font.
-  # HM's "qtct" shortcut has the mirror-image bug: it sets
-  # QT_QPA_PLATFORMTHEME=qt5ct, but qt6ct only ships
-  # lib/qt-6/plugins/platformthemes/libqt6ct.so, which Qt6 resolves from the
-  # literal string "qt6ct". platformTheme.name is free-form and is written to
-  # the env var verbatim when it is not one of HM's aliases, so naming the
-  # plugin directly is what actually makes it load. The package list has to be
-  # explicit for the same reason — HM only auto-detects packages for its own
-  # known names.
+  # qt6ct is the actual platform-theme plugin; Kvantum draws the widgets.
   qt = {
     enable = true;
-
     platformTheme = {
       name = "qt6ct";
       package = with pkgs; [
@@ -234,50 +91,10 @@ in
         libsForQt5.qt5ct
       ];
     };
-
-    # Kvantum draws the widgets (sets QT_STYLE_OVERRIDE and pulls the Qt5/Qt6
-    # style plugins).
     style.name = "kvantum";
     kvantum = {
-      # Required: qt.kvantum has its own enable flag, defaulting to false.
-      # Without it the theme is never written to ~/.config/Kvantum and the
-      # style silently falls back to Kvantum's generic default.
       enable = true;
-      themes = [ tokyoKvantum ];
-      settings.General.theme = palette.name;
-    };
-
-    # qt6ct supplies what Kvantum does not: the icon set and the UI fonts.
-    # Fonts must be quoted strings here. Figtree and JetBrainsMono are the
-    # ones already installed in hosts/desktop.nix — plain "Noto Sans" is not
-    # (only the CJK variants are), so it would silently fall back.
-    # standard_dialogs routes file pickers through the existing xdg portal, so
-    # Qt apps get the same file chooser as everything else.
-    qt6ctSettings = {
-      Appearance = {
-        style = "kvantum";
-        custom_palette = true;
-        color_scheme_path = "${qtScheme}";
-        icon_theme = "Yaru-magenta";
-        standard_dialogs = "xdgdesktopportal";
-      };
-      Fonts = {
-        general = ''"Figtree,11"'';
-        fixed = ''"JetBrainsMono Nerd Font,11"'';
-      };
-    };
-    qt5ctSettings = {
-      Appearance = {
-        style = "kvantum";
-        custom_palette = true;
-        color_scheme_path = "${qtScheme}";
-        icon_theme = "Yaru-magenta";
-        standard_dialogs = "xdgdesktopportal";
-      };
-      Fonts = {
-        general = ''"Figtree,11"'';
-        fixed = ''"JetBrainsMono Nerd Font,11"'';
-      };
+      themes = [ tokyoKvantum latteKvantum ];
     };
   };
 }

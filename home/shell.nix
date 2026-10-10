@@ -87,7 +87,7 @@ in
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
-    colors = {
+    colors = if desktop then { } else {
       "bg" = palette.background;
       "bg+" = palette.surface;
       "fg" = palette.muted;
@@ -154,7 +154,12 @@ in
   ## pulled in by ~/repos/claude-config/install.sh). Give npm a writable
   ## prefix and put its bin dir on PATH so those installs work.
   ##########################################################################
-  home.sessionVariables.NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
+  home.sessionVariables = {
+    NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
+  } // lib.optionalAttrs desktop {
+    STARSHIP_CONFIG = lib.mkForce "${config.localTheme.currentDir}/starship.toml";
+    FZF_DEFAULT_OPTS_FILE = "${config.localTheme.currentDir}/fzf-options";
+  };
   home.sessionPath = [
     "${config.home.homeDirectory}/.npm-global/bin"
     # uv tool installs (agent-reach, etc.) land here.

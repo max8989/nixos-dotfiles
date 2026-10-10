@@ -49,6 +49,10 @@ PanelWindow {
             return controls.capture;
         case "settings":
             return controls.settings;
+        case "style":
+            return controls.style;
+        case "theme":
+            return controls.themes;
         case "workspaces":
             return controls.workspaces;
         case "audio":
@@ -100,6 +104,8 @@ PanelWindow {
             desktop: "Desktop",
             capture: "Capture",
             settings: "Settings and shortcuts",
+            style: "Style",
+            theme: "Theme",
             workspaces: "Workspaces",
             tray: "System tray",
             trayMenu: trayTitle,

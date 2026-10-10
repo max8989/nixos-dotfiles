@@ -1,7 +1,7 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 ##########################################################################
 ## fcitx5 user config: input methods, Traditional (Taiwan) output, and a
-## Jade-palette theme for the Pinyin candidate popup.
+## Theme-aware palette for the Pinyin candidate popup.
 ##
 ## The addons themselves are installed system-wide (hosts/desktop.nix).
 ## Everything here lives in the user dirs because fcitx5 saves its own copy
@@ -10,6 +10,7 @@
 ##########################################################################
 let
   palette = import ./palette.nix;
+  latte = config.localTheme.palettes.catppuccin-latte;
   toINI = lib.generators.toINI { };
   # fcitx5 keeps top-level options outside any [section].
   withGlobals =
@@ -37,17 +38,17 @@ let
     '';
   defaultDark = "${pkgs.fcitx5}/share/fcitx5/themes/default-dark";
 
-  theme = {
+  themeFor = palette: {
     Metadata = {
       Name = palette.name;
       Version = 1;
       Author = "nixos-dotfiles";
-      Description = "Jade palette candidate popup";
+      Description = "Desktop palette candidate popup";
       ScaleWithDPI = "True";
     };
     InputPanel = {
       NormalColor = palette.text;
-      # Selected candidate: dark text on the mint accent.
+      # Selected candidate: contrasting text on the accent.
       HighlightCandidateColor = palette.background;
       HighlightColor = palette.background;
       HighlightBackgroundColor = palette.accent;
@@ -134,23 +135,11 @@ in
       };
     };
 
-    # Candidate popup: Jade theme, horizontal list, bigger CJK text. The TC
+    # Candidate popup: selected desktop theme, horizontal list, bigger CJK text. The TC
     # (Taiwan) cut of Noto Sans CJK draws Traditional glyph forms correctly.
     "fcitx5/conf/classicui.conf" = {
       force = true;
-      text = withGlobals {
-        Theme = palette.name;
-        DarkTheme = palette.name;
-        UseDarkTheme = "False";
-        # Otherwise the GNOME accent colour overrides the Jade highlight.
-        UseAccentColor = "False";
-        "Vertical Candidate List" = "False";
-        Font = "Noto Sans CJK TC 15";
-        MenuFont = "Figtree 12";
-        TrayFont = "Figtree Medium 11";
-        PerScreenDPI = "True";
-        EnableFractionalScale = "True";
-      } { };
+      source = config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/fcitx-classicui.conf";
     };
 
     # Pinyin types Simplified candidates; chttrans converts them with
@@ -171,7 +160,7 @@ in
   };
 
   xdg.dataFile = {
-    "fcitx5/themes/${palette.name}/theme.conf".text = toINI theme;
+    "fcitx5/themes/${palette.name}/theme.conf".text = toINI (themeFor palette);
     "fcitx5/themes/${palette.name}/panel.svg".text = roundedRect {
       fill = palette.base;
       stroke = palette.border;
@@ -185,5 +174,19 @@ in
     "fcitx5/themes/${palette.name}/next.svg".source = "${defaultDark}/next.svg";
     "fcitx5/themes/${palette.name}/radio.svg".source = "${defaultDark}/radio.svg";
     "fcitx5/themes/${palette.name}/arrow.svg".source = "${defaultDark}/arrow.svg";
+    "fcitx5/themes/${latte.name}/theme.conf".text = toINI (themeFor latte);
+    "fcitx5/themes/${latte.name}/panel.svg".text = roundedRect {
+      fill = latte.base;
+      stroke = latte.border;
+      radius = 12;
+    };
+    "fcitx5/themes/${latte.name}/highlight.svg".text = roundedRect {
+      fill = latte.accent;
+      radius = 8;
+    };
+    "fcitx5/themes/${latte.name}/prev.svg".source = "${defaultDark}/prev.svg";
+    "fcitx5/themes/${latte.name}/next.svg".source = "${defaultDark}/next.svg";
+    "fcitx5/themes/${latte.name}/radio.svg".source = "${defaultDark}/radio.svg";
+    "fcitx5/themes/${latte.name}/arrow.svg".source = "${defaultDark}/arrow.svg";
   };
 }

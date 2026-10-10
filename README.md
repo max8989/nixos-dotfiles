@@ -1,7 +1,8 @@
 # nixos-dotfiles
 
 Fully declarative **NixOS + Home Manager** configuration for a Hyprland desktop,
-with a self-authored **Quickshell desktop styled from Omarchy's Tokyo Night theme**.
+with a self-authored **Quickshell desktop styled from Omarchy**, with Tokyo Night
+and Catppuccin Latte themes.
 Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
@@ -34,10 +35,10 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
 | Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
-| Terminal | `home/kitty.nix` | Captured Tokyo Night colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
+| Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
 | Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, Swappy editing, recording and RSS tools |
-| Theme / TUIs | `home/omarchy-palette.nix` + `home/omarchy.nix` | Static desktop palette, btop and VS Code; Superfile/fzf/prompt share the palette |
+| Theme / TUIs | `home/theme.nix` + `home/omarchy.nix` | Runtime theme switcher, btop and VS Code; Superfile/fzf/prompt share the selected palette |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
 Structured configs are converted to native Nix attribute sets. Opaque blobs that
@@ -394,19 +395,19 @@ after any input update and fix anything that has since moved):
 
 ## Known gaps / deviations from the Arch setup
 
-- **Static Omarchy appearance.** The desktop uses the effective Tokyo Night
-  theme from the Omarchy 4.0.0.alpha snapshot captured 2026-10-10. Nix generates
-  shell surface tokens, app settings and executable paths; a rebuild changes
-  the theme. The headless profile retains its original Jade CLI palette.
-  GTK uses dark Adwaita and Yaru-magenta icons; Qt retains its working Kvantum
-  integration, recolored to Tokyo Night. Snapshot assets and license notices
-  live in `home/files/omarchy/`.
+- **Runtime Omarchy-style themes.** Tokyo Night preserves the effective theme
+  from the Omarchy 4.0.0.alpha snapshot captured 2026-10-10. Catppuccin Latte
+  adds a light palette and its Omarchy wallpaper. Nix builds both themes;
+  `desktop-theme set <name>` changes the selected theme immediately and stores
+  the choice across rebuilds. The headless profile retains its Jade CLI palette.
+  GTK uses Adwaita/Yaru icons, and Qt uses Kvantum for both palettes. Snapshot
+  assets and license notices live in `home/files/omarchy/`.
 - **Retained desktop features.** The transparent 26px top bar keeps reminders,
   status indicators, tray controls and existing responsive visibility rules.
-  The shell source and wallpaper images were absent from the snapshot, so
-  Quickshell is restyled with its captured tokens. The desktop uses the bundled
-  NixOS aurora wallpaper, whose dark blue and purple tones complement Tokyo
-  Night. Kitty is the only migrated terminal; Swappy handles editing.
+  The shell source and wallpaper images were absent from the Tokyo Night
+  snapshot, so Quickshell uses its captured tokens and the bundled NixOS aurora
+  wallpaper for that theme. Kitty is the only migrated terminal; Swappy handles
+  editing.
 - **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
   changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
   back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd
@@ -497,6 +498,15 @@ or toggle. Left/Right adjusts volume, microphone level, brightness and night
 light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
 returns to the previous menu, restoring its search and selection; Escape at
 the root closes it. Ctrl+L focuses and selects the search text.
+
+Open **Style → Theme** there to switch between Tokyo Night and Catppuccin
+Latte, or press **Super+Ctrl+Shift+Space** to open the theme menu directly.
+From a terminal, use `desktop-theme list`, `desktop-theme current`, or
+`desktop-theme set catppuccin-latte` (and `desktop-theme set tokyo-night` to
+switch back). The selection persists in XDG state across logins and rebuilds.
+It changes Quickshell, Hyprland, wallpaper, Kitty, GTK/Qt/KDE, Fcitx, btop,
+VS Code, Superfile, fzf and Starship. Apps that only read their theme at launch
+may need reopening; Neovim keeps its separately managed theme.
 
 The four settings panels open beside the top bar and are also available from
 Super+M or their bar icons:

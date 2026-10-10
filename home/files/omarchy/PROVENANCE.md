@@ -20,3 +20,11 @@ or its system-wide terminal defaults. The current wallpaper is retained,
 Quickshell uses the captured surface tokens, and Kitty's padding is aligned with
 the other captured terminals. Swappy replaces the unbundled Tensaku editor.
 Neovim remains owned by the user's separate configuration repository.
+
+Catppuccin Latte's `catppuccin-latte-colors.toml`, the `btop.theme.tpl`
+template, and `home/files/backgrounds/catppuccin-latte.webp` were copied from
+Omarchy's `quattro` branch on 2026-10-10. Their source paths are
+`themes/catppuccin-latte/colors.toml`, `default/themed/btop.theme.tpl`, and
+`themes/catppuccin-latte/backgrounds/1-color-fade.webp`. The accompanying MIT
+license applies. The light wallpaper is converted to PNG at build time for
+hyprpaper.
