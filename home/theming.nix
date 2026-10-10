@@ -1,6 +1,6 @@
 { pkgs, lib, ... }:
 let
-  palette = import ./palette.nix;
+  palette = import ./omarchy-palette.nix;
   rgb =
     color:
     lib.concatStringsSep "," (
@@ -37,12 +37,12 @@ let
     "Colors:View" = kdeColors palette.background palette.text;
     "Colors:Window" = kdeColors palette.base palette.text;
     "Colors:Button" = kdeColors palette.surface palette.text;
-    "Colors:Selection" = kdeColors palette.accent palette.base;
+    "Colors:Selection" = kdeColors palette.selection palette.brightText;
     "Colors:Tooltip" = kdeColors palette.surface palette.text;
     "Colors:Complementary" = kdeColors palette.base palette.text;
     "Colors:Header" = kdeColors palette.background palette.text;
     KDE.contrast = 4;
-    Icons.Theme = "Papirus-Dark";
+    Icons.Theme = "Yaru-magenta";
   };
   # QPalette roles in Qt's enum order, including PlaceholderText and Accent.
   qtColors =
@@ -61,8 +61,8 @@ let
         palette.background
         palette.base
         palette.background
-        palette.accent
-        palette.base
+        palette.selection
+        palette.brightText
         palette.teal
         palette.lavender
         palette.surface
@@ -73,7 +73,7 @@ let
         palette.accent
       ]
     );
-  qtScheme = pkgs.writeText "jade-qt.colors" (
+  qtScheme = pkgs.writeText "tokyo-night-qt.colors" (
     lib.generators.toINI { } {
       ColorScheme = {
         active_colors = qtColors palette.text;
@@ -82,29 +82,25 @@ let
       };
     }
   );
-  # Reuse the installed themes' complete widget styling, with one shared jade
-  # palette for CSS, SVG assets and Kvantum's widget colours.
-  baseGtk = pkgs.catppuccin-gtk.override {
-    variant = "mocha";
-    accents = [ "blue" ];
-  };
+  # GTK follows the captured Adwaita dark preference. Preserve the working Qt
+  # widget integration and recolor its complete Kvantum assets to Tokyo Night.
   baseKvantum = pkgs.catppuccin-kvantum.override {
     variant = "mocha";
     accent = "blue";
   };
-  colorMap = pkgs.writeText "jade-colors.json" (
+  colorMap = pkgs.writeText "tokyo-night-colors.json" (
     builtins.toJSON {
       "#1e1e2e" = palette.base;
       "#181825" = palette.background;
-      "#11111b" = "#091613";
+      "#11111b" = palette.darkest;
       "#313244" = palette.surface;
       "#45475a" = palette.raised;
       "#585b70" = palette.border;
-      "#6c7086" = "#658276";
+      "#6c7086" = palette.dim;
       "#7f849c" = palette.dim;
-      "#9399b2" = "#8ea89c";
+      "#9399b2" = palette.muted;
       "#a6adc8" = palette.muted;
-      "#bac2de" = "#c7d7ce";
+      "#bac2de" = palette.brightText;
       "#cdd6f4" = palette.text;
       "#89b4fa" = palette.accent;
       "#97bbf9" = palette.teal;
@@ -118,24 +114,20 @@ let
       "#f38ba8" = palette.urgent;
       "#eba0ac" = palette.urgent;
       "#cba6f7" = palette.lavender;
-      "#f5c2e7" = "#cabac5";
-      "#f2cdcd" = "#dfc8bc";
+      "#f5c2e7" = palette.lavender;
+      "#f2cdcd" = palette.brightText;
       "#f5e0dc" = palette.text;
     }
   );
-  jadeGtk = pkgs.runCommand "jade-gtk-theme" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-    mkdir -p "$out/share/themes/${palette.name}"
-    cp -rL ${baseGtk}/share/themes/catppuccin-mocha-blue-standard/. "$out/share/themes/${palette.name}/"
-    chmod -R u+w "$out"
-    python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap} catppuccin-mocha-blue-standard ${palette.name}
-  '';
-  jadeKvantum = pkgs.runCommand "jade-kvantum-theme" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-    mkdir -p "$out/share/Kvantum/${palette.name}"
-    cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
-    cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
-    chmod -R u+w "$out"
-    python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap} Catppuccin-Mocha-Blue ${palette.name}
-  '';
+  tokyoKvantum =
+    pkgs.runCommand "tokyo-night-kvantum-theme" { nativeBuildInputs = [ pkgs.python3 ]; }
+      ''
+        mkdir -p "$out/share/Kvantum/${palette.name}"
+        cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
+        cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
+        chmod -R u+w "$out"
+        python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap} Catppuccin-Mocha-Blue ${palette.name}
+      '';
 
 in
 {
@@ -157,22 +149,18 @@ in
       size = 11;
     };
     theme = {
-      name = palette.name;
-      package = jadeGtk;
-    };
-    gtk4.theme = {
-      name = palette.name;
-      package = jadeGtk;
+      name = "Adwaita-dark";
+      package = pkgs.gnome-themes-extra;
     };
     iconTheme = {
-      name = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme.override { color = "green"; };
+      name = "Yaru-magenta";
+      package = pkgs.yaru-theme;
     };
   };
 
   dconf.settings."org/gnome/desktop/interface" = {
     color-scheme = "prefer-dark";
-    accent-color = "green";
+    accent-color = "blue";
   };
 
   # KDE's KColorScheme reads kdeglobals independently of the widget style.
@@ -213,12 +201,12 @@ in
       # Without it the theme is never written to ~/.config/Kvantum and the
       # style silently falls back to Kvantum's generic default.
       enable = true;
-      themes = [ jadeKvantum ];
+      themes = [ tokyoKvantum ];
       settings.General.theme = palette.name;
     };
 
     # qt6ct supplies what Kvantum does not: the icon set and the UI fonts.
-    # Fonts must be quoted strings here. Figtree and CaskaydiaCove are the
+    # Fonts must be quoted strings here. Figtree and JetBrainsMono are the
     # ones already installed in hosts/desktop.nix — plain "Noto Sans" is not
     # (only the CJK variants are), so it would silently fall back.
     # standard_dialogs routes file pickers through the existing xdg portal, so
@@ -228,12 +216,12 @@ in
         style = "kvantum";
         custom_palette = true;
         color_scheme_path = "${qtScheme}";
-        icon_theme = "Papirus-Dark";
+        icon_theme = "Yaru-magenta";
         standard_dialogs = "xdgdesktopportal";
       };
       Fonts = {
         general = ''"Figtree,11"'';
-        fixed = ''"CaskaydiaCove Nerd Font Mono,11"'';
+        fixed = ''"JetBrainsMono Nerd Font,11"'';
       };
     };
     qt5ctSettings = {
@@ -241,12 +229,12 @@ in
         style = "kvantum";
         custom_palette = true;
         color_scheme_path = "${qtScheme}";
-        icon_theme = "Papirus-Dark";
+        icon_theme = "Yaru-magenta";
         standard_dialogs = "xdgdesktopportal";
       };
       Fonts = {
         general = ''"Figtree,11"'';
-        fixed = ''"CaskaydiaCove Nerd Font Mono,11"'';
+        fixed = ''"JetBrainsMono Nerd Font,11"'';
       };
     };
   };

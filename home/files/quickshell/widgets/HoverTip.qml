@@ -45,14 +45,11 @@ PopupWindow {
         interval: 380
         onTriggered: root.ready = true
     }
-    Rectangle {
+    Glass {
         id: card
         anchors.fill: parent
         anchors.margins: 2
-        radius: 12
-        color: Config.theme.solid
-        border.width: 1
-        border.color: Qt.alpha(Config.theme.accent, 0.25)
+        surface: "tooltip"
         Column {
             id: content
             anchors.centerIn: parent
@@ -65,7 +62,7 @@ PopupWindow {
                 text: root.title
                 color: Config.theme.text
                 font.family: Config.theme.uiFont
-                font.pixelSize: 13
+                font.pixelSize: Config.fonts.body
                 font.weight: Font.DemiBold
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
@@ -77,7 +74,7 @@ PopupWindow {
                 text: root.text
                 color: root.title ? Config.theme.dim : Config.theme.text
                 font.family: Config.theme.uiFont
-                font.pixelSize: 13
+                font.pixelSize: Config.fonts.body
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 maximumLineCount: 10

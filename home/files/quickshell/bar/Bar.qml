@@ -74,7 +74,7 @@ PanelWindow {
         window: root
         enabled: Runtime.presentation && !Config.preview && !Runtime.locked
     }
-    Glass {
+    Item {
         id: leftIsland
         anchors {
             left: parent.left
@@ -94,6 +94,7 @@ PanelWindow {
                     return list.sort((a, b) => a - b);
                 }
                 Chip {
+                    compact: true
                     required property int modelData
                     text: String(modelData)
                     highlighted: !!root.monitor && root.monitor.activeWorkspace?.id === modelData
@@ -115,7 +116,7 @@ PanelWindow {
             }
         }
     }
-    Glass {
+    Item {
         id: centerIsland
         anchors {
             horizontalCenter: parent.horizontalCenter
@@ -128,13 +129,15 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: 1
             Chip {
-                text: Qt.formatDateTime(clock.date, root.width > 1700 ? "yyyy-MM-dd HH:mm" : "HH:mm")
+                compact: true
+                text: Qt.formatDateTime(clock.date, root.width > 1350 ? "dddd HH:mm" : "HH:mm")
                 tipTitle: "Calendar"
                 tip: Qt.formatDate(clock.date, "dddd, d MMMM yyyy")
                 selected: root.menuSelected("calendar")
                 onClicked: root.open("calendar", this)
             }
             Chip {
+                compact: true
                 text: "󰄲 " + Reminders.items.length
                 tipTitle: "Reminders"
                 tip: Reminders.items.slice(0, 8).join("\n") || "No open todos"
@@ -142,6 +145,7 @@ PanelWindow {
                 onClicked: root.open("todos", this)
             }
             Chip {
+                compact: true
                 visible: Reminders.overdue.length > 0
                 text: String(Reminders.overdue.length)
                 foreground: Config.theme.urgent
@@ -151,7 +155,7 @@ PanelWindow {
             }
         }
     }
-    Glass {
+    Item {
         anchors {
             right: parent.right
             verticalCenter: parent.verticalCenter
@@ -163,6 +167,7 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: 2
             Chip {
+                compact: true
                 visible: root.width > 1600
                 text: " " + Math.round(Metrics.cpu) + "%"
                 tipTitle: "Processor"
@@ -170,6 +175,7 @@ PanelWindow {
                 onClicked: Runtime.launch([Config.bin.kitty, "-e", Config.bin.btop])
             }
             Chip {
+                compact: true
                 visible: root.width > 1800
                 text: " " + Metrics.ram.percent + "%"
                 tipTitle: "Memory"
@@ -185,6 +191,7 @@ PanelWindow {
                 color: Qt.alpha(Config.theme.text, 0.14)
             }
             Chip {
+                compact: true
                 text: root.wifi ? "󰤨" : root.connection ? "󰈀" : "󰤮"
                 tipTitle: "Network"
                 tip: root.networkTip
@@ -192,6 +199,7 @@ PanelWindow {
                 onClicked: root.open("wifi", this)
             }
             Chip {
+                compact: true
                 text: "󰂯"
                 tipTitle: "Bluetooth"
                 tip: "Manage connected devices"
@@ -200,6 +208,7 @@ PanelWindow {
                 onClicked: root.open("bluetooth", this)
             }
             Chip {
+                compact: true
                 text: Audio.sink?.audio?.muted ? "󰝟" : "󰕾"
                 tipTitle: "Sound · " + (Audio.sink?.audio?.muted ? "Muted" : Math.round((Audio.sink?.audio?.volume || 0) * 100) + "%")
                 tip: (Audio.sink?.description || "No output") + " · " + Math.round((Audio.sink?.audio?.volume || 0) * 100) + "%\nScroll for volume · right-click to mute"
@@ -209,6 +218,7 @@ PanelWindow {
                 onScrolled: direction => Audio.change(false, direction * 5)
             }
             Chip {
+                compact: true
                 text: Audio.source?.audio?.muted ? "󰍭" : "󰍬"
                 tipTitle: "Microphone · " + (Audio.source?.audio?.muted ? "Muted" : "On")
                 tip: "Click to mute · scroll for input volume"
@@ -225,6 +235,7 @@ PanelWindow {
                 color: Qt.alpha(Config.theme.text, 0.14)
             }
             Chip {
+                compact: true
                 text: Preferences.nightlight ? "󰖔" : "󰖙"
                 highlighted: Preferences.nightlight
                 tipTitle: "Night light · " + (Preferences.nightlight ? "On" : "Off")
@@ -236,6 +247,7 @@ PanelWindow {
                 onScrolled: direction => Display.adjustNightlight(direction * 500)
             }
             Chip {
+                compact: true
                 text: Runtime.presentation ? "󰅶" : "󰾪"
                 highlighted: Runtime.presentation
                 tipTitle: "Presentation mode · " + (Runtime.presentation ? "On" : "Off")
@@ -244,13 +256,16 @@ PanelWindow {
                 onClicked: Runtime.presentation = !Runtime.presentation
             }
             Chip {
+                compact: true
                 text: PowerProfiles.profile === PowerProfile.PowerSaver ? "󰾆" : PowerProfiles.profile === PowerProfile.Performance ? "󰓅" : "󰾅"
+                foreground: PowerProfiles.profile === PowerProfile.PowerSaver ? Config.theme.success : PowerProfiles.profile === PowerProfile.Performance ? Config.theme.warning : Config.theme.accent
+                tint: PowerProfiles.profile === PowerProfile.PowerSaver ? Config.theme.success : PowerProfiles.profile === PowerProfile.Performance ? Config.theme.warning : "transparent"
                 tipTitle: "Power profile"
                 tip: (PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced") + "\nClick to cycle"
-                onClicked: Battery.setProfile(PowerProfiles.profile === PowerProfile.PowerSaver ? PowerProfile.Balanced
-                    : PowerProfiles.profile === PowerProfile.Balanced && PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver)
+                onClicked: Battery.setProfile(PowerProfiles.profile === PowerProfile.PowerSaver ? PowerProfile.Balanced : PowerProfiles.profile === PowerProfile.Balanced && PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver)
             }
             Chip {
+                compact: true
                 text: Battery.present ? (UPower.onBattery ? "󰁹 " : "󰂄 ") + Battery.percent + "%" : "AC"
                 foreground: Battery.band === "critical" ? Config.theme.urgent : Battery.band === "low" ? Config.theme.warning : Config.theme.text
                 tipTitle: "Battery · " + Battery.percent + "%"
@@ -263,6 +278,7 @@ PanelWindow {
                 sourceComponent: trayComponent
             }
             Chip {
+                compact: true
                 text: Preferences.dnd ? "󰪑" : Notifications.entries.length ? "󰂚" : "󰂜"
                 tipTitle: "Notifications" + (Preferences.dnd ? " · Do not disturb" : "")
                 tip: Notifications.entries.length + " in history\nRight-click to toggle do not disturb"
@@ -271,6 +287,7 @@ PanelWindow {
                 onRightClicked: Preferences.dnd = !Preferences.dnd
             }
             Chip {
+                compact: true
                 text: "⏻"
                 tipTitle: "Power & controls"
                 tip: "Lock, suspend and desktop settings"
@@ -290,11 +307,11 @@ PanelWindow {
                     required property var modelData
                     property bool tipDismissed: false
                     implicitWidth: 28
-                    implicitHeight: 30
+                    implicitHeight: Config.bar.height - 2
                     Image {
                         anchors.centerIn: parent
-                        width: 20
-                        height: 20
+                        width: 18
+                        height: 18
                         source: trayItem.modelData.icon
                     }
                     Rectangle {

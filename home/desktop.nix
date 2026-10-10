@@ -5,7 +5,7 @@
   ...
 }:
 let
-  palette = import ./palette.nix;
+  palette = import ./omarchy-palette.nix;
   jadeWallpaper = pkgs.runCommand "jade-wallpaper" { nativeBuildInputs = [ pkgs.librsvg ]; } ''
     mkdir -p "$out"
     rsvg-convert ${./files/backgrounds/jade-landscape.svg} -o "$out/jade-landscape.png"

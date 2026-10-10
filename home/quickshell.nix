@@ -8,12 +8,13 @@
   ...
 }:
 let
-  palette = import ./palette.nix;
+  palette = import ./omarchy-palette.nix;
+  capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
   hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   settings = {
     theme = {
-      background = "#e6102824";
-      solid = palette.base;
+      background = palette.background;
+      solid = palette.background;
       surface = palette.surface;
       text = palette.text;
       dim = palette.muted;
@@ -22,16 +23,17 @@ let
       success = palette.green;
       warning = palette.warning;
       urgent = palette.urgent;
-      border = "#805d7369";
+      border = palette.accent;
       font = "JetBrainsMono Nerd Font";
-      uiFont = "Figtree";
-      fontSize = 14;
-      radius = 14;
-    };
+      uiFont = "JetBrainsMono Nerd Font";
+      fontSize = 12;
+      radius = 12;
+    }
+    // import ./omarchy-shell-style.nix { inherit palette; };
     bar = {
-      height = 38;
-      margin = 6;
-      sideMargin = 12;
+      height = 26;
+      margin = 0;
+      sideMargin = 0;
     };
     features = {
       bar = true;
@@ -46,7 +48,8 @@ let
     paths = {
       home = config.home.homeDirectory;
       dotfiles = "${config.home.homeDirectory}/repos/nixos-dotfiles";
-      screenshot = "${config.xdg.configHome}/scripts/screenshot.sh";
+      screenshot = lib.getExe capture.screenshot;
+      editScreenshot = lib.getExe capture.edit;
       screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
       todo = "${config.home.homeDirectory}/Documents/obsidian/00 Home/00 Todos.md";
       vault = "obsidian";
@@ -64,6 +67,7 @@ let
       btop = lib.getExe pkgs.btop;
       cliphist = lib.getExe pkgs.cliphist;
       clipboard = lib.getExe clipboard;
+      clipboardThumbs = lib.getExe clipboardThumbs;
       xdgOpen = "${pkgs.xdg-utils}/bin/xdg-open";
       systemctl = "${pkgs.systemd}/bin/systemctl";
       loginctl = "${pkgs.systemd}/bin/loginctl";
@@ -102,6 +106,40 @@ let
       # must not clear the user's current clipboard.
       cliphist decode "$1" > "$clipboard_file"
       wl-copy < "$clipboard_file"
+    '';
+  };
+  # Decode image history entries into a private runtime cache so the
+  # clipboard menu can show thumbnails. Prints "<id>\t<path>" per image.
+  clipboardThumbs = pkgs.writeShellApplication {
+    name = "quickshell-clipboard-thumbs";
+    runtimeInputs = [
+      pkgs.cliphist
+      pkgs.coreutils
+    ];
+    text = ''
+      umask 077
+      cache="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/quickshell-clipboard-thumbs"
+      mkdir -p -- "$cache"
+      declare -A keep=()
+      for id in "$@"; do
+        [[ "$id" =~ ^[0-9]+$ ]] || continue
+        keep["$id"]=1
+        file="$cache/$id"
+        if [[ ! -s "$file" ]]; then
+          if ! cliphist decode "$id" > "$file.tmp"; then
+            rm -f -- "$file.tmp"
+            continue
+          fi
+          mv -f -- "$file.tmp" "$file"
+        fi
+        printf '%s\t%s\n' "$id" "$file"
+      done
+      # Drop thumbnails whose entries left the history.
+      for file in "$cache"/*; do
+        [[ -e "$file" ]] || continue
+        name=''${file##*/}
+        [[ -n "''${keep[$name]:-}" ]] || rm -f -- "$file"
+      done
     '';
   };
   generated = pkgs.writeText "quickshell-generated.json" (builtins.toJSON settings);

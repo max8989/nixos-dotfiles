@@ -22,7 +22,7 @@ local fileManager = "superfile" -- TUI file manager; nixpkgs names the binary
                                 -- `superfile`, Arch's AUR package called it `spf`
 local menu        = shell.apps
 local browser     = "zen-beta" -- wrapper binary name from the zen-browser flake
-local screenshot  = "~/.config/scripts/screenshot.sh"
+local screenshot  = shell.screenshot
 
 -- Application shortcuts
 hl.bind(mainMod .. " + return", hl.dsp.exec_cmd(terminal), { description = "launch terminal emulator" })
@@ -74,9 +74,11 @@ for key, dir in pairs(focusDirs) do
 end
 
 -- Print Screen & Screen Record
-hl.bind("ALT + 1", hl.dsp.exec_cmd(screenshot .. " -m region -z"))
-hl.bind("ALT + 2", hl.dsp.exec_cmd(screenshot .. " -m active -m window -z"))
-hl.bind("ALT + 3", hl.dsp.exec_cmd(screenshot .. " -m active -m output -z"))
+hl.bind("ALT + 1", hl.dsp.exec_cmd(screenshot .. " region"))
+hl.bind("ALT + 2", hl.dsp.exec_cmd(screenshot .. " windows"))
+hl.bind("ALT + 3", hl.dsp.exec_cmd(screenshot .. " fullscreen"))
+hl.bind("PRINT", hl.dsp.exec_cmd(screenshot .. " smart"))
+hl.bind(mainMod .. " + ALT + comma", hl.dsp.exec_cmd(shell.editScreenshot))
 hl.bind("ALT + 4", hl.dsp.exec_cmd("~/.config/scripts/screen_record.sh"))
 
 -- Power menu

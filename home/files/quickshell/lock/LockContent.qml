@@ -16,9 +16,10 @@ Item {
 
     readonly property bool compact: height < 700
     readonly property int inset: width < 700 ? 24 : 48
-    readonly property color ink: Config.theme.text
+    readonly property var style: Config.surface("lock")
+    readonly property color ink: root.style.text
     readonly property color muted: Config.theme.dim
-    readonly property color jade: Config.theme.accent
+    readonly property color accent: Config.theme.accent
     readonly property string phrase: {
         var lines = Reminders.phrases.trim().split("\n").filter(line => line.trim().length > 0);
         var day = Math.floor((clock.date - new Date(clock.date.getFullYear(), 0, 0)) / 86400000);
@@ -52,18 +53,18 @@ Item {
             var ctx = getContext("2d");
             ctx.reset();
             var sky = ctx.createLinearGradient(0, 0, width, height);
-            sky.addColorStop(0, "#0c191e");
-            sky.addColorStop(0.55, "#19342f");
-            sky.addColorStop(1, "#30473d");
+            sky.addColorStop(0, Config.theme.solid);
+            sky.addColorStop(0.55, Config.theme.surface);
+            sky.addColorStop(1, Config.theme.surface);
             ctx.fillStyle = sky;
             ctx.fillRect(0, 0, width, height);
             var glow = ctx.createRadialGradient(width * 0.74, height * 0.27, 0, width * 0.74, height * 0.27, width * 0.55);
-            glow.addColorStop(0, "#405c4c");
+            glow.addColorStop(0, Config.theme.border);
             glow.addColorStop(1, "transparent");
             ctx.fillStyle = glow;
             ctx.fillRect(0, 0, width, height);
             // Quiet, overlapping silhouettes inspired by ink landscapes.
-            ctx.fillStyle = "#29463e";
+            ctx.fillStyle = Config.theme.surface;
             ctx.beginPath();
             ctx.moveTo(0, height * 0.68);
             ctx.bezierCurveTo(width * 0.20, height * 0.82, width * 0.30, height * 0.43, width * 0.53, height * 0.63);
@@ -72,7 +73,7 @@ Item {
             ctx.lineTo(0, height);
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = "#1b3632";
+            ctx.fillStyle = Config.theme.surface;
             ctx.beginPath();
             ctx.moveTo(0, height * 0.60);
             ctx.bezierCurveTo(width * 0.22, height * 0.43, width * 0.32, height * 0.88, width * 0.58, height * 0.77);
@@ -81,7 +82,7 @@ Item {
             ctx.lineTo(0, height);
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = "#102824";
+            ctx.fillStyle = Config.theme.solid;
             ctx.beginPath();
             ctx.moveTo(0, height * 0.86);
             ctx.bezierCurveTo(width * 0.25, height * 0.95, width * 0.36, height * 0.71, width * 0.61, height * 0.85);
@@ -114,15 +115,15 @@ Item {
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: "#10060f13"
+                color: Qt.alpha(Config.theme.solid, 0.06)
             }
             GradientStop {
                 position: 0.6
-                color: "#00060f13"
+                color: Qt.alpha(Config.theme.solid, 0)
             }
             GradientStop {
                 position: 1
-                color: "#70060f13"
+                color: Qt.alpha(Config.theme.solid, 0.44)
             }
         }
     }
@@ -138,7 +139,7 @@ Item {
             text: "\uf023"
             font.family: Config.theme.font
             font.pixelSize: 14
-            color: root.jade
+            color: root.accent
         }
         Text {
             text: "已鎖定"
@@ -178,7 +179,7 @@ Item {
                     width: 16 * (Battery.present ? Battery.percent / 100 : 1)
                     height: 5
                     radius: 1
-                    color: Battery.present && Battery.percent < 20 ? "#e6b68d" : root.jade
+                    color: Battery.present && Battery.percent < 20 ? Config.theme.warning : root.accent
                 }
                 Rectangle {
                     x: 23
@@ -250,10 +251,10 @@ Item {
             echoMode: TextInput.Password
             passwordCharacter: "•"
             placeholderText: "輸入密碼"
-            placeholderTextColor: root.muted
+            placeholderTextColor: root.style.placeholder
             color: root.ink
-            selectionColor: root.jade
-            selectedTextColor: "#102824"
+            selectionColor: root.accent
+            selectedTextColor: Config.theme.solid
             font.family: Config.theme.uiFont
             font.pixelSize: 16
             leftPadding: 20
@@ -262,9 +263,9 @@ Item {
             Accessible.name: "密碼"
             background: Rectangle {
                 radius: 27
-                color: password.activeFocus ? "#b31a302d" : "#99142624"
+                color: Qt.alpha(Config.theme.solid, password.activeFocus ? 0.7 : 0.6)
                 border.width: 1
-                border.color: root.authMessage ? "#d7a497" : password.activeFocus ? "#88b8d9c5" : "#405d7369"
+                border.color: root.authMessage ? root.style.borderError : password.activeFocus ? root.style.borderActive : root.style.border
                 Behavior on border.color {
                     ColorAnimation {
                         duration: 160
@@ -290,7 +291,7 @@ Item {
                 Accessible.name: "解鎖"
                 contentItem: Text {
                     text: root.busy ? "…" : "→"
-                    color: "#19342b"
+                    color: Config.theme.solid
                     font.family: Config.theme.uiFont
                     font.pixelSize: 24
                     horizontalAlignment: Text.AlignHCenter
@@ -298,7 +299,7 @@ Item {
                 }
                 background: Rectangle {
                     radius: 20
-                    color: unlock.down ? "#91bba2" : unlock.hovered ? "#d8ecdf" : root.jade
+                    color: Qt.alpha(root.accent, unlock.down ? 0.75 : unlock.hovered ? 0.9 : 1)
                     border.width: unlock.visualFocus ? 2 : 0
                     border.color: root.ink
                 }
@@ -314,7 +315,7 @@ Item {
         Text {
             width: parent.width
             text: root.busy ? "正在驗證…" : root.authMessage || "按 Enter 解鎖"
-            color: root.authMessage && !root.busy ? "#efb9ab" : root.muted
+            color: root.authMessage && !root.busy ? root.style.textError : root.muted
             font.family: Config.theme.uiFont
             font.pixelSize: 13
             horizontalAlignment: Text.AlignHCenter
@@ -335,13 +336,13 @@ Item {
         Rectangle {
             width: 28
             height: 2
-            color: root.jade
+            color: root.accent
             opacity: 0.6
         }
         Text {
             width: parent.width
             text: root.phrase
-            color: root.jade
+            color: root.accent
             font.family: Config.theme.uiFont
             font.pixelSize: 22
             font.letterSpacing: 4
@@ -379,7 +380,7 @@ Item {
             RowLayout {
                 id: task
                 required property var modelData
-                readonly property color tint: Reminders.isOverdue(modelData) ? Config.theme.urgent : root.jade
+                readonly property color tint: Reminders.isOverdue(modelData) ? Config.theme.urgent : root.accent
                 width: parent.width
                 spacing: 10
                 Rectangle {

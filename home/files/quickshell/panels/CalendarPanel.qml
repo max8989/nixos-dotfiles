@@ -40,7 +40,7 @@ ColumnLayout {
         Text {
             text: Qt.formatDate(root.shown, "MMMM yyyy")
             color: Config.theme.text
-            font.pixelSize: 22
+            font.pixelSize: Config.fonts.display
             font.family: Config.theme.uiFont
             horizontalAlignment: Text.AlignHCenter
             Layout.fillWidth: true
@@ -73,14 +73,9 @@ ColumnLayout {
             model: 42
             Rectangle {
                 required property int index
-                readonly property int day: index - ((new Date(root.shown.getFullYear(), root.shown.getMonth(),
-                                                              1).getDay() + 6) % 7) + 1
-                readonly property bool inMonth: day > 0 && day <= new Date(root.shown.getFullYear(),
-                                                                           root.shown.getMonth() + 1,
-                                                                           0).getDate()
-                readonly property bool today: inMonth && new Date().toDateString() === new Date(
-                                                  root.shown.getFullYear(), root.shown.getMonth(),
-                                                  day).toDateString()
+                readonly property int day: index - ((new Date(root.shown.getFullYear(), root.shown.getMonth(), 1).getDay() + 6) % 7) + 1
+                readonly property bool inMonth: day > 0 && day <= new Date(root.shown.getFullYear(), root.shown.getMonth() + 1, 0).getDate()
+                readonly property bool today: inMonth && new Date().toDateString() === new Date(root.shown.getFullYear(), root.shown.getMonth(), day).toDateString()
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 radius: 9
@@ -89,7 +84,7 @@ ColumnLayout {
                     anchors.centerIn: parent
                     text: parent.inMonth ? parent.day : ""
                     color: parent.today ? Config.theme.solid : Config.theme.text
-                    font.pixelSize: 16
+                    font.pixelSize: Config.fonts.heading
                 }
             }
         }

@@ -15,6 +15,7 @@
     ./theming.nix
     ./zen.nix
     ./superfile.nix
+    ./omarchy.nix
   ];
 
   home.username = username;
@@ -64,7 +65,6 @@
     kdePackages.filelight
     qalculate-gtk
     zed-editor # `zed` editor binary
-    btop
 
     # --- clipboard ---
     cliphist
@@ -76,11 +76,7 @@
     kanata # caps-lock vim nav, launched from exec-once
 
     # --- screenshots / recording (scripts/screenshot.sh, screen_record.sh) ---
-    hyprshot
-    grim
-    slurp
     wf-recorder
-    swappy
 
     # --- independent script dependencies ---
     jq
@@ -107,6 +103,7 @@
     obsidian
     qbittorrent
     localsend
+    impression # bootable-USB writer (Etcher is not in nixpkgs)
     solaar # Logitech device manager
     blueman # bluetooth GUI (service enabled in common.nix)
     nwg-look # GTK theme settings
@@ -150,7 +147,6 @@
     )
     supabase-cli
     postgresql # psql / pg_dump client tools only — no server (that's services.postgresql)
-    vscode
     insomnia
     claude-code
     codex

@@ -8,18 +8,21 @@ Button {
     property string tip: ""
     property string tipTitle: ""
     property bool selected: false
+    property bool compact: false
     property bool tipDismissed: false
     property color foreground: highlighted || selected ? Config.theme.accent : Config.theme.text
+    // Optional status tint: colored fill and outline (transparent = none).
+    property color tint: "transparent"
     signal rightClicked
     signal scrolled(int direction)
-    implicitHeight: 30
-    implicitWidth: Math.max(30, label.implicitWidth + 18)
+    implicitHeight: compact ? Config.bar.height - 2 : Config.spacing.controlHeight
+    implicitWidth: Math.max(compact ? 24 : 28, label.implicitWidth + (compact ? 12 : Config.spacing.controlPaddingX * 2))
     hoverEnabled: true
     // Mouse clicks should not leave the keyboard focus ring behind.
     focusPolicy: Qt.TabFocus
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
-    padding: 7
+    padding: compact ? 4 : Config.spacing.controlPaddingY
     onPressed: tipDismissed = true
     onHoveredChanged: if (!hovered)
         tipDismissed = false
@@ -40,10 +43,10 @@ Button {
         }
     }
     background: Rectangle {
-        radius: 10
-        color: root.down ? Qt.alpha(Config.theme.accent, 0.24) : root.highlighted || root.selected ? Qt.alpha(Config.theme.accent, 0.14) : root.hovered ? Qt.alpha(Config.theme.text, 0.08) : "transparent"
-        border.color: root.visualFocus ? Config.theme.accent : "transparent"
-        border.width: 1
+        radius: root.compact ? 0 : 4
+        color: Qt.alpha(root.tint.a > 0 ? root.tint : Config.theme.text, root.down ? Config.controls.pressedFillAlpha : root.highlighted || root.selected ? Config.controls.selectedFillAlpha : root.hovered || root.visualFocus ? Config.controls.hoverFillAlpha : root.compact ? 0 : Config.controls.normalFillAlpha)
+        border.color: root.tint.a > 0 ? root.tint : root.compact && !root.visualFocus ? "transparent" : Qt.alpha(Config.theme.text, root.hovered || root.visualFocus ? Config.controls.hoverBorderAlpha : Config.controls.normalBorderAlpha)
+        border.width: root.highlighted || root.selected || root.compact && !root.visualFocus ? 0 : 1
         Behavior on color {
             ColorAnimation {
                 duration: 140

@@ -14,7 +14,7 @@ Singleton {
     property bool barHidden: false
     property string audioSink: ""
     property string audioSource: ""
-    property int panelTextSize: 14
+    property int panelTextSize: Config.fonts.body
     property var monitorScales: ({})
     property var appLaunchCounts: Object.create(null)
     property string folder: ""
@@ -65,16 +65,16 @@ Singleton {
         id: saveTimer
         interval: 250
         onTriggered: file.setText(JSON.stringify({
-                                                     nightlight: root.nightlight,
-                                                     temperature: root.temperature,
-                                                     dnd: root.dnd,
-                                                     barHidden: root.barHidden,
-                                                     audioSink: root.audioSink,
-                                                     audioSource: root.audioSource,
-                                                     panelTextSize: root.panelTextSize,
-                                                     monitorScales: root.monitorScales,
-                                                     appLaunchCounts: root.appLaunchCounts,
-                                                     folder: root.folder
-                                                 }))
+            nightlight: root.nightlight,
+            temperature: root.temperature,
+            dnd: root.dnd,
+            barHidden: root.barHidden,
+            audioSink: root.audioSink,
+            audioSource: root.audioSource,
+            panelTextSize: root.panelTextSize,
+            monitorScales: root.monitorScales,
+            appLaunchCounts: root.appLaunchCounts,
+            folder: root.folder
+        }))
     }
 }

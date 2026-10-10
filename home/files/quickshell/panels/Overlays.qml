@@ -37,7 +37,7 @@ Scope {
                     text: Runtime.osdLabel + (Runtime.osdProgress ? "  " + Math.round(Runtime.osdValue * 100) + "%" : "")
                     color: Config.theme.text
                     font.family: Config.theme.uiFont
-                    font.pixelSize: 14
+                    font.pixelSize: Config.fonts.body
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                 }

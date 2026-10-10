@@ -33,7 +33,7 @@ assert.equal(context.restoreState(null).folder,"");
 assert.equal(context.restoreState([]).nightlight,false);
 assert.equal(context.restoreState("broken").temperature,4000);
 assert.equal(context.restoreState({panelTextSize:9000}).panelTextSize,20);
-assert.equal(context.restoreState({panelTextSize:"broken"}).panelTextSize,14);
+assert.equal(context.restoreState({panelTextSize:"broken"}).panelTextSize,12);
 assert.equal(context.restoreState({audioSource:42}).audioSource,"");
 assert.deepEqual(plain(context.restoreState({monitorScales:[]}).monitorScales),{});
 for (const value of [undefined, null, [], "broken", 42]) {
@@ -67,6 +67,7 @@ assert.deepEqual(plain(context.clipboardEntries("17\t  keep spaces  \n16\t[[ bin
     {id:"15", title:"中文\twith tab", image:false},
 ]);
 assert.deepEqual(plain(context.clipboardEntries("")), []);
+assert.deepEqual(plain(context.clipboardThumbs("16\t/run/user/1000/quickshell-clipboard-thumbs/16\nbad\n9\trelative\n")), {"16":"/run/user/1000/quickshell-clipboard-thumbs/16"});
 const network=context.networkSample("wlan0: 100 0 0 0 0 0 0 0 200 0 0 0\nlo: 999 0 0 0 0 0 0 0 999");
 assert.deepEqual(plain(network),{wlan0:{rx:100,tx:200}});
 assert.equal(context.networkRate(network,{wlan0:{rx:300,tx:400}},2),"↓ 100 B/s  ↑ 100 B/s");

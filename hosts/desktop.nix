@@ -144,9 +144,10 @@
   fonts = {
     fontDir.enable = true;
     packages = with pkgs; [
-      nerd-fonts.caskaydia-cove # kitty (CaskaydiaCove Nerd Font Mono)
-      nerd-fonts.jetbrains-mono # shell icons and monospace text
-      figtree # shell UI
+      nerd-fonts.caskaydia-cove
+      nerd-fonts.jetbrains-mono # Kitty and Omarchy-styled shell
+      figtree # native GTK/Qt applications
+      noto-fonts # captured Hyprland groupbar font (Noto Sans)
       font-awesome # general icon glyphs
       # CJK — lock screen phrases and fcitx5 Chinese input candidates.
       noto-fonts-cjk-sans
@@ -154,5 +155,6 @@
       source-han-sans # Adobe CJK sans (was adobe-source-han-sans-otc)
       source-han-serif # Adobe CJK serif (was adobe-source-han-serif-otc)
     ];
+    fontconfig.defaultFonts.monospace = [ "JetBrainsMono Nerd Font" ];
   };
 }

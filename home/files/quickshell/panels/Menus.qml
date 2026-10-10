@@ -19,8 +19,7 @@ PanelWindow {
     id: root
     signal powerRequested(string action)
     visible: Runtime.menu !== "" && !Runtime.locked && Config.features.menus
-    screen: Runtime.menuScreen || Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
-            || Quickshell.screens[0]
+    screen: Runtime.menuScreen || Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) || Quickshell.screens[0]
     anchors {
         top: true
         bottom: true
@@ -32,36 +31,53 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-menu"
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     readonly property bool fromBar: Runtime.menuAnchorX >= 0
+    readonly property string surfaceName: Runtime.menu === "apps" ? "launcher" : root.fromBar || root.settingsPanel ? "popups" : "menu"
+    readonly property var surfaceStyle: Config.surface(surfaceName)
     readonly property bool settingsPanel: ["audio", "wifi", "display", "battery"].indexOf(Runtime.menu) >= 0
     readonly property var settingsPanelItem: Runtime.menu === "audio" ? audioPanel : Runtime.menu === "wifi" ? wifiPanel : Runtime.menu === "display" ? displayPanel : Runtime.menu === "battery" ? batteryPanel : null
-    color: fromBar || settingsPanel ? "transparent" : "#44000000"
+    color: fromBar || settingsPanel ? "transparent" : Qt.alpha(surfaceStyle.scrim, surfaceStyle.scrimAlpha)
     property var rows: []
     readonly property var pageRows: {
         switch (Runtime.menu) {
-        case "controls": return search.text.trim() ? controls.all : controls.home;
-        case "display": return controls.display;
-        case "desktop": return controls.desktop;
-        case "capture": return controls.capture;
-        case "settings": return controls.settings;
-        case "workspaces": return controls.workspaces;
-        case "audio": return controls.audio.slice(0, 2).concat(rows);
-        case "power": return controls.power.concat(controls.display.slice(1, 4), [controls.desktop[3]]);
-        case "tray": return root.trayRows();
-        case "trayMenu": return trayOpener.children.values.filter(e => !e.isSeparator).map(e => ({
-            id: e.text, title: e.text.replace(/&(.)/g, "$1"), subtitle: e.enabled ? "" : "Unavailable",
-            icon: "", submenu: e.hasChildren, value: e.checkState === Qt.Checked ? "✓" : "",
-            action: () => {
-                if (!e.enabled || Config.preview)
-                    return;
-                if (e.hasChildren)
-                    root.openTrayMenu(e, e.text.replace(/&(.)/g, "$1"));
-                else {
-                    e.triggered();
-                    Runtime.closeMenu();
-                }
-            }
-        }));
-        default: return rows;
+        case "controls":
+            return search.text.trim() ? controls.all : controls.home;
+        case "display":
+            return controls.display;
+        case "desktop":
+            return controls.desktop;
+        case "capture":
+            return controls.capture;
+        case "settings":
+            return controls.settings;
+        case "workspaces":
+            return controls.workspaces;
+        case "audio":
+            return controls.audio.slice(0, 2).concat(rows);
+        case "power":
+            return controls.power.concat(controls.display.slice(1, 4), [controls.desktop[3]]);
+        case "tray":
+            return root.trayRows();
+        case "trayMenu":
+            return trayOpener.children.values.filter(e => !e.isSeparator).map(e => ({
+                        id: e.text,
+                        title: e.text.replace(/&(.)/g, "$1"),
+                        subtitle: e.enabled ? "" : "Unavailable",
+                        icon: "",
+                        submenu: e.hasChildren,
+                        value: e.checkState === Qt.Checked ? "✓" : "",
+                        action: () => {
+                            if (!e.enabled || Config.preview)
+                                return;
+                            if (e.hasChildren)
+                                root.openTrayMenu(e, e.text.replace(/&(.)/g, "$1"));
+                            else {
+                                e.triggered();
+                                Runtime.closeMenu();
+                            }
+                        }
+                    }));
+        default:
+            return rows;
         }
     }
     property var filtered: Logic.search(pageRows, search.text)
@@ -73,38 +89,36 @@ PanelWindow {
     property string confirmation: ""
     property string folderPath: Config.paths.home || "/"
     Component.onCompleted: if (Preferences.initialized && Preferences.folder)
-                               folderPath = Preferences.folder
+        folderPath = Preferences.folder
     property int requestSerial: 0
     property bool clipboardBusy: false
-    readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(
-                                                                                         d.networks.values),
-    [])
+    readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(d.networks.values), [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
     readonly property string heading: ({
-                                           controls: "Desktop controls",
-                                           display: "Display",
-                                           desktop: "Desktop",
-                                           capture: "Capture",
-                                           settings: "Settings and shortcuts",
-                                           workspaces: "Workspaces",
-                                           tray: "System tray",
-                                           trayMenu: trayTitle,
-                                           apps: "Applications",
-                                           clipboard: "Clipboard",
-                                           files: "Files",
-                                           vim: "Vim reference",
-                                           lazyvim: "LazyVim reference",
-                                           todos: "Reminders",
-                                           audio: "Audio",
-                                           battery: "Battery",
-                                           wifi: "Wi-Fi",
-                                           bluetooth: "Bluetooth",
-                                           power: "Power",
-                                           powerProfiles: "Power profile",
-                                           notifications: "Notifications",
-                                           calendar: "Calendar",
-                                           status: "System status"
-                                       })[Runtime.menu] || "Desktop"
+            controls: "Desktop controls",
+            display: "Display",
+            desktop: "Desktop",
+            capture: "Capture",
+            settings: "Settings and shortcuts",
+            workspaces: "Workspaces",
+            tray: "System tray",
+            trayMenu: trayTitle,
+            apps: "Applications",
+            clipboard: "Clipboard",
+            files: "Files",
+            vim: "Vim reference",
+            lazyvim: "LazyVim reference",
+            todos: "Reminders",
+            audio: "Audio",
+            battery: "Battery",
+            wifi: "Wi-Fi",
+            bluetooth: "Bluetooth",
+            power: "Power",
+            powerProfiles: "Power profile",
+            notifications: "Notifications",
+            calendar: "Calendar",
+            status: "System status"
+        })[Runtime.menu] || "Desktop"
     function row(title, action, subtitle, icon) {
         return {
             title: title,
@@ -137,7 +151,10 @@ PanelWindow {
         SystemTray.items.values.forEach(item => {
             var title = item.title || item.tooltipTitle || item.id || "Application";
             if (!item.onlyMenu)
-                rows.push(row("Open " + title, () => { item.activate(); Runtime.closeMenu(); }, "Tray application"));
+                rows.push(row("Open " + title, () => {
+                    item.activate();
+                    Runtime.closeMenu();
+                }, "Tray application"));
             if (item.hasMenu)
                 rows.push(row(title + " menu", () => openTrayMenu(item.menu, title), "Browse application actions"));
         });
@@ -149,10 +166,15 @@ PanelWindow {
         trayTitle = title;
     }
     function openPage(name) {
-        Runtime.menuHistory = Runtime.menuHistory.concat([{
-            menu: Runtime.menu, query: search.text, index: list.currentIndex,
-            trayHandle: trayHandle, trayTitle: trayTitle
-        }]);
+        Runtime.menuHistory = Runtime.menuHistory.concat([
+            {
+                menu: Runtime.menu,
+                query: search.text,
+                index: list.currentIndex,
+                trayHandle: trayHandle,
+                trayTitle: trayTitle
+            }
+        ]);
         // A nested application menu keeps the same page name.
         if (Runtime.menu === name) {
             search.text = "";
@@ -222,8 +244,7 @@ PanelWindow {
         var menu = Runtime.menu;
         var items = [];
         if (menu === "apps") {
-            items = Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay),
-                                           Preferences.appLaunchCounts).map(a => {
+            items = Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay), Preferences.appLaunchCounts).map(a => {
                 var item = row(a.name, () => {
                     if (!Config.preview) {
                         a.execute();
@@ -240,101 +261,85 @@ PanelWindow {
             Runtime.run([Config.bin.cliphist, "list"], function (code, out) {
                 if (serial !== root.requestSerial || Runtime.menu !== "clipboard")
                     return;
-                root.rows = Logic.clipboardEntries(out).map(entry => {
-                    return root.row(entry.title, () => root.restoreClipboard(entry.id),
-                                    entry.image ? "Image · select to copy" : "Text · select to copy");
+                var entries = Logic.clipboardEntries(out);
+                root.rows = entries.map(entry => {
+                    var item = root.row(entry.title, () => root.restoreClipboard(entry.id), entry.image ? "Image · " + entry.title.replace(/^\[\[ binary data (.*) \]\]$/, "$1") + " · select to copy" : "Text · select to copy");
+                    item.id = entry.id;
+                    return item;
                 });
-                if (code)
+                if (code) {
                     Runtime.report("Clipboard history could not be loaded");
+                    return;
+                }
+                var images = entries.filter(entry => entry.image).map(entry => entry.id);
+                if (!images.length)
+                    return;
+                Runtime.run([Config.bin.clipboardThumbs].concat(images), function (thumbCode, thumbOut) {
+                    if (serial !== root.requestSerial || Runtime.menu !== "clipboard")
+                        return;
+                    var paths = Logic.clipboardThumbs(thumbOut);
+                    root.rows = root.rows.map(item => {
+                        if (!paths[item.id])
+                            return item;
+                        var copy = Object.assign({}, item);
+                        copy.thumbnail = "file://" + paths[item.id];
+                        return copy;
+                    });
+                });
             });
             return;
         } else if (menu === "files") {
-            items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"),
-            folderPath));
+            items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"), folderPath));
             items.push(row("Open this folder", () => {
                 Runtime.launch([Config.bin.xdgOpen, folderPath]);
                 Runtime.closeMenu();
             }));
             for (var i = 0; i < folders.count; i++) {
-                var name = folders.get(i, "fileName"), directory = folders.get(i, "fileIsDir"), path
-                                                                                                = folders.get(
-                                                                                                    i, "filePath");
+                var name = folders.get(i, "fileName"), directory = folders.get(i, "fileIsDir"), path = folders.get(i, "filePath");
                 items.push(fileRow(name, path, directory));
             }
         } else if (menu === "vim" || menu === "lazyvim") {
-            items = reference.text().split("\n").filter(Boolean).map(line => row(line, () => {},
-            "Reference"));
-
+            items = reference.text().split("\n").filter(Boolean).map(line => row(line, () => {}, "Reference"));
         } else if (menu === "todos") {
             items = Reminders.tasks.map((task, i) => row((Reminders.isOverdue(task) ? "⚠ " : "") + Reminders.items[i], () => {
-                Reminders.openNote(Config.paths.todoNote);
-                Runtime.closeMenu();
-            }));
+                    Reminders.openNote(Config.paths.todoNote);
+                    Runtime.closeMenu();
+                }));
             items.push(row("Open TODO note", () => Reminders.openNote(Config.paths.todoNote)));
             items.push(row("Open vault Home", () => Reminders.openNote(Config.paths.homeNote)));
             items.push(row("Refresh", () => Reminders.refresh()));
         } else if (menu === "audio") {
-            items = Audio.sinks.map(n => row((n === Audio.sink ? "✓ " : "") + n.description, ()
-                                             => Audio.select(n), "Output"));
-            items = items.concat(Audio.sources.map(n => row((n === Audio.source ? "✓ " : "") + n.description, (
-                                                                ) => Audio.select(n), "Input")));
+            items = Audio.sinks.map(n => row((n === Audio.sink ? "✓ " : "") + n.description, () => Audio.select(n), "Output"));
+            items = items.concat(Audio.sources.map(n => row((n === Audio.source ? "✓ " : "") + n.description, () => Audio.select(n), "Input")));
         } else if (menu === "wifi") {
             items.push(row(Networking.wifiEnabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on", () => {
                 if (!Config.preview)
                     Networking.wifiEnabled = !Networking.wifiEnabled;
             }));
-            items = items.concat(wifiNetworks.slice().sort((a, b) => (b.signalStrength || 0) - (
-                                     a.signalStrength || 0)).map(n => row((n.connected ? "✓ " : "") + n.name, (
-                                                                              ) => connectNetwork(n), (
-                                                                                  n.connected
-                                                                                  ? "Connected · click to disconnect" :
-                                                                                    n.known ? "Saved" :
-                                                                                              "Available") + (
-                                                                                  n.signalStrength
-                                                                                  === undefined ? "" : " · "
-                                                                                                  + Math.round(
-                                                                                                      n.signalStrength
-                                                                                                      * 100) + "%"))));
+            items = items.concat(wifiNetworks.slice().sort((a, b) => (b.signalStrength || 0) - (a.signalStrength || 0)).map(n => row((n.connected ? "✓ " : "") + n.name, () => connectNetwork(n), (n.connected ? "Connected · click to disconnect" : n.known ? "Saved" : "Available") + (n.signalStrength === undefined ? "" : " · " + Math.round(n.signalStrength * 100) + "%"))));
             items.push(row("Hidden networks / advanced settings", () => {
                 Runtime.launch([Config.bin.kitty, "-e", Config.bin.nmtui]);
                 Runtime.closeMenu();
             }));
         } else if (menu === "bluetooth") {
-            items = Bluetooth.adapters.values.map(a => row(a.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", (
-                                                               ) => {
-                                                                   if (!Config.preview)
-                                                                       a.enabled = !a.enabled;
-                                                               }, a.name));
+            items = Bluetooth.adapters.values.map(a => row(a.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", () => {
+                    if (!Config.preview)
+                        a.enabled = !a.enabled;
+                }, a.name));
             items = items.concat(bluetoothDevices.map(d => row((d.connected ? "✓ " : "") + d.name, () => {
-                if (!Config.preview)
-                    d.connected = !d.connected;
-            }, d.paired ? "Paired" : "Pair in Bluetooth settings")));
+                    if (!Config.preview)
+                        d.connected = !d.connected;
+                }, d.paired ? "Paired" : "Pair in Bluetooth settings")));
             items.push(row("Pair / manage devices", () => {
                 Runtime.launch([Config.bin.bluetooth]);
                 Runtime.closeMenu();
             }));
         } else if (menu === "powerProfiles") {
-            items = [row("Power saver", () => setProfile(PowerProfile.PowerSaver)), row("Balanced", () => setProfile(
-                                                                                                              PowerProfile.Balanced))];
+            items = [row("Power saver", () => setProfile(PowerProfile.PowerSaver)), row("Balanced", () => setProfile(PowerProfile.Balanced))];
             if (PowerProfiles.hasPerformanceProfile)
                 items.push(row("Performance", () => setProfile(PowerProfile.Performance)));
         } else if (menu === "status") {
-            items = [row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "-e",
-                                                                                       Config.bin.btop]),
-            Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature)
-                                           + " °C"), row("Memory " + Metrics.ram.percent + "%", () => Runtime.launch(
-                                                                                                          [Config.bin.kitty,
-                                                                                                           "-e", Config.bin.btop]),
-                                           (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total
-                                                                                              / 1048576).toFixed(
-                                               1) + " GiB"), row("Battery " + (Battery.present
-                                                                               ? Battery.percent + "%" : "AC"),
-                                                                 () => {}, Battery.band), row("Network", ()
-                                                                                              => openPage("wifi"), Metrics.networkRate),
-                     row("Bluetooth", () => openPage("bluetooth")), row("Audio and microphone", ()
-                                                                             => openPage("audio")), row(
-                         "Night light", () => Display.toggleNightlight(), Preferences.nightlight
-                         ? Preferences.temperature + " K" : "Off")];
+            items = [row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "-e", Config.bin.btop]), Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature) + " °C"), row("Memory " + Metrics.ram.percent + "%", () => Runtime.launch([Config.bin.kitty, "-e", Config.bin.btop]), (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB"), row("Battery " + (Battery.present ? Battery.percent + "%" : "AC"), () => {}, Battery.band), row("Network", () => openPage("wifi"), Metrics.networkRate), row("Bluetooth", () => openPage("bluetooth")), row("Audio and microphone", () => openPage("audio")), row("Night light", () => Display.toggleNightlight(), Preferences.nightlight ? Preferences.temperature + " K" : "Off")];
         }
         rows = items;
     }
@@ -394,19 +399,19 @@ PanelWindow {
         });
     }
     onWifiNetworksChanged: if (Runtime.menu === "wifi")
-                               refresh()
+        refresh()
     onBluetoothDevicesChanged: if (Runtime.menu === "bluetooth")
-                                   refresh()
+        refresh()
     onFolderPathChanged: search.text = ""
     onVisibleChanged: if (visible) {
-                          reveal.restart();
-                          search.text = "";
-                          confirmation = "";
-                          passwordPrompt = "";
-                          pendingWifi = null;
-                          refresh();
-                          focusTimer.restart();
-                      }
+        reveal.restart();
+        search.text = "";
+        confirmation = "";
+        passwordPrompt = "";
+        pendingWifi = null;
+        refresh();
+        focusTimer.restart();
+    }
     Connections {
         target: Runtime
         function onMenuChanged() {
@@ -540,7 +545,7 @@ PanelWindow {
             required property var modelData
             property bool scan: root.visible && Runtime.menu === "wifi" && !Config.preview
             onScanChanged: if (modelData.type === DeviceType.Wifi)
-                               modelData.scannerEnabled = scan
+                modelData.scannerEnabled = scan
         }
     }
     Connections {
@@ -559,14 +564,13 @@ PanelWindow {
         sortCaseSensitive: false
         showDirsFirst: true
         onCountChanged: if (Runtime.menu === "files")
-                            root.refresh()
+            root.refresh()
         onStatusChanged: if (status === FolderListModel.Ready && Runtime.menu === "files")
-                             root.refresh()
+            root.refresh()
     }
     ReferenceFile {
         id: reference
-        sourcePath: Runtime.menu === "vim" ? Config.paths.vim : Runtime.menu === "lazyvim" ? Config.paths.lazyvim :
-                                                                                             ""
+        sourcePath: Runtime.menu === "vim" ? Config.paths.vim : Runtime.menu === "lazyvim" ? Config.paths.lazyvim : ""
         onReady: root.refresh()
     }
     Timer {
@@ -585,25 +589,25 @@ PanelWindow {
         id: focusTimer
         interval: 40
         onTriggered: if (root.visible) {
-                         if (root.confirmation)
-                             cancelPower.forceActiveFocus(Qt.TabFocusReason);
-                         else if (root.passwordPrompt)
-                             password.forceActiveFocus();
-                         else if (search.visible)
-                             search.forceActiveFocus();
-                         else if (Runtime.menu === "notifications")
-                             dndButton.forceActiveFocus(Qt.TabFocusReason);
-                         else if (Runtime.menu === "calendar")
-                             calendar.focusDefault();
-                         else if (Runtime.menu === "audio")
-                             audioPanel.focusDefault();
-                         else if (Runtime.menu === "wifi")
-                             wifiPanel.focusDefault();
-                         else if (Runtime.menu === "display")
-                             displayPanel.focusDefault();
-                         else if (Runtime.menu === "battery")
-                             batteryPanel.focusDefault();
-                     }
+            if (root.confirmation)
+                cancelPower.forceActiveFocus(Qt.TabFocusReason);
+            else if (root.passwordPrompt)
+                password.forceActiveFocus();
+            else if (search.visible)
+                search.forceActiveFocus();
+            else if (Runtime.menu === "notifications")
+                dndButton.forceActiveFocus(Qt.TabFocusReason);
+            else if (Runtime.menu === "calendar")
+                calendar.focusDefault();
+            else if (Runtime.menu === "audio")
+                audioPanel.focusDefault();
+            else if (Runtime.menu === "wifi")
+                wifiPanel.focusDefault();
+            else if (Runtime.menu === "display")
+                displayPanel.focusDefault();
+            else if (Runtime.menu === "battery")
+                batteryPanel.focusDefault();
+        }
     }
     Shortcut {
         sequence: "Escape"
@@ -618,7 +622,10 @@ PanelWindow {
     Shortcut {
         sequence: "Ctrl+L"
         enabled: root.visible && search.visible && search.enabled
-        onActivated: { search.forceActiveFocus(); search.selectAll(); }
+        onActivated: {
+            search.forceActiveFocus();
+            search.selectAll();
+        }
     }
     MouseArea {
         anchors.fill: parent
@@ -626,11 +633,11 @@ PanelWindow {
     }
     Glass {
         id: card
+        surface: root.surfaceName
         width: Math.min(root.settingsPanel ? 540 : root.fromBar ? 480 : 720, root.width - 32)
         height: Math.min(root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : root.fromBar ? 560 : 650, root.height - 80)
         x: root.settingsPanel ? root.width - width - 16 : root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
         y: root.fromBar || root.settingsPanel ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
-        color: Config.theme.solid
         transformOrigin: root.fromBar ? (Config.preview ? Item.Bottom : Item.Top) : Item.Center
         MouseArea {
             anchors.fill: parent
@@ -638,9 +645,9 @@ PanelWindow {
         ColumnLayout {
             anchors {
                 fill: parent
-                margins: 22
+                margins: Config.spacing.panelPadding
             }
-            spacing: 12
+            spacing: Config.spacing.rowGap
             RowLayout {
                 Chip {
                     text: "‹"
@@ -651,7 +658,7 @@ PanelWindow {
                 Text {
                     text: root.heading
                     font.family: Config.theme.uiFont
-                    font.pixelSize: 26
+                    font.pixelSize: Config.fonts.displayLarge
                     color: Config.theme.text
                     Layout.fillWidth: true
                 }
@@ -664,14 +671,31 @@ PanelWindow {
                 visible: Config.preview
                 text: "Preview · device and session actions disabled"
                 color: Config.theme.warning
-                font.pixelSize: 12
+                font.pixelSize: Config.fonts.bodySmall
             }
             RowLayout {
                 visible: root.settingsPanel
                 Layout.fillWidth: true
                 spacing: 6
                 Repeater {
-                    model: [{id: "audio", title: "Audio"}, {id: "wifi", title: "Wi-Fi"}, {id: "display", title: "Display"}, {id: "battery", title: "Battery"}]
+                    model: [
+                        {
+                            id: "audio",
+                            title: "Audio"
+                        },
+                        {
+                            id: "wifi",
+                            title: "Wi-Fi"
+                        },
+                        {
+                            id: "display",
+                            title: "Display"
+                        },
+                        {
+                            id: "battery",
+                            title: "Battery"
+                        }
+                    ]
                     SettingsButton {
                         required property var modelData
                         Layout.fillWidth: true
@@ -691,7 +715,7 @@ PanelWindow {
                 placeholderTextColor: Config.theme.dim
                 placeholderText: Runtime.menu === "files" ? root.folderPath : Runtime.menu === "controls" ? "Search controls… volume, dnd, bluetooth" : "Search…"
                 color: Config.theme.text
-                font.pixelSize: 16
+                font.pixelSize: Config.fonts.heading
                 selectByMouse: true
                 background: Rectangle {
                     radius: 9
@@ -699,7 +723,10 @@ PanelWindow {
                     border.color: search.activeFocus ? Config.theme.accent : Config.theme.border
                 }
                 onAccepted: root.activate()
-                onTextEdited: { root.selectionKey = ""; root.selectIndex(0); }
+                onTextEdited: {
+                    root.selectionKey = "";
+                    root.selectIndex(0);
+                }
                 Keys.onDownPressed: root.selectIndex(list.currentIndex + 1)
                 Keys.onUpPressed: root.selectIndex(list.currentIndex - 1)
                 Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
@@ -717,7 +744,7 @@ PanelWindow {
                 text: root.clipboardBusy ? "Copying…" : "Select an entry to copy, then paste in your app."
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
-                font.pixelSize: 13
+                font.pixelSize: Config.fonts.body
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
             }
@@ -812,13 +839,12 @@ PanelWindow {
                     required property var modelData
                     required property int index
                     width: list.width
-                    height: subtitle.visible ? 65 : 44
+                    height: modelData.thumbnail ? 104 : subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
                     focusPolicy: Qt.NoFocus
                     background: Rectangle {
                         radius: 9
-                        color: rowDelegate.highlighted || rowDelegate.hovered ? Config.theme.surface :
-                                                                                "transparent"
+                        color: rowDelegate.highlighted || rowDelegate.hovered ? Qt.alpha(Config.theme.text, Config.controls.hoverFillAlpha) : "transparent"
                         border.color: rowDelegate.highlighted ? Config.theme.accent : "transparent"
                     }
                     contentItem: RowLayout {
@@ -833,11 +859,23 @@ PanelWindow {
                         ColumnLayout {
                             spacing: 3
                             Layout.fillWidth: true
+                            Image {
+                                visible: !!modelData.thumbnail
+                                source: modelData.thumbnail || ""
+                                asynchronous: true
+                                cache: false
+                                fillMode: Image.PreserveAspectFit
+                                horizontalAlignment: Image.AlignLeft
+                                sourceSize.height: 160
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: visible ? 80 : 0
+                            }
                             Text {
+                                visible: !modelData.thumbnail
                                 text: modelData.title
                                 color: Config.theme.text
                                 font.family: Config.theme.uiFont
-                                font.pixelSize: 16
+                                font.pixelSize: Config.fonts.heading
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -848,7 +886,7 @@ PanelWindow {
                                 text: modelData.subtitle
                                 color: Config.theme.dim
                                 font.family: Config.theme.uiFont
-                                font.pixelSize: 12
+                                font.pixelSize: Config.fonts.bodySmall
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -858,13 +896,16 @@ PanelWindow {
                             text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
                             color: Config.theme.accent
                             font.family: Config.theme.uiFont
-                            font.pixelSize: 14
+                            font.pixelSize: Config.fonts.body
                             textFormat: Text.PlainText
                         }
                     }
-                    onClicked: { root.selectIndex(index); root.activate(); }
+                    onClicked: {
+                        root.selectIndex(index);
+                        root.activate();
+                    }
                     onHoveredChanged: if (hovered)
-                                          root.selectIndex(index)
+                        root.selectIndex(index)
                 }
                 Label {
                     anchors.centerIn: parent
@@ -954,12 +995,8 @@ PanelWindow {
                 wrapMode: Text.Wrap
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
-                font.pixelSize: 12
-                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel"
-                    : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close"
-                    : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close"
-                    : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close"
-                    : "↑ ↓  Select    Enter  Open / toggle    ← →  Adjust    Esc  Back / close"
+                font.pixelSize: Config.fonts.bodySmall
+                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : "↑ ↓  Select    Enter  Open / toggle    ← →  Adjust    Esc  Back / close"
             }
         }
     }

@@ -6,6 +6,7 @@
 }:
 let
   hyprlandPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+  capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
 
   # Ctrl+Space: us -> ca -> pinyin -> us. fcitx5 holds the state (all three
   # are fcitx5 IMs, so each switch shows its popup); Hyprland's layout is kept
@@ -59,12 +60,14 @@ in
     # package.path setup and the `require("keybindings")` call to the
     # generated hyprland.lua, so hyprland.lua must not require it itself.
     extraLuaFiles.keybindings = ./files/hypr/keybindings.lua;
+    extraLuaFiles.capture_bindings = ./files/hypr/capture_bindings.lua;
 
     extraConfig = builtins.readFile ./files/hypr/hyprland.lua;
 
   };
 
-  xdg.configFile."hypr/theme.lua".text = "return " + lib.generators.toLua { } (import ./palette.nix);
+  xdg.configFile."hypr/theme.lua".text =
+    "return " + lib.generators.toLua { } (import ./omarchy-palette.nix);
 
   xdg.configFile."hypr/shell_commands.lua".text =
     let
@@ -88,6 +91,9 @@ in
           name
         ];
       commands = {
+        screenshot = lib.getExe capture.screenshot;
+        captureRegion = lib.getExe capture.region;
+        editScreenshot = lib.getExe capture.edit;
         controls = menu "controls";
         apps = menu "apps";
         files = menu "files";

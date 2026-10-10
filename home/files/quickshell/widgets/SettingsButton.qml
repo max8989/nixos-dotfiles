@@ -7,9 +7,9 @@ Button {
     id: root
     property string detail: ""
     property bool selected: false
-    implicitHeight: detail ? label.implicitHeight + 22 : 38
+    implicitHeight: detail ? label.implicitHeight + Config.spacing.controlPaddingY * 2 : Config.spacing.controlHeight
     implicitWidth: Math.max(title.implicitWidth, description.implicitWidth) + 24
-    padding: 12
+    padding: Config.spacing.controlPaddingY
     focusPolicy: Qt.TabFocus
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
@@ -34,9 +34,9 @@ Button {
         }
     }
     background: Rectangle {
-        radius: 8
-        color: root.selected || root.down ? Qt.alpha(Config.theme.accent, 0.13) : root.hovered ? Config.theme.surface : "transparent"
-        border.width: 1
-        border.color: root.visualFocus ? Config.theme.accent : root.selected ? Qt.alpha(Config.theme.accent, 0.4) : Config.theme.border
+        radius: 4
+        color: Qt.alpha(Config.theme.text, root.down ? Config.controls.pressedFillAlpha : root.selected ? Config.controls.selectedFillAlpha : root.hovered || root.visualFocus ? Config.controls.hoverFillAlpha : Config.controls.normalFillAlpha)
+        border.width: root.selected ? 0 : 1
+        border.color: Qt.alpha(Config.theme.text, root.visualFocus || root.hovered ? Config.controls.hoverBorderAlpha : Config.controls.normalBorderAlpha)
     }
 }

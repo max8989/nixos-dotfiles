@@ -460,14 +460,15 @@ elif sys.argv[1] == 'battery-info':
 
     qa("openPanel", "display")
     wait(lambda: inspect()["menu"] == "display")
+    initial_text_size = inspect()["panelTextSize"]
     time.sleep(0.2)
     key("Right")
     wait(lambda: (output / "brightnessctl.state").read_text() == "60")
     key("Tab")
     key("Right")
-    wait(lambda: inspect()["panelTextSize"] == 15)
+    wait(lambda: inspect()["panelTextSize"] == initial_text_size + 1)
     key("Left")
-    wait(lambda: inspect()["panelTextSize"] == 14)
+    wait(lambda: inspect()["panelTextSize"] == initial_text_size)
     capture("settings-display")
     key("Tab")  # selected monitor
     key("Tab")  # 1x

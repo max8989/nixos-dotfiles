@@ -6,6 +6,7 @@ import "../services"
 
 Glass {
     id: root
+    surface: "notifications"
     required property var entry
     property bool expandable: false
     property bool expanded: false
@@ -27,7 +28,7 @@ Glass {
                 text: root.entry.notification ? root.entry.notification.appName : root.entry.app
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
-                font.pixelSize: 12
+                font.pixelSize: Config.fonts.bodySmall
                 textFormat: Text.PlainText
                 Layout.fillWidth: true
                 elide: Text.ElideRight
@@ -36,12 +37,13 @@ Glass {
                 text: root.entry.time ? Qt.formatTime(new Date(root.entry.time), "hh:mm") : ""
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
-                font.pixelSize: 12
+                font.pixelSize: Config.fonts.bodySmall
             }
             Chip {
                 text: "×"
                 Accessible.name: "Dismiss notification"
-                onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
+                onActiveFocusChanged: if (activeFocus)
+                    root.focusRequested(this)
                 tip: "Dismiss"
                 onClicked: Notifications.dismiss(root.entry.id)
             }
@@ -52,7 +54,7 @@ Glass {
             color: Config.theme.text
             font.bold: true
             font.family: Config.theme.uiFont
-            font.pixelSize: 16
+            font.pixelSize: Config.fonts.heading
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
             maximumLineCount: root.expanded ? 2147483647 : 3
@@ -65,7 +67,7 @@ Glass {
             visible: text.length > 0
             color: Config.theme.text
             font.family: Config.theme.uiFont
-            font.pixelSize: 14
+            font.pixelSize: Config.fonts.body
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
             maximumLineCount: root.expanded ? 2147483647 : 6
@@ -77,7 +79,8 @@ Glass {
             visible: root.expandable && (root.expanded || summary.truncated || body.truncated)
             text: root.expanded ? "Show less" : "Show more"
             foreground: Config.theme.accent
-            onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
+            onActiveFocusChanged: if (activeFocus)
+                root.focusRequested(this)
             onClicked: {
                 root.expanded = !root.expanded;
                 if (!root.expanded)
@@ -99,7 +102,8 @@ Glass {
                 model: root.entry.notification ? root.entry.notification.actions : []
                 Chip {
                     required property var modelData
-                    onActiveFocusChanged: if (activeFocus) root.focusRequested(this)
+                    onActiveFocusChanged: if (activeFocus)
+                        root.focusRequested(this)
                     text: modelData.text
                     onClicked: Notifications.invoke(root.entry.id, modelData)
                 }

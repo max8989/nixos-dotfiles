@@ -1,0 +1,6 @@
+{
+  "captured": "2026-10-10T05:18:48.437354+00:00",
+  "omarchy_version": "4.0.0.alpha",
+  "source": "Installed Omarchy configuration and packaged defaults",
+  "purpose": "Reference for adapting to NixOS"
+}

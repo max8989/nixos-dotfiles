@@ -37,8 +37,7 @@ Scope {
     }
     PanelWindow {
         visible: agent.isActive && !Runtime.locked
-        screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
-                || Quickshell.screens[0]
+        screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) || Quickshell.screens[0]
 
         anchors {
             top: true
@@ -46,7 +45,7 @@ Scope {
             left: true
             right: true
         }
-        color: "#88000000"
+        color: Qt.alpha(Config.surface("polkit").scrim, Config.surface("polkit").scrimAlpha)
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-auth"
@@ -57,24 +56,24 @@ Scope {
                 focusDelay.restart();
         }
         Glass {
+            surface: "polkit"
             width: Math.min(500, parent.width - 40)
             height: content.implicitHeight + 48
             anchors.centerIn: parent
-            color: Config.theme.solid
             ColumnLayout {
                 id: content
                 anchors {
                     left: parent.left
                     right: parent.right
                     top: parent.top
-                    margins: 24
+                    margins: Config.spacing.panelPadding
                 }
-                spacing: 16
+                spacing: Config.spacing.panelGap
                 Text {
                     text: "Authentication required"
                     color: Config.theme.accent
                     font.family: Config.theme.uiFont
-                    font.pixelSize: 24
+                    font.pixelSize: Config.fonts.display
                 }
                 Text {
                     text: agent.flow?.message || ""
@@ -88,7 +87,7 @@ Scope {
                     model: agent.flow?.identities || []
                     textRole: "displayName"
                     onActivated: if (agent.flow)
-                                     agent.flow.selectedIdentity = model[currentIndex]
+                        agent.flow.selectedIdentity = model[currentIndex]
                 }
                 Text {
                     text: agent.flow?.inputPrompt || ""
@@ -112,11 +111,10 @@ Scope {
                         text = "";
                     }
                     Keys.onEscapePressed: if (agent.flow)
-                                              agent.flow.cancelAuthenticationRequest()
+                        agent.flow.cancelAuthenticationRequest()
                 }
                 Text {
-                    text: agent.flow?.failed ? "Authentication failed. Try again." : agent.flow
-                                               ?.supplementaryMessage || ""
+                    text: agent.flow?.failed ? "Authentication failed. Try again." : agent.flow?.supplementaryMessage || ""
                     color: Config.theme.warning
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
@@ -126,7 +124,7 @@ Scope {
                     Chip {
                         text: "Cancel"
                         onClicked: if (agent.flow)
-                                       agent.flow.cancelAuthenticationRequest()
+                            agent.flow.cancelAuthenticationRequest()
                     }
                     Item {
                         Layout.fillWidth: true

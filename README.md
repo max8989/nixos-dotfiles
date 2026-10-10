@@ -1,7 +1,8 @@
 # nixos-dotfiles
 
 Fully declarative **NixOS + Home Manager** configuration for a Hyprland desktop,
-with a self-authored **Quickshell neon glass desktop** and **Catppuccin Mocha** applications. Migrated from an Arch/Hyprland dotfiles setup and
+with a self-authored **Quickshell desktop styled from Omarchy's Tokyo Night theme**.
+Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
 **Hosts:**
@@ -33,9 +34,10 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
 | Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
-| Terminal | `home/kitty.nix` | `programs.kitty` (+ `themeFile = "Catppuccin-Mocha"`) |
+| Terminal | `home/kitty.nix` | Captured Tokyo Night colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
-| Independent scripts | `home/scripts.nix` | Screenshot, recording and RSS tools |
+| Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, Swappy editing, recording and RSS tools |
+| Theme / TUIs | `home/omarchy-palette.nix` + `home/omarchy.nix` | Static desktop palette, btop and VS Code; Superfile/fzf/prompt share the palette |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
 Structured configs are converted to native Nix attribute sets. Opaque blobs that
@@ -377,7 +379,7 @@ so the attribute/option names below are confirmed present there. They're kept as
 a checklist for when you bump `nixpkgs`/`home-manager` (re-run `nix flake check`
 after any input update and fix anything that has since moved):
 
-- `pkgs.catppuccin-gtk` — recent nixpkgs may expose it as `pkgs.catppuccin.gtkTheme`.
+- `pkgs.gnome-themes-extra`, `pkgs.yaru-theme`, `pkgs.catppuccin-kvantum`.
 - `pkgs.figtree` — may live under `google-fonts`.
 - `pkgs.nerd-fonts.caskaydia-cove` / `pkgs.nerd-fonts.jetbrains-mono` (post nerd-fonts restructure).
 - `pkgs.zed-editor`, `pkgs.quickshell` (currently 0.3.1).
@@ -385,17 +387,25 @@ after any input update and fix anything that has since moved):
 - HM service modules used here: `services.hypridle`, `services.hyprpaper`,
   `services.hyprsunset`, `programs.quickshell`.
 - `inputs.zen-browser.packages.<system>.default`.
-- `programs.kitty.themeFile = "Catppuccin-Mocha"` (name from `pkgs.kitty-themes`).
+- Captured Kitty settings and `programs.btop.themes`.
 - `wayland.windowManager.hyprland.configType` — defaults to `"lua"` from
   `home.stateVersion` 26.05 (it was `"hyprlang"` before). The Lua backend also
   provides `extraLuaFiles` / `extraConfig`, both used here.
 
 ## Known gaps / deviations from the Arch setup
 
-- **Single theme.** The Arch setup had a runtime 6-theme switcher (it copied
-  config files into place). Pure Nix puts configs in the immutable store, so the
-  switcher is dropped. Applications retain **Catppuccin Mocha**; Quickshell uses
-  the neon glass palette in `home/quickshell.nix`. The other themes were not ported.
+- **Static Omarchy appearance.** The desktop uses the effective Tokyo Night
+  theme from the Omarchy 4.0.0.alpha snapshot captured 2026-10-10. Nix generates
+  shell surface tokens, app settings and executable paths; a rebuild changes
+  the theme. The headless profile retains its original Jade CLI palette.
+  GTK uses dark Adwaita and Yaru-magenta icons; Qt retains its working Kvantum
+  integration, recolored to Tokyo Night. Snapshot assets and license notices
+  live in `home/files/omarchy/`.
+- **Retained desktop features.** The transparent 26px top bar keeps reminders,
+  status indicators, tray controls and existing responsive visibility rules.
+  The shell source and wallpaper images were absent from the snapshot, so
+  Quickshell is restyled with its captured tokens and the existing wallpaper
+  is retained. Kitty is the only migrated terminal; Swappy handles editing.
 - **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
   changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
   back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd
@@ -406,12 +416,35 @@ after any input update and fix anything that has since moved):
 - **Audio output selection** (SUPER+F12 / bar click) uses Quickshell's native PipeWire service.
 - **Night light** uses the retained hyprsunset daemon, controlled by Quickshell. Preferences persist outside the Nix store.
 - **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.
-- **Neovim is out of scope** (no longer used — not ported).
+- **Neovim is managed separately.** Its configuration and explicit theme remain
+  owned by the user's `nvim-config` repository.
+
+## Screenshot workflow
+
+Alt+1 selects a region, Alt+2 picks a window, Alt+3 captures the focused monitor,
+and Print uses smart selection. Interactive captures freeze the displayed
+content. While the picker is open, Tab/Ctrl+Tab or arrows change the highlighted
+window; Enter captures it and Ctrl+Enter captures the focused monitor. Escape
+cancels, and pressing a screenshot shortcut again cancels the active picker.
+These temporary bindings disappear after the last selection layer closes.
+
+Captures are saved under `~/Pictures/Screenshots`, copied as PNG images, and
+shown in a preview notification with an Edit action. Super+Alt+comma opens the
+latest saved capture in Swappy. The capture menu offers the same actions.
+Alt+4 retains the existing focused-monitor recording toggle.
+
+The packaged `nixos-screenshot` helper accepts
+`[smart|region|windows|fullscreen] [slurp|copy|save]`: the default `slurp` processing
+saves, copies and notifies; `copy` only updates the image clipboard; `save` only
+writes a file. Successful saved captures print their path. Set
+`NIXOS_SCREENSHOT_DIR` to override the output directory. Cancellation preserves
+the clipboard; failed captures remove partial files and restore cursor state.
 
 ## Quickshell development and validation
 
 The immutable bundle contains QML and one Nix-generated JSON. Palette, layout,
-user paths and executable paths belong in `home/quickshell.nix`; QML owns the
+user paths and executable paths belong in `home/quickshell.nix` and captured
+surface tokens in `home/omarchy-shell-style.nix`; QML owns the
 views and live service state. Preferences live in
 `$XDG_STATE_HOME/quickshell-desktop/`. The retired g7 host and GTK shell configs
 have been removed; the homeserver keeps its headless profile.
@@ -443,6 +476,9 @@ The harness uses its own compositor, D-Bus session, clipboard cache and fixture
 files. Screenshots and results are written to the supplied directory. The VM
 test exercises real PAM password authentication, rejection, notifications, and
 the compositor's fail-closed session lock. Test passwords exist only in the VM.
+`nix flake check` also exercises capture cancellation, PNG clipboard data,
+selection geometry, overlapping/hidden windows, scaled/rotated monitors,
+failure cleanup, and the lifetime of temporary selection bindings.
 
 Inspect actions with `quickshell ipc --config desktop show`. Examples:
 

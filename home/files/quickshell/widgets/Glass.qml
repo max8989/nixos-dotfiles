@@ -3,8 +3,10 @@ import QtQuick
 import ".."
 
 Rectangle {
-    color: Config.theme.background
+    property string surface: "popups"
+    readonly property var style: Config.surface(surface)
+    color: Qt.alpha(style.background, style.backgroundAlpha)
     radius: Config.theme.radius
-    border.width: 1
-    border.color: Config.theme.border
+    border.width: style.borderWidth
+    border.color: Qt.alpha(style.border, style.borderAlpha)
 }

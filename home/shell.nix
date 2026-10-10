@@ -1,6 +1,11 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  desktop ? false,
+  ...
+}:
 let
-  palette = import ./palette.nix;
+  palette = import (if desktop then ./omarchy-palette.nix else ./palette.nix);
   # Shared by bash and zsh — the set from the Arch ~/.zshrc.
   shellAliases = {
     # eza-based listings
@@ -123,8 +128,8 @@ in
     enableBashIntegration = true;
     enableZshIntegration = true;
     settings = (lib.importTOML ./starship.toml) // {
-      palette = "jade";
-      palettes.jade = {
+      palette = if desktop then "tokyo-night" else "jade";
+      palettes.${if desktop then "tokyo-night" else "jade"} = {
         s1 = palette.base;
         s2 = palette.surface;
         text = palette.text;

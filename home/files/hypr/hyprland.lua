@@ -55,7 +55,7 @@ hl.monitor({ output = "SUNSHINE", mode = "1280x720@30", position = "auto", scale
 -- dbus-update-activation-environment and starts hyprland-session.target, so
 -- that is deliberately absent below too.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("hyprctl setcursor catppuccin-frappe-dark-cursors 28")
+    hl.exec_cmd("hyprctl setcursor catppuccin-frappe-dark-cursors 24")
     hl.exec_cmd("wl-paste --type text --watch cliphist store")  -- text only
     hl.exec_cmd("wl-paste --type image --watch cliphist store") -- images only
 end)
@@ -82,9 +82,8 @@ hl.config({
         border_size = 2,
 
         col = {
-            -- A quiet sage border identifies the focused window.
-            active_border   = rgba(theme.accent, "dd"),
-            inactive_border = rgba(theme.border, "88"),
+            active_border   = rgba(theme.accent),
+            inactive_border = "rgba(595959aa)",
         },
 
         resize_on_border = false,
@@ -108,7 +107,6 @@ hl.config({
             enabled      = true,
             range        = 3,
             render_power = 3,
-            color        = argb(theme.background, "55"),
         },
 
         blur = {
@@ -136,6 +134,10 @@ hl.config({
     -- tab is marked the way a browser marks one: a lighter plate and brighter,
     -- heavier text, not a slab of colour.
     group = {
+        col = {
+            border_active = rgba(theme.accent),
+            border_inactive = "rgba(595959aa)",
+        },
         groupbar = {
             -- The fix. Without this nothing below about col.* is even drawn.
             gradients = true,
@@ -143,11 +145,9 @@ hl.config({
             -- treatment the Waybar islands get from their layer rule.
             blur = true,
 
-            -- Keep in sync with `font` in home/desktop.nix -- this is a
-            -- fontconfig family name, so it cannot be shared from there
-            -- (generated shell commands live in a separate Lua module). Empty
-            -- would fall back to misc:font_family.
-            font_family = "Figtree",
+            -- Captured personal override; Noto Sans is installed by
+            -- hosts/desktop.nix independently of the shell's monospace font.
+            font_family = "Noto Sans",
             font_size = 11,           -- was 8
             font_weight_active = 600, -- the focused tab leads on weight...
             font_weight_inactive = 400,
@@ -175,15 +175,15 @@ hl.config({
             -- ...and on brightness. Both stay well clear of the dim grey that
             -- made these unreadable to begin with; inactive is subordinate,
             -- not invisible.
-            text_color = argb(theme.text),
+            text_color = argb("#ffffff"),
             -- Explicit because -1 (the default) means "reuse text_color".
-            text_color_inactive = argb(theme.muted),
+            text_color_inactive = argb("#ffffff", "90"),
             col = {
                 -- Muted jade: clearly lighter than the inactive
                 -- plate, without reading as a coloured band.
-                active = { colors = { rgba(theme.raised, "ee"), rgba(theme.surface, "ee") }, angle = 45 },
+                active = "rgba(00000040)",
                 -- 0.70 alpha over the Waybar island background colour.
-                inactive = rgba(theme.base, "dd"),
+                inactive = "rgba(00000020)",
             },
         },
     },
@@ -193,7 +193,32 @@ hl.config({
     },
 })
 
--- Omarchy bezier curves
+-- Timings from the installed Omarchy 4.0.0.alpha snapshot captured 2026-10-10.
+-- Source: omarchy-configs/upstream/default/hypr/looknfeel.lua, then
+-- omarchy-configs/config/hypr/repo-looknfeel.lua (personal overrides win).
+-- Speed is the duration in units of 100 ms: smaller values finish sooner.
+--[[ Omarchy's MIT license applies to the adapted settings below:
+Copyright (c) David Heinemeier Hansson
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+]]
 hl.curve("easeOutQuint",   { type = "bezier", points = { { 0.23, 1 },   { 0.32, 1 } } })
 hl.curve("easeInOutCubic", { type = "bezier", points = { { 0.65, 0 },   { 0.35, 1 } } })
 hl.curve("linear",         { type = "bezier", points = { { 0, 0 },      { 1, 1 } } })
@@ -202,6 +227,7 @@ hl.curve("quick",          { type = "bezier", points = { { 0.15, 0 },   { 0.1, 1
 hl.curve("overshot",       { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } }) -- slight bounce past the target
 
 -- Smooth window animations
+hl.animation({ leaf = "global",      enabled = true,  speed = 10,   bezier = "default" })
 hl.animation({ leaf = "windows",     enabled = true,  speed = 4.79, bezier = "easeOutQuint" })
 hl.animation({ leaf = "windowsIn",   enabled = true,  speed = 4.1,  bezier = "overshot",      style = "popin 80%" })
 hl.animation({ leaf = "windowsOut",  enabled = true,  speed = 1.49, bezier = "linear",        style = "popin 87%" })
@@ -216,12 +242,13 @@ hl.animation({ leaf = "border",      enabled = true,  speed = 0.81, bezier = "ea
 -- A static border avoids continuous rendering while the desktop is idle.
 hl.animation({ leaf = "borderangle", enabled = false })
 hl.animation({ leaf = "workspaces",  enabled = true,  speed = 0.8,  bezier = "easeOutQuint",  style = "slidefade" })
--- Special workspace (SUPER+S scratchpad): same slidefade as before, but with
--- the overshot curve so it bounces into place like moving windows do.
+-- The scratchpad keeps its previous bounce and slidefade effect.
 hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "overshot", style = "slidefade" })
 hl.animation({ leaf = "layers",      enabled = true,  speed = 3.81, bezier = "easeOutQuint",  style = "fade" })
 hl.animation({ leaf = "layersIn",    enabled = true,  speed = 4,    bezier = "easeOutQuint",  style = "fade" })
 hl.animation({ leaf = "layersOut",   enabled = true,  speed = 1.5,  bezier = "linear",        style = "fade" })
+hl.animation({ leaf = "fadeLayersIn", enabled = true,  speed = 1.79, bezier = "almostLinear" })
+hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "almostLinear" })
 
 -- "Smart gaps" / "No gaps when only" -- uncomment all if you wish to use that.
 -- hl.workspace_rule({ workspace = "w[tv1]", gaps_out = 0, gaps_in = 0 })

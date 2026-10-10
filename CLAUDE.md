@@ -5,7 +5,8 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (neon glass shell, Catppuccin **Mocha** apps) plus a headless home server. Two hosts:
+desktop (Quickshell styled from the captured Omarchy **Tokyo Night** theme)
+plus a headless home server. Two hosts:
 `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
 Intel Core Ultra 5 125U / Meteor Lake, btrfs root), desktop; and
 `homeserver` (Gigabyte H81M-HD2, i5-4460 Haswell, RTX 3070) — headless, runs the
@@ -125,9 +126,18 @@ flakes only see git-tracked files inside the flake root.
 - **Scripts must create their own output dirs.** `$HOME` is not pre-populated on
   a fresh install (no `~/Pictures/Screenshots`, etc.), and the tools these
   scripts wrap generally do not `mkdir -p` for you.
-- **Static themes.** Applications retain Mocha; the shell uses the neon glass
-  palette in `home/quickshell.nix`. There is no runtime theme switcher. Edit Nix
-  and rebuild to change the palette.
+- **Static themes.** Desktop apps and Quickshell use `home/omarchy-palette.nix`;
+  captured shell tokens live in `home/omarchy-shell-style.nix`. The desktop flag
+  is passed into Home Manager so shared shell.nix keeps the server's original
+  palette. There is no runtime theme switcher. Preserve the snapshot provenance
+  and license in `home/files/omarchy/`. Neovim is owned by a separate repository
+  and must remain untouched by this desktop migration.
+- **Capture helpers are packaged.** `home/capture-tools.nix` supplies explicit
+  runtime dependencies and is shared by Quickshell and generated Hyprland
+  commands. Use the mode arguments, not the retired hyprshot flags. Captures
+  copy image/png; their stdout contains the saved path. Runtime selection/PID
+  files and locks are private to this helper, and temporary Lua bindings must
+  be removed by handle after the last selection layer closes.
 - **Quickshell owns the desktop shell.** `home/quickshell.nix` generates the
   immutable settings/QML bundle. Runtime state goes under XDG state/runtime
   directories. Never write into the bundle. Keep shared services in singletons

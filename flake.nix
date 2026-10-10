@@ -1,5 +1,5 @@
 {
-  description = "Declarative NixOS + Home Manager config — Hyprland desktop (Catppuccin Mocha) + headless home server";
+  description = "Declarative NixOS + Home Manager config — Omarchy-styled Tokyo Night desktop + headless home server";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -112,7 +112,7 @@
               # e.g. nwg-look rewriting ~/.config/gtk-4.0/settings.ini —
               # silently blocks every HM change in the rebuild.
               home-manager.backupFileExtension = "hm-bak";
-              home-manager.extraSpecialArgs = { inherit inputs username; };
+              home-manager.extraSpecialArgs = { inherit inputs username desktop; };
               home-manager.users.${username} = import (if desktop then ./home/home.nix else ./home/server.nix);
             }
           ];

@@ -68,7 +68,7 @@ function restoreState(value) {
     return { nightlight: value.nightlight === true, temperature: Math.max(2500,Math.min(6000,Number(value.temperature)||4000)), dnd: value.dnd === true,
         barHidden: value.barHidden === true, audioSink: typeof value.audioSink === "string" ? value.audioSink : "",
         audioSource: typeof value.audioSource === "string" ? value.audioSource : "",
-        panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 14))),
+        panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 12))),
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
         folder: typeof value.folder === "string" ? value.folder : "" };
@@ -94,6 +94,14 @@ function clipboardEntries(text) {
         var match = /^(\d+)\t(.*)$/.exec(line);
         return match ? {id: match[1], title: match[2], image: /^\[\[ binary data .*\b(png|jpe?g|gif|webp|bmp|tiff)\b/i.test(match[2])} : null;
     }).filter(Boolean);
+}
+function clipboardThumbs(text) {
+    var paths = {};
+    text.split("\n").forEach(function(line) {
+        var match = /^(\d+)\t(\/.+)$/.exec(line);
+        if (match) paths[match[1]] = match[2];
+    });
+    return paths;
 }
 function search(items, query) {
     var tokens = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
