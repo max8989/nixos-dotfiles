@@ -404,8 +404,9 @@ after any input update and fix anything that has since moved):
 - **Retained desktop features.** The transparent 26px top bar keeps reminders,
   status indicators, tray controls and existing responsive visibility rules.
   The shell source and wallpaper images were absent from the snapshot, so
-  Quickshell is restyled with its captured tokens and the existing wallpaper
-  is retained. Kitty is the only migrated terminal; Swappy handles editing.
+  Quickshell is restyled with its captured tokens. The desktop uses the bundled
+  NixOS aurora wallpaper, whose dark blue and purple tones complement Tokyo
+  Night. Kitty is the only migrated terminal; Swappy handles editing.
 - **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
   changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
   back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd

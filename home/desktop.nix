@@ -6,10 +6,6 @@
 }:
 let
   palette = import ./omarchy-palette.nix;
-  jadeWallpaper = pkgs.runCommand "jade-wallpaper" { nativeBuildInputs = [ pkgs.librsvg ]; } ''
-    mkdir -p "$out"
-    rsvg-convert ${./files/backgrounds/jade-landscape.svg} -o "$out/jade-landscape.png"
-  '';
 in
 {
   services.hypridle = {
@@ -94,7 +90,7 @@ in
       wallpaper = [
         {
           monitor = "";
-          path = "${jadeWallpaper}/jade-landscape.png";
+          path = "${./files/backgrounds/nixos-cool-wallpaper.png}";
         }
       ];
     };
