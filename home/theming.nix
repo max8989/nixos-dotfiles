@@ -156,6 +156,48 @@ in
       name = "Yaru-magenta";
       package = pkgs.yaru-theme;
     };
+    # YAD names its window explicitly; scope these colors to its dialogs.
+    # The sudo askpass helper inherits this without changing password handling.
+    gtk3.extraCss = ''
+      #yad-dialog-window {
+        background-color: ${palette.background};
+        color: ${palette.text};
+        font-family: "Figtree";
+        font-size: 11pt;
+      }
+      #yad-dialog-window label { color: ${palette.text}; }
+      #yad-dialog-window entry {
+        background-image: none;
+        background-color: ${palette.surface};
+        color: ${palette.brightText};
+        border: 1px solid ${palette.border};
+        border-radius: 9px;
+        padding: 8px 10px;
+        box-shadow: none;
+      }
+      #yad-dialog-window entry:focus { border-color: ${palette.accent}; }
+      #yad-dialog-window entry selection {
+        background-color: ${palette.selection};
+        color: ${palette.brightText};
+      }
+      #yad-dialog-window button {
+        background-image: none;
+        background-color: ${palette.surface};
+        color: ${palette.text};
+        border: 1px solid ${palette.border};
+        border-radius: 9px;
+        padding: 6px 14px;
+        text-shadow: none;
+        box-shadow: none;
+      }
+      #yad-dialog-window button:hover,
+      #yad-dialog-window button:focus {
+        background-color: ${palette.raised};
+        border-color: ${palette.accent};
+        color: ${palette.brightText};
+      }
+      #yad-dialog-window button:active { background-color: ${palette.selection}; }
+    '';
   };
 
   dconf.settings."org/gnome/desktop/interface" = {

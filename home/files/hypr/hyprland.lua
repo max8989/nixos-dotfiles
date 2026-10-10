@@ -302,6 +302,65 @@ hl.window_rule({
     suppress_event = "maximize",
 })
 
+-- Codex's sudo askpass helper uses a YAD entry dialog.
+hl.window_rule({
+    name = "codex-sudo-prompt",
+    match = { class = "^(Yad|yad)$", title = "^sudo authentication$" },
+    float = true,
+    size = { 420, 170 },
+    center = true,
+})
+
+-- Follow the askpass process ancestry to its requesting terminal. Focus may
+-- have changed while Codex was working, so the active window is unrelated.
+local function sudo_requesting_terminal(pid)
+    local terminals = {}
+    for _, candidate in ipairs(hl.get_windows()) do
+        if candidate.class == "kitty" and candidate.mapped then
+            terminals[candidate.pid] = candidate
+        end
+    end
+    for _ = 1, 128 do
+        if terminals[pid] then return terminals[pid] end
+        if not pid or pid <= 1 then return end
+        local stat = io.open("/proc/" .. pid .. "/stat", "r")
+        if not stat then return end
+        local line = stat:read("*l")
+        stat:close()
+        -- The command name in parentheses may itself contain spaces or ')'.
+        pid = line and tonumber(line:match("^.*%)%s+%S+%s+(%d+)"))
+    end
+end
+
+-- Snapshot the terminal's center before layout/focus changes; position the
+-- prompt once its floating size and decorations have been initialized.
+local sudo_prompt_origins = {}
+hl.on("window.open_early", function(window)
+    if window.class:lower() ~= "yad" or window.title ~= "sudo authentication" then return end
+    local parent = sudo_requesting_terminal(window.pid)
+    if not parent then return end
+    sudo_prompt_origins[window.address] = {
+        x = parent.at.x + parent.size.x / 2,
+        y = parent.at.y + parent.size.y / 2,
+        workspace = parent.workspace,
+    }
+end)
+
+hl.on("window.open", function(window)
+    local origin = sudo_prompt_origins[window.address]
+    sudo_prompt_origins[window.address] = nil
+    if not origin then return end
+    if window.workspace.id ~= origin.workspace.id then
+        hl.dispatch(hl.dsp.window.move({ window = window, workspace = origin.workspace, follow = true }))
+    end
+    hl.dispatch(hl.dsp.window.move({
+        window = window,
+        x = math.floor(origin.x - window.size.x / 2),
+        y = math.floor(origin.y - window.size.y / 2),
+        relative = false,
+    }))
+end)
+
 -- System monitor popup (Quickshell CPU/RAM chips): same look as Super+O pop-out.
 hl.window_rule({
     name = "btop-popup",
