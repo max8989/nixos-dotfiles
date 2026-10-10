@@ -184,7 +184,7 @@ PanelWindow {
                 text: " " + Math.round(Metrics.cpu) + "%"
                 tipTitle: "Processor"
                 tip: Math.round(Metrics.cpu) + "% in use" + (Metrics.temperature === null ? "" : " · " + Math.round(Metrics.temperature) + " °C") + "\nClick to open system monitor"
-                onClicked: Runtime.launch([Config.bin.kitty, "-e", Config.bin.btop])
+                onClicked: Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop])
             }
             Chip {
                 compact: true
@@ -192,7 +192,7 @@ PanelWindow {
                 text: " " + Metrics.ram.percent + "%"
                 tipTitle: "Memory"
                 tip: (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB in use\nClick to open system monitor"
-                onClicked: Runtime.launch([Config.bin.kitty, "-e", Config.bin.btop])
+                onClicked: Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop])
             }
             Rectangle {
                 visible: root.width > 1600

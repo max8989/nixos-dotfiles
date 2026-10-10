@@ -302,6 +302,16 @@ hl.window_rule({
     suppress_event = "maximize",
 })
 
+-- System monitor popup (Quickshell CPU/RAM chips): same look as Super+O pop-out.
+hl.window_rule({
+    name = "btop-popup",
+    match = { class = "^btop-popup$" },
+    float = true,
+    size = "1300 900",
+    center = true,
+    pin = true,
+})
+
 ---------------
 ---- INPUT ----
 ---------------
