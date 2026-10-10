@@ -74,7 +74,7 @@ PanelWindow {
         window: root
         enabled: Runtime.presentation && !Config.preview && !Runtime.locked
     }
-    Item {
+    Glass {
         id: leftIsland
         anchors {
             left: parent.left
@@ -82,6 +82,10 @@ PanelWindow {
         }
         width: leftRow.implicitWidth + 12
         height: parent.height
+        radius: height / 2
+        color: Qt.alpha(Config.theme.background, 0.9)
+        border.width: 1
+        border.color: Qt.alpha(Config.theme.border, 0.5)
         RowLayout {
             id: leftRow
             anchors.centerIn: parent
@@ -110,13 +114,13 @@ PanelWindow {
                 Layout.maximumWidth: Math.min(200, root.width * 0.13)
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
-                font.pixelSize: 13
+                font.pixelSize: Config.bar.fontSize || Config.fonts.title
                 elide: Text.ElideRight
                 textFormat: Text.PlainText
             }
         }
     }
-    Item {
+    Glass {
         id: centerIsland
         anchors {
             horizontalCenter: parent.horizontalCenter
@@ -124,6 +128,10 @@ PanelWindow {
         }
         width: centerRow.implicitWidth + 12
         height: parent.height
+        radius: height / 2
+        color: Qt.alpha(Config.theme.background, 0.9)
+        border.width: 1
+        border.color: Qt.alpha(Config.theme.border, 0.5)
         RowLayout {
             id: centerRow
             anchors.centerIn: parent
@@ -155,13 +163,17 @@ PanelWindow {
             }
         }
     }
-    Item {
+    Glass {
         anchors {
             right: parent.right
             verticalCenter: parent.verticalCenter
         }
         width: rightRow.implicitWidth + 12
         height: parent.height
+        radius: height / 2
+        color: Qt.alpha(Config.theme.background, 0.9)
+        border.width: 1
+        border.color: Qt.alpha(Config.theme.border, 0.5)
         RowLayout {
             id: rightRow
             anchors.centerIn: parent
@@ -306,18 +318,18 @@ PanelWindow {
                     id: trayItem
                     required property var modelData
                     property bool tipDismissed: false
-                    implicitWidth: 28
-                    implicitHeight: Config.bar.height - 2
+                    implicitWidth: 30
+                    implicitHeight: Config.bar.height - 8
                     Image {
                         anchors.centerIn: parent
-                        width: 18
-                        height: 18
+                        width: 20
+                        height: 20
                         source: trayItem.modelData.icon
                     }
                     Rectangle {
                         anchors.fill: parent
                         z: -1
-                        radius: 10
+                        radius: height / 2
                         color: trayMouse.containsMouse ? Qt.alpha(Config.theme.text, 0.08) : "transparent"
                         Behavior on color {
                             ColorAnimation {

@@ -15,14 +15,14 @@ Button {
     property color tint: "transparent"
     signal rightClicked
     signal scrolled(int direction)
-    implicitHeight: compact ? Config.bar.height - 2 : Config.spacing.controlHeight
-    implicitWidth: Math.max(compact ? 24 : 28, label.implicitWidth + (compact ? 12 : Config.spacing.controlPaddingX * 2))
+    implicitHeight: compact ? Config.bar.height - 8 : Config.spacing.controlHeight
+    implicitWidth: Math.max(compact ? 30 : 28, label.implicitWidth + (compact ? 18 : Config.spacing.controlPaddingX * 2))
     hoverEnabled: true
     // Mouse clicks should not leave the keyboard focus ring behind.
     focusPolicy: Qt.TabFocus
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
-    padding: compact ? 4 : Config.spacing.controlPaddingY
+    padding: compact ? 7 : Config.spacing.controlPaddingY
     onPressed: tipDismissed = true
     onHoveredChanged: if (!hovered)
         tipDismissed = false
@@ -31,7 +31,7 @@ Button {
         text: root.text
         color: root.enabled ? root.foreground : Config.theme.dim
         font.family: Config.theme.font
-        font.pixelSize: Config.theme.fontSize
+        font.pixelSize: root.compact ? (Config.bar.fontSize || Config.fonts.title) : Config.theme.fontSize
         verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignHCenter
         textFormat: Text.PlainText
@@ -43,7 +43,7 @@ Button {
         }
     }
     background: Rectangle {
-        radius: root.compact ? 0 : 4
+        radius: root.compact ? height / 2 : 4
         color: Qt.alpha(root.tint.a > 0 ? root.tint : Config.theme.text, root.down ? Config.controls.pressedFillAlpha : root.highlighted || root.selected ? Config.controls.selectedFillAlpha : root.hovered || root.visualFocus ? Config.controls.hoverFillAlpha : root.compact ? 0 : Config.controls.normalFillAlpha)
         border.color: root.tint.a > 0 ? root.tint : root.compact && !root.visualFocus ? "transparent" : Qt.alpha(Config.theme.text, root.hovered || root.visualFocus ? Config.controls.hoverBorderAlpha : Config.controls.normalBorderAlpha)
         border.width: root.highlighted || root.selected || root.compact && !root.visualFocus ? 0 : 1

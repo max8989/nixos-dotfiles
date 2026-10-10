@@ -46,6 +46,23 @@ hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(shell.clipboard))
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + C", hl.dsp.window.float({ action = "toggle" }))
 
+-- Omarchy-style pop-out: center and pin a floating window; press again to tile.
+hl.bind(mainMod .. " + O", function()
+    local window = hl.get_active_window()
+    if not window then return end
+
+    if window.pinned then
+        hl.dispatch(hl.dsp.window.pin({ window = window, action = "off" }))
+        hl.dispatch(hl.dsp.window.float({ window = window, action = "off" }))
+    else
+        hl.dispatch(hl.dsp.window.float({ window = window, action = "on" }))
+        hl.dispatch(hl.dsp.window.resize({ window = window, x = 1300, y = 900 }))
+        hl.dispatch(hl.dsp.window.center({ window = window }))
+        hl.dispatch(hl.dsp.window.pin({ window = window, action = "on" }))
+        hl.dispatch(hl.dsp.window.alter_zorder({ window = window, mode = "top" }))
+    end
+end, { description = "pop window out (center, float and pin)" })
+
 -- Resize floating window with mainMod + Ctrl + Mouse movement
 hl.bind(mainMod .. " + CTRL + mouse_down",  hl.dsp.window.resize({ x = 0,   y = 30,  relative = true }))
 hl.bind(mainMod .. " + CTRL + mouse_up",    hl.dsp.window.resize({ x = 0,   y = -30, relative = true }))

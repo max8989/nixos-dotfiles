@@ -31,9 +31,10 @@ let
     }
     // import ./omarchy-shell-style.nix { inherit palette; };
     bar = {
-      height = 26;
-      margin = 0;
-      sideMargin = 0;
+      height = 38;
+      margin = 6;
+      sideMargin = 12;
+      fontSize = 14;
     };
     features = {
       bar = true;

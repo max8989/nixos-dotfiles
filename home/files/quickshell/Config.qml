@@ -32,9 +32,10 @@ Singleton {
     readonly property var bin: data.bin || ({})
     readonly property var paths: data.paths || ({})
     readonly property var bar: data.bar || ({
-            height: 26,
-            margin: 0,
-            sideMargin: 0
+            height: 38,
+            margin: 6,
+            sideMargin: 12,
+            fontSize: 14
         })
     readonly property var fonts: theme.fonts || ({
             caption: 10,

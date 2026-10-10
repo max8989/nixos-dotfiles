@@ -319,8 +319,17 @@ hl.config({
 
         touchpad = {
             natural_scroll = true,
+            clickfinger_behavior = true,
+            scroll_factor = 0.4,
         },
     },
+})
+
+-- Match Omarchy's terminal touchpad scrolling while keeping Kitty as the terminal.
+hl.window_rule({
+    name = "kitty-touchpad-scroll",
+    match = { class = "kitty" },
+    scroll_touchpad = 1.5,
 })
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
