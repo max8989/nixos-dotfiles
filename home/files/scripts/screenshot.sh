@@ -46,7 +46,8 @@ SELECTION=${PICKER_RESULT[1]:-}
 [[ $SELECTION =~ ^(-?[0-9]+),(-?[0-9]+)[[:space:]]([0-9]+)x([0-9]+)$ ]] || exit 1
 
 if [[ $PROCESSING == copy ]]; then
-  grim -g "$SELECTION" - | wl-copy --type image/png
+  # The clipboard owner outlives this script and must not retain its lock.
+  grim -g "$SELECTION" - | wl-copy --type image/png 9>&-
   exit 0
 fi
 
@@ -72,7 +73,7 @@ mv -f "$STATE_DIR/latest.tmp" "$STATE_DIR/latest"
 printf '%s\n' "$FILEPATH"
 
 if [[ $PROCESSING == slurp ]]; then
-  if ! wl-copy --type image/png < "$FILEPATH"; then
+  if ! wl-copy --type image/png 9>&- < "$FILEPATH"; then
     notify-send "Screenshot saved; clipboard unavailable" "$FILEPATH" || true
     exit 1
   fi

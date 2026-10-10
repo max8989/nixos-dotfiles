@@ -3,6 +3,7 @@ import base64
 import json
 import os
 from pathlib import Path
+import signal
 import shutil
 import subprocess
 import sys
@@ -51,6 +52,17 @@ elif name == "wl-copy":
     data = sys.stdin.buffer.read()
     if os.environ.get("CLIPBOARD_FAIL") == "1": sys.exit(1)
     (root / "clipboard").write_bytes(data)
+    if os.environ.get("CLIPBOARD_DAEMON") == "1":
+        pid = os.fork()
+        if pid == 0:
+            # Keep inherited descriptors like the real clipboard owner, but
+            # detach the pipes so subprocess.run can finish independently.
+            with open(os.devnull, "r+b") as null:
+                for fd in (0, 1, 2): os.dup2(null.fileno(), fd)
+            time.sleep(30)
+            os._exit(0)
+        with (root / "clipboard-daemons").open("a") as pids:
+            pids.write(str(pid) + "\n")
 elif name in ("notify-send", "nixos-capture-notify"):
     if os.environ.get("NOTIFY_FAIL") == "1": sys.exit(1)
 '''
@@ -91,6 +103,11 @@ class CaptureTests(unittest.TestCase):
     def tearDown(self):
         # Always reap the fake freeze if a failing test interrupted cleanup.
         self.run_region("--cancel", check=False)
+        pids = self.root / "clipboard-daemons"
+        if pids.exists():
+            for pid in pids.read_text().splitlines():
+                try: os.kill(int(pid), signal.SIGTERM)
+                except ProcessLookupError: pass
         self.temp.cleanup()
 
     def write_geometry(self):
@@ -142,6 +159,24 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual((self.root / "clipboard").read_bytes(), b"original clipboard")
         self.assertFalse(Path(self.env["NIXOS_SCREENSHOT_DIR"]).exists())
         self.assert_clean()
+
+    def assert_repeated_capture_with_clipboard_owner_running(self, processing):
+        first = self.run_capture("fullscreen", processing, CLIPBOARD_DAEMON="1")
+        pid = int((self.root / "clipboard-daemons").read_text().splitlines()[-1])
+        os.kill(pid, 0)
+        second = self.run_capture("fullscreen", processing, CLIPBOARD_DAEMON="1")
+        self.assertEqual(len(self.calls("grim")), 2)
+        self.assertEqual((self.root / "clipboard").read_bytes(), PNG)
+        if processing == "slurp":
+            self.assertTrue(Path(second.stdout.strip()).is_file())
+            self.assertNotEqual(first.stdout, second.stdout)
+        self.assert_clean()
+
+    def test_repeated_saved_capture_with_clipboard_owner_running(self):
+        self.assert_repeated_capture_with_clipboard_owner_running("slurp")
+
+    def test_repeated_copy_only_capture_with_clipboard_owner_running(self):
+        self.assert_repeated_capture_with_clipboard_owner_running("copy")
 
     def test_capture_failure_removes_partial_file_and_restores_cursor(self):
         self.assertNotEqual(self.run_capture("region", check=False, GRIM_FAIL="1").returncode, 0)
