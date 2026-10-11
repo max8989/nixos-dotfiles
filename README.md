@@ -12,7 +12,9 @@ rewritten as pure Nix (no live-symlinked dotfile tree).
 - `homeserver` — Gigabyte H81M-HD2 (i5-4460 Haswell, 16 GB, RTX 3070). Headless
   media server: the Docker Compose stack (Traefik, Jellyfin, *arr, qBittorrent
   behind a PIA WireGuard container, SABnzbd, Homepage, …) runs unchanged on top
-  of NixOS-provided Docker + NVIDIA container toolkit.
+  of NixOS-provided Docker + NVIDIA container toolkit. Installed on the Corsair
+  Neutron XT SSD with BIOS GRUB, an ext4 root, and an 8.8 GiB swap partition.
+  The separate Samsung SSD is not managed by this profile.
 
 Every host imports `hosts/common.nix` (role-agnostic system config); graphical
 hosts additionally import `hosts/desktop.nix` (Hyprland, greetd, PipeWire,
@@ -65,9 +67,9 @@ hosts/
     disko.nix                  # declarative disk layout (partitioning + fileSystems)
     hardware-configuration.nix # detected hardware only — regenerated at install
   homeserver/
-    configuration.nix          # ../common.nix (NO desktop.nix) + headless NVIDIA + server tweaks
-    disko.nix                  # declarative disk layout (partitioning + fileSystems)
-    hardware-configuration.nix # placeholder — regenerate at install
+    configuration.nix          # ../common.nix + BIOS GRUB + key-only SSH + headless NVIDIA
+    disko.nix                  # installed Corsair SSD: MBR + ext4 root + swap
+    hardware-configuration.nix # generated on the installed server with --no-filesystems
 home/
   home.nix                     # full desktop HM profile (desktop hosts)
   server.nix                   # minimal HM profile: shell + CLI only (headless hosts)
@@ -302,7 +304,7 @@ Clone the repo on the new machine and rebuild from there — flakes build from
 **any** path, the location is not special:
 
 ```sh
-git clone https://github.com/max8989/nixos-dotfiles ~/repos/nixos-dotfiles
+git clone git@github.com:max8989/nixos-dotfiles.git ~/repos/nixos-dotfiles
 cd ~/repos/nixos-dotfiles
 ```
 
@@ -323,6 +325,33 @@ sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 `switch` builds the new generation and activates it immediately. Use
 `boot` instead of `switch` to apply only on next reboot, or `test` to activate
 without making it the boot default.
+
+### Installed home server
+
+The server at `192.168.2.43` has this repository in `~/repos/nixos-dotfiles`.
+Its `homeserver` profile uses the installation's existing Corsair SSD root and
+swap partitions, BIOS GRUB, and authorized SSH key. The profile sets the host
+name to `homeserver` and uses the headless Home Manager configuration.
+`system.stateVersion` and `home.stateVersion` remain `26.05`.
+
+To activate it on the server:
+
+```sh
+cd ~/repos/nixos-dotfiles
+git pull --ff-only
+nix flake check
+sudo -A nixos-rebuild switch --flake .#homeserver
+```
+
+Until the first rebuild installs Git and enables flakes, use `nix-shell -p git`
+and add `--extra-experimental-features 'nix-command flakes'` to Nix commands.
+Activation requires sudo authentication on the server.
+
+Hardware can be regenerated with
+`nixos-generate-config --no-filesystems --show-hardware-config`; filesystems
+and swap stay in `hosts/homeserver/disko.nix`. Applying this profile uses the
+existing partitions. Running the fresh-install disko commands repartitions
+and formats the Corsair SSD.
 
 ### (Optional) test in a VM first
 

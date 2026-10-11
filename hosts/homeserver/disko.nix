@@ -1,57 +1,46 @@
-# Declarative disk layout (disko) — homeserver (H81M-HD2 desktop).
+# Installed disk layout — homeserver (H81M-HD2, BIOS boot).
 #
-# Used twice:
-#   1. At install time: `nixos-anywhere` (or the two-step disko +
-#      nixos-install route — see README "Install") partitions, formats, and
-#      mounts the device below from this description.
-#   2. On the running system: the disko NixOS module derives fileSystems.*
-#      from it, so hardware-configuration.nix must NOT define filesystems
-#      (it is generated with `nixos-generate-config --no-filesystems`).
+# NixOS is installed on the Corsair SSD with an MBR partition table, an
+# ext4 root partition, and an 8.8 GiB swap partition. The disko module
+# derives fileSystems and swapDevices from this existing layout; a normal
+# nixos-rebuild does not partition or format disks. The separate Samsung
+# SSD is not managed by this configuration.
 #
-# ⚠️ Installing with this file ERASES the device below — including the old
-# Arch install, all Docker volumes, and the media library. Back everything up
-# first, and confirm the device with `ls -l /dev/disk/by-id/` on the target
-# before running the install.
+# Sector boundaries were read from /sys/block/sda on the installed server
+# (512-byte sectors). MBR requires disko's legacy table type.
+# Running disko in destroy/format mode ERASES this disk.
 { ... }:
 {
   disko.devices.disk.main = {
     type = "disk";
-    # by-id, not /dev/sdX: the board also exposes an empty card-reader slot
-    # (sda, 0 B) and letter assignment is not stable across boots.
-    device = "/dev/disk/by-id/ata-Samsung_SSD_870_EVO_500GB_S6PXNM0W412042T";
+    device = "/dev/disk/by-id/ata-Corsair_Neutron_XT_SSD_155281320FF103720100";
     content = {
-      type = "gpt";
-      partitions = {
-        ESP = {
-          size = "1G";
-          type = "EF00"; # EFI system partition
+      type = "table";
+      format = "msdos";
+      partitions = [
+        {
+          name = "root";
+          start = "2048s";
+          end = "919248143s";
+          fs-type = "ext4";
+          bootable = true;
           content = {
             type = "filesystem";
-            format = "vfat";
-            mountpoint = "/boot";
-            mountOptions = [ "umask=0077" ];
+            format = "ext4";
+            mountpoint = "/";
           };
-        };
-        root = {
-          size = "100%"; # fills the rest of the disk
+        }
+        {
+          name = "swap";
+          start = "919248144s";
+          end = "937703087s";
+          fs-type = "linux-swap";
           content = {
-            type = "btrfs";
-            extraArgs = [
-              "-L"
-              "nixos"
-            ];
-            subvolumes = {
-              "@" = {
-                mountpoint = "/";
-                mountOptions = [
-                  "compress=zstd"
-                  "noatime"
-                ];
-              };
-            };
+            type = "swap";
+            priority = 0; # zram (priority 100) fills first
           };
-        };
-      };
+        }
+      ];
     };
   };
 }

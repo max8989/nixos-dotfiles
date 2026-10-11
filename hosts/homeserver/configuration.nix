@@ -10,7 +10,7 @@
 # container toolkit and otherwise stays out of the way. Copy the compose
 # project + volumes back onto the machine after install and `docker compose
 # up -d`.
-{ pkgs, ... }:
+{ lib, username, ... }:
 {
   imports = [
     ../common.nix
@@ -18,16 +18,28 @@
     ./hardware-configuration.nix
   ];
 
-  # Disk-backed overflow for cold anonymous memory, same shape as the G12.
-  # nixpkgs detects btrfs and creates this with `btrfs filesystem mkswapfile`,
-  # so the file is NODATACOW and uncompressed despite compress=zstd on /.
-  swapDevices = [
-    {
-      device = "/swapfile";
-      size = 8 * 1024; # MiB
-      priority = 0; # zram (priority 100) fills first
-    }
-  ];
+  # The installed system boots with BIOS GRUB from the Corsair SSD. The
+  # shared UEFI defaults belong to the laptop; /boot is part of this root.
+  boot.loader.systemd-boot.enable = lib.mkForce false;
+  boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
+  boot.loader.grub = {
+    enable = true;
+    device = "/dev/disk/by-id/ata-Corsair_Neutron_XT_SSD_155281320FF103720100";
+    useOSProber = true;
+  };
+
+  # Preserve the installation's key-only SSH access and existing account
+  # password. The disk-backed swap partition is declared in disko.nix.
+  users.users.${username} = {
+    initialPassword = lib.mkForce null;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA/pvM8FDrjIAsh05zAQ6FbpJrhucYfxiltL7R/PD2Om"
+    ];
+  };
+  services.openssh.settings = {
+    PasswordAuthentication = lib.mkForce false;
+    KbdInteractiveAuthentication = false;
+  };
 
   ##########################################################################
   ## Graphics — RTX 3070, headless.
