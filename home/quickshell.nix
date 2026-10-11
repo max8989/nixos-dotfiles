@@ -13,6 +13,7 @@ let
     palette:
     {
       mode = palette.mode;
+      displayName = palette.displayName;
       background = palette.background;
       solid = palette.background;
       surface = palette.surface;
@@ -35,6 +36,7 @@ let
   settings = {
     theme = themeSettings palettes.tokyo-night;
     themes = lib.mapAttrs (_: themeSettings) palettes;
+    themeOrder = config.localTheme.themeOrder;
     bar = {
       height = 38;
       margin = 6;

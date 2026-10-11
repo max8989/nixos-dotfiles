@@ -9,15 +9,13 @@ selected_file="$state_dir/selected"
 current_link="$state_dir/current"
 
 usage() {
-  echo 'Usage: desktop-theme list|current|set <tokyo-night|catppuccin-latte>|reconcile' >&2
+  echo 'Usage: desktop-theme list|current|set <name>|reconcile' >&2
   exit 2
 }
 
 valid_theme() {
-  case "$1" in
-    tokyo-night|catppuccin-latte) [[ -d "$theme_root/$1" ]] ;;
-    *) return 1 ;;
-  esac
+  [[ $1 =~ ^[a-z0-9]+(-[a-z0-9]+)*$ && -d "$theme_root/$1" ]] &&
+    jq -e --arg name "$1" '.themes | has($name)' "$theme_root/catalog.json" >/dev/null
 }
 
 current_name() {
@@ -33,19 +31,17 @@ current_name() {
 apply_session() {
   local name=$1 wallpaper="$theme_root/$1/wallpaper.png" mode gtk_theme icon_theme monitor pid
 
-  if [[ $name == catppuccin-latte ]]; then
-    mode=prefer-light
+  mode=$(jq -er --arg name "$name" '.themes[$name].mode' "$theme_root/catalog.json")
+  icon_theme=$(jq -er --arg name "$name" '.themes[$name].iconTheme' "$theme_root/catalog.json")
+  if [[ $mode == light ]]; then
     gtk_theme=Adwaita
-    icon_theme=Yaru-blue
   else
-    mode=prefer-dark
     gtk_theme=Adwaita-dark
-    icon_theme=Yaru-magenta
   fi
 
   # Omarchy uses these same GNOME settings for GTK and the appearance portal.
   if [[ -n ${DBUS_SESSION_BUS_ADDRESS:-} ]]; then
-    gsettings set org.gnome.desktop.interface color-scheme "$mode"
+    gsettings set org.gnome.desktop.interface color-scheme "prefer-$mode"
     gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme"
     gsettings set org.gnome.desktop.interface icon-theme "$icon_theme"
     fcitx5-remote --check -r >/dev/null 2>&1 || true
@@ -96,7 +92,7 @@ select_theme() {
 
 case "${1:-}" in
   list)
-    printf 'tokyo-night\ncatppuccin-latte\n'
+    jq -r '.order[]' "$theme_root/catalog.json"
     ;;
   current)
     current_name

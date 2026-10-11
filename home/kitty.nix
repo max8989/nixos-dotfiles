@@ -26,8 +26,17 @@
     };
   };
 
-  # Kitty follows the desktop's light/dark preference and updates open windows.
-  xdg.configFile."kitty/dark-theme.auto.conf".source = "${config.localTheme.themeDirs.tokyo-night}/kitty.conf";
-  xdg.configFile."kitty/light-theme.auto.conf".source = "${config.localTheme.themeDirs.catppuccin-latte}/kitty.conf";
-  xdg.configFile."kitty/no-preference-theme.auto.conf".source = "${config.localTheme.themeDirs.tokyo-night}/kitty.conf";
+  # Every appearance preference follows the selected desktop palette.
+  xdg.configFile = builtins.listToAttrs (
+    map
+      (mode: {
+        name = "kitty/${mode}-theme.auto.conf";
+        value.source = config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/kitty.conf";
+      })
+      [
+        "dark"
+        "light"
+        "no-preference"
+      ]
+  );
 }

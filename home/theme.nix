@@ -7,6 +7,16 @@
 }:
 let
   palettes = import ./theme-data.nix;
+  themeOrder = [
+    "tokyo-night"
+    "catppuccin-latte"
+  ]
+  ++ builtins.attrNames (
+    builtins.removeAttrs palettes [
+      "tokyo-night"
+      "catppuccin-latte"
+    ]
+  );
   stateDir = "${config.xdg.stateHome}/desktop-theme";
   currentDir = "${stateDir}/current";
   toINI = lib.generators.toINI { };
@@ -79,27 +89,31 @@ let
         p.accent
       ]
     );
-  qtScheme = p: toINI {
-    ColorScheme = {
-      active_colors = qtColors p p.text;
-      inactive_colors = qtColors p p.text;
-      disabled_colors = qtColors p p.dim;
+  qtScheme =
+    p:
+    toINI {
+      ColorScheme = {
+        active_colors = qtColors p p.text;
+        inactive_colors = qtColors p p.text;
+        disabled_colors = qtColors p p.dim;
+      };
     };
-  };
-  qtctSettings = p: toINI {
-    Appearance = {
-      style = "kvantum";
-      custom_palette = true;
-      color_scheme_path = "${currentDir}/qt.colors";
-      icon_theme = p.iconTheme;
-      standard_dialogs = "xdgdesktopportal";
+  qtctSettings =
+    p:
+    toINI {
+      Appearance = {
+        style = "kvantum";
+        custom_palette = true;
+        color_scheme_path = "${currentDir}/qt.colors";
+        icon_theme = p.iconTheme;
+        standard_dialogs = "xdgdesktopportal";
+      };
+      Fonts = {
+        general = ''"Figtree,11"'';
+        fixed = ''"JetBrainsMono Nerd Font,11"'';
+      };
+      Applications = { };
     };
-    Fonts = {
-      general = ''"Figtree,11"'';
-      fixed = ''"JetBrainsMono Nerd Font,11"'';
-    };
-    Applications = { };
-  };
   gtkSettings = p: version: ''
     [Settings]
     gtk-application-prefer-dark-theme=${if p.mode == "dark" then "true" else "false"}
@@ -107,7 +121,12 @@ let
     gtk-cursor-theme-size=24
     gtk-font-name=Figtree 11
     gtk-icon-theme-name=${p.iconTheme}
-    ${if version == 3 then "gtk-theme-name=${if p.mode == "dark" then "Adwaita-dark" else "Adwaita"}" else "gtk-interface-color-scheme=${p.mode}"}
+    ${
+      if version == 3 then
+        "gtk-theme-name=${if p.mode == "dark" then "Adwaita-dark" else "Adwaita"}"
+      else
+        "gtk-interface-color-scheme=${p.mode}"
+    }
   '';
   yadCss = p: ''
     #yad-dialog-window {
@@ -173,42 +192,63 @@ let
   fzfOptions = p: ''
     --color=bg:${p.background},bg+:${p.surface},fg:${p.muted},fg+:${p.text},hl:${p.accent},hl+:${p.accent},border:${p.border},prompt:${p.accent},pointer:${p.accent},marker:${p.green},spinner:${p.teal},info:${p.muted}
   '';
-  starshipSettings = p: (lib.importTOML ./starship.toml) // {
-    palette = p.name;
-    palettes.${p.name} = {
-      s1 = p.base;
-      s2 = p.surface;
-      text = p.text;
-      muted = p.muted;
-      dim = p.dim;
-      cyan = p.accent;
-      blue = p.blue;
-      green = p.green;
-      red = p.urgent;
-      amber = p.warning;
+  starshipSettings =
+    p:
+    (lib.importTOML ./starship.toml)
+    // {
+      palette = p.name;
+      palettes.${p.name} = {
+        s1 = p.base;
+        s2 = p.surface;
+        text = p.text;
+        muted = p.muted;
+        dim = p.dim;
+        cyan = p.accent;
+        blue = p.blue;
+        green = p.green;
+        red = p.urgent;
+        amber = p.warning;
+      };
     };
-  };
-  fcitxSettings = p: lib.generators.toINIWithGlobalSection { } {
-    globalSection = {
-      Theme = p.fcitxTheme;
-      DarkTheme = p.fcitxTheme;
-      UseDarkTheme = "False";
-      UseAccentColor = "False";
-      "Vertical Candidate List" = "False";
-      Font = "Noto Sans CJK TC 15";
-      MenuFont = "Figtree 12";
-      TrayFont = "Figtree Medium 11";
-      PerScreenDPI = "True";
-      EnableFractionalScale = "True";
+  fcitxSettings =
+    p:
+    lib.generators.toINIWithGlobalSection { } {
+      globalSection = {
+        Theme = p.fcitxTheme;
+        DarkTheme = p.fcitxTheme;
+        UseDarkTheme = "False";
+        UseAccentColor = "False";
+        "Vertical Candidate List" = "False";
+        Font = "Noto Sans CJK TC 15";
+        MenuFont = "Figtree 12";
+        TrayFont = "Figtree Medium 11";
+        PerScreenDPI = "True";
+        EnableFractionalScale = "True";
+      };
+      sections = { };
     };
-    sections = { };
-  };
   btopTemplate = builtins.readFile ./files/omarchy/btop.theme.tpl;
-  latteColors = builtins.fromTOML (builtins.readFile ./files/omarchy/catppuccin-latte-colors.toml);
-  latteBtop = lib.replaceStrings
-    (map (key: "{{ ${key} }}") (builtins.attrNames latteColors))
-    (map (key: latteColors.${key}) (builtins.attrNames latteColors))
-    btopTemplate;
+  kittyTemplate = builtins.readFile ./files/omarchy/kitty.conf.tpl;
+  colorsFor =
+    id:
+    builtins.fromTOML (
+      builtins.readFile (
+        if id == "catppuccin-latte" then
+          ./files/omarchy/catppuccin-latte-colors.toml
+        else
+          ./files/omarchy + "/${id}/colors.toml"
+      )
+    );
+  renderTemplate =
+    template: colors:
+    let
+      values = colors // {
+        selection_background = colors.selection;
+        selection_foreground = colors.bright_foreground;
+      };
+      keys = builtins.attrNames values;
+    in
+    lib.replaceStrings (map (key: "{{ ${key} }}") keys) (map (key: values.${key}) keys) template;
   mkTheme =
     id: p:
     let
@@ -228,12 +268,16 @@ let
           }
           .window { font-family: Figtree; }
         '';
-        "kitty.conf" = kittyColors p;
+        "kitty.conf" =
+          if id == "tokyo-night" || id == "catppuccin-latte" then
+            kittyColors p
+          else
+            renderTemplate kittyTemplate (colorsFor id);
         "qt.colors" = qtScheme p;
         "qt6ct.conf" = qtctSettings p;
         "qt5ct.conf" = qtctSettings p;
         "kvantum.kvconfig" = toINI {
-          General.theme = if id == "tokyo-night" then p.name else "catppuccin-latte-blue";
+          General.theme = if p.mode == "light" then "catppuccin-latte-blue" else p.name;
         };
         "kdeglobals" = toINI (kdeScheme p);
         "gtk3-settings.ini" = gtkSettings p 3;
@@ -246,13 +290,21 @@ let
         "superfile.toml" = (pkgs.formats.toml { }).generate "${id}-superfile.toml" (
           import ./superfile-theme.nix { palette = p; }
         );
-        "btop.theme" = if id == "tokyo-night" then ./files/omarchy/btop.theme else latteBtop;
+        "btop.theme" =
+          if id == "tokyo-night" then
+            ./files/omarchy/btop.theme
+          else
+            renderTemplate btopTemplate (colorsFor id);
       };
       copyFiles = lib.concatStringsSep "\n" (
         lib.mapAttrsToList (
           name: content:
           let
-            source = if builtins.isPath content || lib.isDerivation content then content else pkgs.writeText "${id}-${name}" content;
+            source =
+              if builtins.isPath content || lib.isDerivation content then
+                content
+              else
+                pkgs.writeText "${id}-${name}" content;
           in
           ''cp ${source} "$out/${name}"''
         ) themeFiles
@@ -261,12 +313,26 @@ let
     pkgs.runCommand "desktop-theme-${id}" { nativeBuildInputs = [ pkgs.imagemagick ]; } ''
       mkdir -p "$out"
       ${copyFiles}
-      ${if id == "tokyo-night" then "cp ${p.wallpaper} \"$out/wallpaper.png\"" else "magick ${p.wallpaper} \"$out/wallpaper.png\""}
+      ${
+        if id == "tokyo-night" then
+          "cp ${p.wallpaper} \"$out/wallpaper.png\""
+        else
+          "magick ${p.wallpaper} \"$out/wallpaper.png\""
+      }
     '';
   themeDirs = lib.mapAttrs mkTheme palettes;
+  catalog = pkgs.writeText "desktop-theme-catalog.json" (
+    builtins.toJSON {
+      order = themeOrder;
+      themes = lib.mapAttrs (_: p: { inherit (p) displayName mode iconTheme; }) palettes;
+    }
+  );
   themeRoot = pkgs.runCommand "desktop-themes" { } ''
     mkdir -p "$out"
-    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (id: path: ''ln -s ${path} "$out/${id}"'') themeDirs)}
+    cp ${catalog} "$out/catalog.json"
+    ${lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (id: path: ''ln -s ${path} "$out/${id}"'') themeDirs
+    )}
   '';
   hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   switcher = pkgs.writeShellApplication {
@@ -302,7 +368,15 @@ in
 
   config = {
     localTheme = {
-      inherit palettes stateDir currentDir themeDirs themeRoot switcher;
+      inherit
+        palettes
+        themeOrder
+        stateDir
+        currentDir
+        themeDirs
+        themeRoot
+        switcher
+        ;
     };
     home.packages = [ switcher ];
     home.activation.desktopTheme = lib.hm.dag.entryAfter [ "linkGeneration" ] ''

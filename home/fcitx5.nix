@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 ##########################################################################
 ## fcitx5 user config: input methods, Traditional (Taiwan) output, and a
 ## Theme-aware palette for the Pinyin candidate popup.
@@ -9,8 +14,7 @@
 ## replace whatever fcitx5 saved on the next switch.
 ##########################################################################
 let
-  palette = import ./palette.nix;
-  latte = config.localTheme.palettes.catppuccin-latte;
+  palettes = config.localTheme.palettes;
   toINI = lib.generators.toINI { };
   # fcitx5 keeps top-level options outside any [section].
   withGlobals =
@@ -159,34 +163,24 @@ in
     };
   };
 
-  xdg.dataFile = {
-    "fcitx5/themes/${palette.name}/theme.conf".text = toINI (themeFor palette);
-    "fcitx5/themes/${palette.name}/panel.svg".text = roundedRect {
-      fill = palette.base;
-      stroke = palette.border;
-      radius = 12;
-    };
-    "fcitx5/themes/${palette.name}/highlight.svg".text = roundedRect {
-      fill = palette.accent;
-      radius = 8;
-    };
-    "fcitx5/themes/${palette.name}/prev.svg".source = "${defaultDark}/prev.svg";
-    "fcitx5/themes/${palette.name}/next.svg".source = "${defaultDark}/next.svg";
-    "fcitx5/themes/${palette.name}/radio.svg".source = "${defaultDark}/radio.svg";
-    "fcitx5/themes/${palette.name}/arrow.svg".source = "${defaultDark}/arrow.svg";
-    "fcitx5/themes/${latte.name}/theme.conf".text = toINI (themeFor latte);
-    "fcitx5/themes/${latte.name}/panel.svg".text = roundedRect {
-      fill = latte.base;
-      stroke = latte.border;
-      radius = 12;
-    };
-    "fcitx5/themes/${latte.name}/highlight.svg".text = roundedRect {
-      fill = latte.accent;
-      radius = 8;
-    };
-    "fcitx5/themes/${latte.name}/prev.svg".source = "${defaultDark}/prev.svg";
-    "fcitx5/themes/${latte.name}/next.svg".source = "${defaultDark}/next.svg";
-    "fcitx5/themes/${latte.name}/radio.svg".source = "${defaultDark}/radio.svg";
-    "fcitx5/themes/${latte.name}/arrow.svg".source = "${defaultDark}/arrow.svg";
-  };
+  xdg.dataFile = builtins.foldl' (
+    files: palette:
+    files
+    // {
+      "fcitx5/themes/${palette.name}/theme.conf".text = toINI (themeFor palette);
+      "fcitx5/themes/${palette.name}/panel.svg".text = roundedRect {
+        fill = palette.base;
+        stroke = palette.border;
+        radius = 12;
+      };
+      "fcitx5/themes/${palette.name}/highlight.svg".text = roundedRect {
+        fill = palette.accent;
+        radius = 8;
+      };
+      "fcitx5/themes/${palette.name}/prev.svg".source = "${defaultDark}/prev.svg";
+      "fcitx5/themes/${palette.name}/next.svg".source = "${defaultDark}/next.svg";
+      "fcitx5/themes/${palette.name}/radio.svg".source = "${defaultDark}/radio.svg";
+      "fcitx5/themes/${palette.name}/arrow.svg".source = "${defaultDark}/arrow.svg";
+    }
+  ) { } (builtins.attrValues palettes);
 }

@@ -499,14 +499,20 @@ light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
 returns to the previous menu, restoring its search and selection; Escape at
 the root closes it. Ctrl+L focuses and selects the search text.
 
-Open **Style → Theme** there to switch between Tokyo Night and Catppuccin
-Latte, or press **Super+Ctrl+Shift+Space** to open the theme menu directly.
+Open **Style → Theme** there to choose Tokyo Night, Catppuccin Latte, Osaka
+Jade, Catppuccin Mocha, Gruvbox or Nord, or press **Super+Ctrl+Shift+Space** to
+open the theme menu directly.
 From a terminal, use `desktop-theme list`, `desktop-theme current`, or
-`desktop-theme set catppuccin-latte` (and `desktop-theme set tokyo-night` to
-switch back). The selection persists in XDG state across logins and rebuilds.
+`desktop-theme set osaka-jade` (or `catppuccin`, `gruvbox`, `nord`,
+`catppuccin-latte`, `tokyo-night`). The selection persists in XDG state across
+logins and rebuilds. The four additional themes use Omarchy's original
+palettes, default wallpapers, icon themes, Kitty/btop templates and VS Code
+theme choices; see `home/files/omarchy/PROVENANCE.md` for pinned sources.
 It changes Quickshell, Hyprland, wallpaper, Kitty, GTK/Qt/KDE, Fcitx, btop,
 VS Code, Superfile, fzf and Starship. Apps that only read their theme at launch
 may need reopening; Neovim keeps its separately managed theme.
+The Powerline terminal prompt follows the selected palette on its next prompt,
+including terminals already open when switching themes.
 
 The four settings panels open beside the top bar and are also available from
 Super+M or their bar icons:

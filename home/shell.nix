@@ -87,20 +87,24 @@ in
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
-    colors = if desktop then { } else {
-      "bg" = palette.background;
-      "bg+" = palette.surface;
-      "fg" = palette.muted;
-      "fg+" = palette.text;
-      "hl" = palette.accent;
-      "hl+" = palette.accent;
-      "border" = palette.border;
-      "prompt" = palette.accent;
-      "pointer" = palette.accent;
-      "marker" = palette.green;
-      "spinner" = palette.teal;
-      "info" = palette.muted;
-    };
+    colors =
+      if desktop then
+        { }
+      else
+        {
+          "bg" = palette.background;
+          "bg+" = palette.surface;
+          "fg" = palette.muted;
+          "fg+" = palette.text;
+          "hl" = palette.accent;
+          "hl+" = palette.accent;
+          "border" = palette.border;
+          "prompt" = palette.accent;
+          "pointer" = palette.accent;
+          "marker" = palette.green;
+          "spinner" = palette.teal;
+          "info" = palette.muted;
+        };
   };
 
   # `z`/`zi` frecency jumping — replaces `eval "$(zoxide init zsh)"`.
@@ -122,26 +126,35 @@ in
   programs.bash.shellAliases = shellAliases;
   programs.zsh.shellAliases = shellAliases;
 
-  # Keep the prompt's structure in TOML and its colours in the shared palette.
+  # Desktop prompts read the selected theme through the standard config path.
   programs.starship = {
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
-    settings = (lib.importTOML ./starship.toml) // {
-      palette = if desktop then "tokyo-night" else "jade";
-      palettes.${if desktop then "tokyo-night" else "jade"} = {
-        s1 = palette.base;
-        s2 = palette.surface;
-        text = palette.text;
-        muted = palette.muted;
-        dim = palette.dim;
-        cyan = palette.accent;
-        blue = palette.blue;
-        green = palette.green;
-        red = palette.urgent;
-        amber = palette.warning;
-      };
-    };
+    settings = lib.mkIf (!desktop) (
+      (lib.importTOML ./starship.toml)
+      // {
+        palette = "jade";
+        palettes.jade = {
+          s1 = palette.base;
+          s2 = palette.surface;
+          text = palette.text;
+          muted = palette.muted;
+          dim = palette.dim;
+          cyan = palette.accent;
+          blue = palette.blue;
+          green = palette.green;
+          red = palette.urgent;
+          amber = palette.warning;
+        };
+      }
+    );
+  };
+
+  # Existing shells can retain STARSHIP_CONFIG pointing here after a rebuild.
+  # Follow the state link so their next prompt uses the current palette too.
+  xdg.configFile."starship.toml" = lib.mkIf desktop {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/starship.toml";
   };
 
   ##########################################################################
@@ -156,8 +169,8 @@ in
   ##########################################################################
   home.sessionVariables = {
     NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
-  } // lib.optionalAttrs desktop {
-    STARSHIP_CONFIG = lib.mkForce "${config.localTheme.currentDir}/starship.toml";
+  }
+  // lib.optionalAttrs desktop {
     FZF_DEFAULT_OPTS_FILE = "${config.localTheme.currentDir}/fzf-options";
   };
   home.sessionPath = [

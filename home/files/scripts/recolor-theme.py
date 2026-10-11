@@ -1,4 +1,4 @@
-"""Apply the shared Jade palette to the pinned GTK/Kvantum theme assets.
+"""Apply a desktop palette to the pinned GTK/Kvantum theme assets.
 
 Replace complete colour tokens in one pass, including RGB CSS and the trailing
 alpha used by Kvantum. Never rewrite binary assets or cascade substitutions.
@@ -39,5 +39,5 @@ for path in Path(root).rglob("*"):
         if updated != original:
             path.write_text(updated)
             count += 1
-assert {"#1e1e2e", "#89b4fa"} <= replaced, "Upstream theme palette changed; review Jade mappings"
+assert {"#1e1e2e", "#89b4fa"} <= replaced, "Upstream theme palette changed; review desktop mappings"
 print(f"Recoloured {count} theme assets using {len(replaced)} palette colours")
