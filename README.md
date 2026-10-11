@@ -364,10 +364,21 @@ and formats the Corsair SSD.
 
 ### Portainer
 
-After activating the server profile, open `https://192.168.2.43:9443` and create
-the initial administrator account. The default HTTPS certificate is
-self-signed. Portainer CE connects to the host's Docker socket and stores its
-configuration in the persistent Docker volume `portainer_data`.
+After activating the server profile, open `https://192.168.2.43:9443`. The
+default HTTPS certificate is self-signed. For the initial administrator setup,
+retrieve the setup token in your own SSH terminal on the server:
+
+```sh
+docker logs portainer 2>&1 | rg '^setup_token=' | tail -n 1
+```
+
+Paste the value after `setup_token=` into the setup screen and create the
+administrator account within five minutes of Portainer starting. If setup has
+timed out, run `docker restart portainer`, retrieve the latest token, and reload
+the page. See the [setup token FAQ](https://docs.portainer.io/faqs/installing/setup-token).
+
+Portainer CE connects to the host's Docker socket and stores its configuration
+in the persistent Docker volume `portainer_data`.
 
 `hosts/homeserver/portainer.nix` pins the LTS image version and digest. Update
 that declaration and rebuild to upgrade it. NixOS manages the container through
@@ -397,18 +408,20 @@ Where a package goes depends on what it is. Find the binary you want first
 
 | What you're adding | Where | How |
 |--------------------|-------|-----|
-| A user app or CLI tool (browsers, editors, `ripgrep`, …) | `home/home.nix` → `home.packages` | add the attr to the list |
+| A CLI tool shared by desktop and server (`ripgrep`, lazygit, …) | `home/cli.nix` → `home.packages` | add the attr to the list |
+| A server-only CLI tool or diagnostic | `home/server.nix` → `home.packages` | add the attr to the list |
+| A desktop app (browsers, GUI editors, …) | `home/home.nix` → `home.packages` | add the attr to the list |
 | A system service / daemon (docker, flatpak, firewall, printing, …) | `hosts/common.nix` | use its NixOS option, e.g. `services.<name>.enable = true;` |
 | A font | `hosts/common.nix` → `fonts.packages` | add the attr to the list |
 | Something only one machine needs (GPU drivers, kernel modules) | `hosts/<host>/configuration.nix` | per-host option |
 
-Most of the time you want the first row. For example, to add `neofetch`:
+For example, shared CLI packages belong in `home/cli.nix`:
 
 ```nix
-# home/home.nix — inside home.packages = with pkgs; [ … ];
+# home/cli.nix — inside home.packages = with pkgs; [ … ];
 home.packages = with pkgs; [
   # …existing…
-  neofetch
+  htop
 ];
 ```
 
