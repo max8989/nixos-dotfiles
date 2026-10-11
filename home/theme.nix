@@ -10,11 +10,15 @@ let
   themeOrder = [
     "tokyo-night"
     "catppuccin-latte"
+    "flexoki-light"
+    "white"
   ]
   ++ builtins.attrNames (
     builtins.removeAttrs palettes [
       "tokyo-night"
       "catppuccin-latte"
+      "flexoki-light"
+      "white"
     ]
   );
   stateDir = "${config.xdg.stateHome}/desktop-theme";
@@ -229,6 +233,7 @@ let
     };
   btopTemplate = builtins.readFile ./files/omarchy/btop.theme.tpl;
   kittyTemplate = builtins.readFile ./files/omarchy/kitty.conf.tpl;
+  vscodeTemplate = builtins.readFile ./files/omarchy/vscode-theme.json.tpl;
   colorsFor =
     id:
     builtins.fromTOML (
@@ -239,12 +244,35 @@ let
           ./files/omarchy + "/${id}/colors.toml"
       )
     );
+  # Match Omarchy's round-to-nearest RGB mixing for the editor template.
+  mixColors =
+    background: foreground: percent:
+    "#"
+    +
+      lib.concatMapStrings
+        (
+          offset:
+          let
+            channel = color: lib.fromHexString (builtins.substring offset 2 color);
+            value = (channel background * (100 - percent) + channel foreground * percent + 50) / 100;
+          in
+          lib.toLower (lib.fixedWidthString 2 "0" (lib.toHexString value))
+        )
+        [
+          1
+          3
+          5
+        ];
   renderTemplate =
     template: colors:
     let
       values = colors // {
         selection_background = colors.selection;
         selection_foreground = colors.bright_foreground;
+        orange = colors.orange or colors.yellow;
+        theme_type = colors.mode;
+        "mix background foreground 6%" = mixColors colors.background colors.foreground 6;
+        "mix background foreground 30%" = mixColors colors.background colors.foreground 30;
       };
       keys = builtins.attrNames values;
     in
@@ -277,7 +305,7 @@ let
         "qt6ct.conf" = qtctSettings p;
         "qt5ct.conf" = qtctSettings p;
         "kvantum.kvconfig" = toINI {
-          General.theme = if p.mode == "light" then "catppuccin-latte-blue" else p.name;
+          General.theme = if id == "catppuccin-latte" then "catppuccin-latte-blue" else p.name;
         };
         "kdeglobals" = toINI (kdeScheme p);
         "gtk3-settings.ini" = gtkSettings p 3;
@@ -295,6 +323,9 @@ let
             ./files/omarchy/btop.theme
           else
             renderTemplate btopTemplate (colorsFor id);
+      }
+      // lib.optionalAttrs (id == "white") {
+        "vscode-theme.json" = renderTemplate vscodeTemplate (colorsFor id);
       };
       copyFiles = lib.concatStringsSep "\n" (
         lib.mapAttrsToList (

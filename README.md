@@ -1,8 +1,8 @@
 # nixos-dotfiles
 
 Fully declarative **NixOS + Home Manager** configuration for a Hyprland desktop,
-with a self-authored **Quickshell desktop styled from Omarchy**, with Tokyo Night
-and Catppuccin Latte themes.
+with a self-authored **Quickshell desktop styled from Omarchy**, with eight
+runtime themes including three light palettes.
 Migrated from an Arch/Hyprland dotfiles setup and
 rewritten as pure Nix (no live-symlinked dotfile tree).
 
@@ -397,10 +397,11 @@ after any input update and fix anything that has since moved):
 
 - **Runtime Omarchy-style themes.** Tokyo Night preserves the effective theme
   from the Omarchy 4.0.0.alpha snapshot captured 2026-10-10. Catppuccin Latte
-  adds a light palette and its Omarchy wallpaper. Nix builds both themes;
+  is joined by Flexoki Light and White as light options, each with its Omarchy
+  wallpaper. Nix builds all eight themes;
   `desktop-theme set <name>` changes the selected theme immediately and stores
   the choice across rebuilds. The headless profile retains its Jade CLI palette.
-  GTK uses Adwaita/Yaru icons, and Qt uses Kvantum for both palettes. Snapshot
+  GTK uses Adwaita/Yaru icons, and Qt uses Kvantum with matching palettes. Snapshot
   assets and license notices live in `home/files/omarchy/`.
 - **Retained desktop features.** The transparent 26px top bar keeps reminders,
   status indicators, tray controls and existing responsive visibility rules.
@@ -499,20 +500,23 @@ light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
 returns to the previous menu, restoring its search and selection; Escape at
 the root closes it. Ctrl+L focuses and selects the search text.
 
-Open **Style → Theme** there to choose Tokyo Night, Catppuccin Latte, Osaka
-Jade, Catppuccin Mocha, Gruvbox or Nord, or press **Super+Ctrl+Shift+Space** to
-open the theme menu directly.
+Open **Style → Theme** there to choose Tokyo Night, Catppuccin Latte, Flexoki
+Light, White, Osaka Jade, Catppuccin Mocha, Gruvbox or Nord, or press
+**Super+Ctrl+Shift+Space** to open the theme menu directly.
 From a terminal, use `desktop-theme list`, `desktop-theme current`, or
-`desktop-theme set osaka-jade` (or `catppuccin`, `gruvbox`, `nord`,
+`desktop-theme set flexoki-light` (or `white`, `osaka-jade`, `catppuccin`, `gruvbox`, `nord`,
 `catppuccin-latte`, `tokyo-night`). The selection persists in XDG state across
-logins and rebuilds. The four additional themes use Omarchy's original
+logins and rebuilds. The additional themes use Omarchy's original
 palettes, default wallpapers, icon themes, Kitty/btop templates and VS Code
-theme choices; see `home/files/omarchy/PROVENANCE.md` for pinned sources.
+theme choices. White uses Omarchy's generated VS Code template; Flexoki Light
+and White also have recolored light Kvantum assets. See
+`home/files/omarchy/PROVENANCE.md` for pinned sources.
 It changes Quickshell, Hyprland, wallpaper, Kitty, GTK/Qt/KDE, Fcitx, btop,
 VS Code, Superfile, fzf and Starship. Apps that only read their theme at launch
 may need reopening; Neovim keeps its separately managed theme.
 The Powerline terminal prompt follows the selected palette on its next prompt,
 including terminals already open when switching themes.
+Running Kitty windows update their colors immediately during a theme switch.
 
 The four settings panels open beside the top bar and are also available from
 Super+M or their bar icons:

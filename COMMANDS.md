@@ -44,6 +44,8 @@ Super+Ctrl+Shift+Space. From a terminal:
 desktop-theme list
 desktop-theme current
 desktop-theme set catppuccin-latte
+desktop-theme set flexoki-light
+desktop-theme set white
 desktop-theme set osaka-jade
 desktop-theme set catppuccin
 desktop-theme set gruvbox
@@ -52,6 +54,7 @@ desktop-theme set tokyo-night
 ```
 
 `catppuccin` selects Catppuccin Mocha; Omarchy names its Jade theme Osaka Jade.
+The light choices are `catppuccin-latte`, `flexoki-light` and `white`.
 The choice persists across rebuilds. Some applications need reopening to read
 their new colors.
 

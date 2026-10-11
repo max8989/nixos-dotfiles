@@ -75,6 +75,13 @@ select_theme() {
   exec 9>"$state_dir/.lock"
   flock 9
 
+  # Kitty's automatic theme cache only re-reads files with a newer mtime.
+  # Nix store assets share the epoch timestamp, so publish a fresh snapshot
+  # before changing the appearance settings and sending the reload signal.
+  temp="$state_dir/.kitty.conf.$$"
+  cp "$theme_root/$name/kitty.conf" "$temp"
+  mv -f "$temp" "$state_dir/kitty.conf"
+
   temp="$state_dir/.current.$$"
   ln -s "$theme_root/$name" "$temp"
   mv -Tf "$temp" "$current_link"

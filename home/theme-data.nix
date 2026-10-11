@@ -35,7 +35,7 @@ let
       blue = colors.blue;
       lavender = colors.magenta;
       yellow = colors.yellow;
-      warning = colors.orange;
+      warning = colors.orange or colors.yellow;
       urgent = colors.red;
       selection = colors.selection;
       ansi = [
@@ -58,16 +58,24 @@ let
       ];
       fcitxTheme = name;
     };
-  darkTheme =
+  omarchyTheme =
     id: name: displayName: wallpaper:
     let
       source = ./files/omarchy + "/${id}";
+      upstreamIconTheme = builtins.replaceStrings [ "\n" ] [ "" ] (
+        builtins.readFile (source + "/icons.theme")
+      );
     in
     fromOmarchy {
       inherit name displayName wallpaper;
       colors = builtins.fromTOML (builtins.readFile (source + "/colors.toml"));
-      iconTheme = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile (source + "/icons.theme"));
-      vscodeTheme = (builtins.fromJSON (builtins.readFile (source + "/vscode.json"))).name;
+      # The pinned Yaru package does not include Omarchy's grey variant.
+      iconTheme = if upstreamIconTheme == "Yaru-grey" then "Yaru" else upstreamIconTheme;
+      vscodeTheme =
+        if builtins.pathExists (source + "/vscode.json") then
+          (builtins.fromJSON (builtins.readFile (source + "/vscode.json"))).name
+        else
+          "Omarchy ${displayName}";
     };
 in
 {
@@ -87,10 +95,16 @@ in
     vscodeTheme = "Catppuccin Latte";
     wallpaper = ./files/backgrounds/catppuccin-latte.webp;
   };
-  osaka-jade = darkTheme "osaka-jade" "Osaka-Jade" "Osaka Jade" ./files/backgrounds/osaka-jade.webp;
+  flexoki-light =
+    omarchyTheme "flexoki-light" "Flexoki-Light" "Flexoki Light"
+      ./files/backgrounds/flexoki-light.webp;
+  white = omarchyTheme "white" "White" "White" ./files/backgrounds/white.webp;
+  osaka-jade =
+    omarchyTheme "osaka-jade" "Osaka-Jade" "Osaka Jade"
+      ./files/backgrounds/osaka-jade.webp;
   catppuccin =
-    darkTheme "catppuccin" "Catppuccin-Mocha" "Catppuccin Mocha"
+    omarchyTheme "catppuccin" "Catppuccin-Mocha" "Catppuccin Mocha"
       ./files/backgrounds/catppuccin.webp;
-  gruvbox = darkTheme "gruvbox" "Gruvbox" "Gruvbox" ./files/backgrounds/gruvbox.jpg;
-  nord = darkTheme "nord" "Nord" "Nord" ./files/backgrounds/nord.jpg;
+  gruvbox = omarchyTheme "gruvbox" "Gruvbox" "Gruvbox" ./files/backgrounds/gruvbox.jpg;
+  nord = omarchyTheme "nord" "Nord" "Nord" ./files/backgrounds/nord.jpg;
 }

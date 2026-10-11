@@ -61,3 +61,39 @@ VSIX version 1.1.2 with SHA-256
 The extension declares the MIT license. Its source manifest is available at
 [`datyin/theme-ocean-green@f14d8785`](https://github.com/datyin/theme-ocean-green/blob/f14d8785bb3124907efa8a09a6a2f73fa111faf1/package.json).
 The Catppuccin, Gruvbox and Nord extensions come from the pinned nixpkgs input.
+
+## Additional light themes
+
+Flexoki Light and White were imported on 2026-10-11 from Omarchy's `quattro`
+branch at the same pinned revision,
+[`0b9dace01837edd87eb65f20789063abcd5cf491`](https://github.com/omacom/omarchy/tree/0b9dace01837edd87eb65f20789063abcd5cf491).
+Their directories retain byte-for-byte copies of `colors.toml` and
+`icons.theme`; Flexoki Light also retains its `vscode.json`. Both palettes
+declare `mode = "light"`. White omits `orange`, so the mapping uses Omarchy's
+`orange = yellow` fallback from `bin/omarchy-theme-color`.
+
+| Local wallpaper | Upstream path |
+| --- | --- |
+| `home/files/backgrounds/flexoki-light.webp` | `themes/flexoki-light/backgrounds/1-orb.webp` |
+| `home/files/backgrounds/white.webp` | `themes/white/backgrounds/1-white.webp` |
+
+These source images are preserved and converted to PNG at build time. The
+copied Omarchy assets retain the accompanying MIT license. Qt uses recolored
+Catppuccin Latte Kvantum assets for these two palettes; Catppuccin Latte keeps
+its original Kvantum package. White's upstream `Yaru-grey` icon variant is
+absent from the pinned nixpkgs Yaru package, so its runtime icon theme falls
+back to the installed base `Yaru` set. The original descriptor remains intact.
+
+Flexoki Light uses the exact upstream `shadesOfBuntu.flexoki-light` VS Code
+extension and `flexoki-light` theme label. The official Marketplace VSIX is
+pinned to version 1.0.0 with SHA-256
+`sha256-//y9uvIUGGDEhd8inDHvNy2e1IKNx6hSfO9sxNOTcUE=`. Its manifest declares no
+license and the archive includes no license file, so it is packaged as unfree.
+
+White ships no `vscode.json`. Following `bin/omarchy-theme-set-vscode`, its
+editor theme is generated from the byte-for-byte copy of
+`default/themed/vscode-theme.json.tpl` retained here and packaged as the local
+`local.omarchy-white` extension, with the distinct label `Omarchy White`.
+The renderer follows Omarchy's derived selection colors, `theme_type = mode`,
+orange fallback, and rounded RGB mixes used by this pinned template. The
+generated extension carries Omarchy's MIT license.

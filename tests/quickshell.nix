@@ -58,6 +58,7 @@ in
           pkgs.glib
           pkgs.python3
           home.programs.starship.package
+          home.programs.kitty.package
         ];
       }
       ''
@@ -65,9 +66,13 @@ in
         test -x ${pkgs.quickshell}/bin/quickshell
         test -x ${pkgs.quickshell}/bin/qs
         jq -e '
-          (.themes | keys) == ["catppuccin", "catppuccin-latte", "gruvbox", "nord", "osaka-jade", "tokyo-night"] and
+          (.themes | keys) == ["catppuccin", "catppuccin-latte", "flexoki-light", "gruvbox", "nord", "osaka-jade", "tokyo-night", "white"] and
           .themes["tokyo-night"].background == "#1a1b26" and
           .themes["catppuccin-latte"].mode == "light" and
+          .themes["flexoki-light"].mode == "light" and
+          .themes["flexoki-light"].background == "#FFFCF0" and
+          .themes.white.mode == "light" and
+          .themes.white.background == "#ffffff" and
           .themes["osaka-jade"].background == "#111c18" and
           .themes.catppuccin.background == "#1e1e2e" and
           .themes.gruvbox.background == "#282828" and
@@ -95,7 +100,7 @@ in
         ln -s "$DESKTOP_THEME_STATE/current/starship.toml" "$STARSHIP_CONFIG"
         themeScript=${../home/files/scripts/desktop-theme.sh}
         test "$(bash "$themeScript" current)" = tokyo-night
-        test "$(bash "$themeScript" list)" = $'tokyo-night\ncatppuccin-latte\ncatppuccin\ngruvbox\nnord\nosaka-jade'
+        test "$(bash "$themeScript" list)" = $'tokyo-night\ncatppuccin-latte\nflexoki-light\nwhite\ncatppuccin\ngruvbox\nnord\nosaka-jade'
         while IFS= read -r theme; do
           test -s "$DESKTOP_THEME_ROOT/$theme/wallpaper.png"
           luac -p "$DESKTOP_THEME_ROOT/$theme/hypr-theme.lua"
@@ -125,7 +130,8 @@ in
         grep -Fx 'theme[main_bg]="#111c18"' "$DESKTOP_THEME_ROOT/osaka-jade/btop.theme"
         test "$(readlink ${
           home.xdg.configFile."kitty/dark-theme.auto.conf".source
-        })" = "${home.localTheme.currentDir}/kitty.conf"
+        })" = "${home.localTheme.stateDir}/kitty.conf"
+        kitty +runpy 'import runpy, sys; path = sys.argv.pop(1); runpy.run_path(path, run_name="__main__")' ${./desktop-theme-kitty.py} "$themeScript"
         if bash "$themeScript" set unknown; then exit 1; fi
         if bash "$themeScript" set ../; then exit 1; fi
         # A failed appearance update must not report a successful theme switch.

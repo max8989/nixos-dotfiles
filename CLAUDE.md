@@ -5,7 +5,7 @@ Guidance for working in this repo. Read this before editing.
 ## What this is
 
 A standalone, **fully declarative** NixOS + Home Manager config for a Hyprland
-desktop (Quickshell styled from six Omarchy themes)
+desktop (Quickshell styled from eight Omarchy themes)
 plus a headless home server. Two hosts:
 `thinkpad-x1-carbon-g12` (Gen 12, 21KC —
 Intel Core Ultra 5 125U / Meteor Lake, btrfs root), desktop; and
@@ -127,12 +127,15 @@ flakes only see git-tracked files inside the flake root.
   a fresh install (no `~/Pictures/Screenshots`, etc.), and the tools these
   scripts wrap generally do not `mkdir -p` for you.
 - **Runtime desktop themes.** `home/theme-data.nix` preserves the captured
-  Tokyo Night palette and maps Omarchy's Catppuccin Latte, Osaka Jade,
-  Catppuccin Mocha, Gruvbox and Nord palettes.
+  Tokyo Night palette and maps Omarchy's Catppuccin Latte, Flexoki Light, White,
+  Osaka Jade, Catppuccin Mocha, Gruvbox and Nord palettes.
   `home/theme.nix` builds immutable app assets and a shared catalog; `desktop-theme`
   selects one through XDG state, with Home Manager activation reconciling
   the selection after rebuilds. The default Starship config links to the
-  selected asset so existing shells follow switches. Quickshell follows that state; the desktop
+  selected asset so existing shells follow switches. Kitty's automatic color
+  files link to a fresh snapshot in XDG state: its mtime cache cannot detect
+  switches between immutable Nix assets with identical timestamps.
+  Quickshell follows that state; the desktop
   flag keeps the headless server's original Jade palette. Preserve asset
   provenance and licenses in `home/files/omarchy/`. Neovim is owned by a
   separate repository and remains untouched.

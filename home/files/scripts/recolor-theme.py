@@ -39,5 +39,10 @@ for path in Path(root).rglob("*"):
         if updated != original:
             path.write_text(updated)
             count += 1
-assert {"#1e1e2e", "#89b4fa"} <= replaced, "Upstream theme palette changed; review desktop mappings"
+required = (
+    {"#eff1f5", "#1e66f5"}
+    if old_name == "Catppuccin-Latte-Blue"
+    else {"#1e1e2e", "#89b4fa"}
+)
+assert required <= replaced, "Upstream theme palette changed; review desktop mappings"
 print(f"Recoloured {count} theme assets using {len(replaced)} palette colours")

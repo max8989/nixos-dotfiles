@@ -26,12 +26,13 @@
     };
   };
 
-  # Every appearance preference follows the selected desktop palette.
+  # Kitty caches automatic colors by mtime. Use the switcher's fresh snapshot
+  # instead of the immutable assets, whose Nix store timestamps are identical.
   xdg.configFile = builtins.listToAttrs (
     map
       (mode: {
         name = "kitty/${mode}-theme.auto.conf";
-        value.source = config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/kitty.conf";
+        value.source = config.lib.file.mkOutOfStoreSymlink "${config.localTheme.stateDir}/kitty.conf";
       })
       [
         "dark"

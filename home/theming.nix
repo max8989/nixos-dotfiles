@@ -8,7 +8,7 @@ let
   palettes = config.localTheme.palettes;
   active = name: config.lib.file.mkOutOfStoreSymlink "${config.localTheme.currentDir}/${name}";
 
-  # Reuse the established Kvantum recolor for every dark desktop palette.
+  # Reuse the established Kvantum recolor with a matching light/dark base.
   baseKvantum = pkgs.catppuccin-kvantum.override {
     variant = "mocha";
     accent = "blue";
@@ -16,52 +16,92 @@ let
   colorMap =
     id: palette:
     pkgs.writeText "${id}-colors.json" (
-      builtins.toJSON {
-        # Preserve Tokyo Night's original background mapping.
-        "#1e1e2e" = if id == "tokyo-night" then palette.base else palette.background;
-        "#181825" = if id == "tokyo-night" then palette.background else palette.base;
-        "#11111b" = palette.darkest;
-        "#313244" = palette.surface;
-        "#45475a" = palette.raised;
-        "#585b70" = palette.border;
-        "#6c7086" = palette.dim;
-        "#7f849c" = palette.dim;
-        "#9399b2" = palette.muted;
-        "#a6adc8" = palette.muted;
-        "#bac2de" = palette.brightText;
-        "#cdd6f4" = palette.text;
-        "#89b4fa" = palette.accent;
-        "#97bbf9" = palette.teal;
-        "#b4befe" = palette.accent;
-        "#74c7ec" = palette.blue;
-        "#89dceb" = palette.teal;
-        "#94e2d5" = palette.teal;
-        "#a6e3a1" = palette.green;
-        "#f9e2af" = palette.yellow;
-        "#fab387" = palette.warning;
-        "#f38ba8" = palette.urgent;
-        "#eba0ac" = palette.urgent;
-        "#cba6f7" = palette.lavender;
-        "#f5c2e7" = palette.lavender;
-        "#f2cdcd" = palette.brightText;
-        "#f5e0dc" = palette.text;
-      }
+      builtins.toJSON (
+        if palette.mode == "light" then
+          {
+            "#eff1f5" = palette.background;
+            "#e6e9ef" = palette.base;
+            "#dce0e8" = palette.darkest;
+            "#ccd0da" = palette.surface;
+            "#bcc0cc" = palette.raised;
+            "#acb0be" = palette.border;
+            "#9ca0b0" = palette.muted;
+            "#8c8fa1" = palette.muted;
+            "#7c7f93" = palette.dim;
+            "#6c6f85" = palette.dim;
+            "#5c5f77" = palette.muted;
+            "#4c4f69" = palette.text;
+            "#1e66f5" = palette.accent;
+            "#2762d9" = palette.accent;
+            "#3375f5" = palette.blue;
+            "#7287fd" = palette.accent;
+            "#04a5e5" = palette.blue;
+            "#209fb5" = palette.teal;
+            "#179299" = palette.teal;
+            "#40a02b" = palette.green;
+            "#df8e1d" = palette.yellow;
+            "#fe640b" = palette.warning;
+            "#d20f39" = palette.urgent;
+            "#e64553" = palette.urgent;
+            "#8839ef" = palette.lavender;
+            "#ea76cb" = palette.lavender;
+            "#dd7878" = palette.brightText;
+            "#dc8a78" = palette.text;
+          }
+        else
+          {
+            # Preserve Tokyo Night's original background mapping.
+            "#1e1e2e" = if id == "tokyo-night" then palette.base else palette.background;
+            "#181825" = if id == "tokyo-night" then palette.background else palette.base;
+            "#11111b" = palette.darkest;
+            "#313244" = palette.surface;
+            "#45475a" = palette.raised;
+            "#585b70" = palette.border;
+            "#6c7086" = palette.dim;
+            "#7f849c" = palette.dim;
+            "#9399b2" = palette.muted;
+            "#a6adc8" = palette.muted;
+            "#bac2de" = palette.brightText;
+            "#cdd6f4" = palette.text;
+            "#89b4fa" = palette.accent;
+            "#97bbf9" = palette.teal;
+            "#b4befe" = palette.accent;
+            "#74c7ec" = palette.blue;
+            "#89dceb" = palette.teal;
+            "#94e2d5" = palette.teal;
+            "#a6e3a1" = palette.green;
+            "#f9e2af" = palette.yellow;
+            "#fab387" = palette.warning;
+            "#f38ba8" = palette.urgent;
+            "#eba0ac" = palette.urgent;
+            "#cba6f7" = palette.lavender;
+            "#f5c2e7" = palette.lavender;
+            "#f2cdcd" = palette.brightText;
+            "#f5e0dc" = palette.text;
+          }
+      )
     );
-  darkKvantum =
+  recoloredKvantum =
     id: palette:
+    let
+      light = palette.mode == "light";
+      base = if light then latteKvantum else baseKvantum;
+      variant = if light then "Latte" else "Mocha";
+      sourceName = "catppuccin-${lib.toLower variant}-blue";
+    in
     pkgs.runCommand "${id}-kvantum-theme" { nativeBuildInputs = [ pkgs.python3 ]; } ''
       mkdir -p "$out/share/Kvantum/${palette.name}"
-      cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
-      cp ${baseKvantum}/share/Kvantum/catppuccin-mocha-blue/catppuccin-mocha-blue.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
+      cp ${base}/share/Kvantum/${sourceName}/${sourceName}.svg "$out/share/Kvantum/${palette.name}/${palette.name}.svg"
+      cp ${base}/share/Kvantum/${sourceName}/${sourceName}.kvconfig "$out/share/Kvantum/${palette.name}/${palette.name}.kvconfig"
       chmod -R u+w "$out"
-      python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap id palette} Catppuccin-Mocha-Blue ${palette.name}
+      python3 ${./files/scripts/recolor-theme.py} "$out" ${colorMap id palette} Catppuccin-${variant}-Blue ${palette.name}
     '';
   latteKvantum = pkgs.catppuccin-kvantum.override {
     variant = "latte";
     accent = "blue";
   };
   kvantumThemes = lib.mapAttrsToList (
-    id: palette: if palette.mode == "light" then latteKvantum else darkKvantum id palette
+    id: palette: if id == "catppuccin-latte" then latteKvantum else recoloredKvantum id palette
   ) palettes;
 in
 {
