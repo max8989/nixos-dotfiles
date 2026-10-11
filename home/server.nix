@@ -1,8 +1,6 @@
-# Minimal Home Manager profile for headless hosts (selected by the
-# `desktop = false` flag in flake.nix). Shares the exact same shell experience
-# as the desktops (zsh + starship + fzf/zoxide from ./shell.nix) but pulls in
-# no graphical software — the server's actual services run in Docker (see
-# hosts/homeserver/configuration.nix), not here.
+# Home Manager profile for headless hosts (desktop = false in flake.nix).
+# Shares the desktop's CLI essentials and shell, with extra administration
+# tools. Server services are configured in hosts/homeserver, not here.
 {
   pkgs,
   username,
@@ -10,6 +8,7 @@
 }:
 {
   imports = [
+    ./cli.nix
     ./shell.nix
   ];
 
@@ -21,30 +20,28 @@
   programs.home-manager.enable = true;
 
   home.packages = with pkgs; [
-    # --- CLI tools the shell.nix aliases depend on ---
-    eza # ls/ll/la/lt aliases
-    bat # `cat` alias
-    fastfetch # `neofetch` alias
-    neovim # `n` alias
-
-    # --- general CLI ---
-    htop
+    # Terminal sessions, resource usage, and file operations.
     btop
-    wget
-    curl
-    fd
-    ripgrep
-    jq
-    zip
     unzip
-    dnsutils # dig / nslookup
-    lm_sensors
     tmux
-    ncdu # disk usage — a 500 GB media disk fills up
+    ncdu
+    file
+    tree
+    rsync
 
-    # --- managing the Docker media stack ---
-    docker-compose
-    lazydocker
-    lazygit
+    # Process, hardware, disk, and network diagnostics.
+    lsof
+    strace
+    lm_sensors
+    smartmontools
+    pciutils
+    usbutils
+    inetutils
+    iperf3
+    openssl
+
+    # Edit and validate this configuration and run maintenance scripts.
+    nixfmt
+    python3
   ];
 }

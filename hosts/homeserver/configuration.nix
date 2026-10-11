@@ -16,6 +16,7 @@
     ../common.nix
     ./disko.nix
     ./hardware-configuration.nix
+    ./portainer.nix
   ];
 
   # The installed system boots with BIOS GRUB from the Corsair SSD. The

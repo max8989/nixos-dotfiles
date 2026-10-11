@@ -20,7 +20,8 @@ Every host imports `hosts/common.nix` (role-agnostic system config); graphical
 hosts additionally import `hosts/desktop.nix` (Hyprland, greetd, PipeWire,
 fonts, laptop peripherals). The `desktop` flag per host in `flake.nix` also
 selects the Home Manager profile: `home/home.nix` (full desktop) or
-`home/server.nix` (shell + CLI tools only). Each host dir adds its declarative
+`home/server.nix` (CLI tools and server administration). Both import
+`home/cli.nix` for shared command-line essentials. Each host dir adds its declarative
 disk layout (`disko.nix`) and generated `hardware-configuration.nix`. Fresh
 installs are one command via **disko + nixos-anywhere** (see
 [Install](#install)).
@@ -39,6 +40,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
 | Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
+| CLI packages | `home/cli.nix` + `home/server.nix` | Shared utilities, Git/Docker tools and core runtimes; extra headless administration tools |
 | Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, Swappy editing, recording and RSS tools |
 | Theme / TUIs | `home/theme.nix` + `home/omarchy.nix` | Runtime theme switcher, btop and VS Code; Superfile/fzf/prompt share the selected palette |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
@@ -70,9 +72,11 @@ hosts/
     configuration.nix          # ../common.nix + BIOS GRUB + key-only SSH + headless NVIDIA
     disko.nix                  # installed Corsair SSD: MBR + ext4 root + swap
     hardware-configuration.nix # generated on the installed server with --no-filesystems
+    portainer.nix              # Portainer CE Docker service, persistent data, HTTPS 9443
 home/
   home.nix                     # full desktop HM profile (desktop hosts)
-  server.nix                   # minimal HM profile: shell + CLI only (headless hosts)
+  cli.nix                      # CLI essentials shared by both profiles
+  server.nix                   # shell + shared CLI + administration (headless hosts)
   hyprland.nix  quickshell.nix  kitty.nix  shell.nix
   desktop.nix  scripts.nix  theming.nix
   starship.toml
@@ -334,6 +338,11 @@ swap partitions, BIOS GRUB, and authorized SSH key. The profile sets the host
 name to `homeserver` and uses the headless Home Manager configuration.
 `system.stateVersion` and `home.stateVersion` remain `26.05`.
 
+The server shares tools such as lazygit, lazydocker, Docker Compose, GitHub CLI,
+Yazi, eza/bat, ripgrep, jq, Node.js, Bun, and uv with the desktop. Its own profile
+adds tmux, btop, ncdu, rsync, Python, hardware/disk/network diagnostics, and
+nixfmt. Git and Vim are installed system-wide by `hosts/common.nix`.
+
 To activate it on the server:
 
 ```sh
@@ -352,6 +361,26 @@ Hardware can be regenerated with
 and swap stay in `hosts/homeserver/disko.nix`. Applying this profile uses the
 existing partitions. Running the fresh-install disko commands repartitions
 and formats the Corsair SSD.
+
+### Portainer
+
+After activating the server profile, open `https://192.168.2.43:9443` and create
+the initial administrator account. The default HTTPS certificate is
+self-signed. Portainer CE connects to the host's Docker socket and stores its
+configuration in the persistent Docker volume `portainer_data`.
+
+`hosts/homeserver/portainer.nix` pins the LTS image version and digest. Update
+that declaration and rebuild to upgrade it. NixOS manages the container through
+`docker-portainer.service`:
+
+```sh
+systemctl status docker-portainer
+sudo -A systemctl restart docker-portainer
+```
+
+See the [official Docker installation guide](https://docs.portainer.io/start/install-ce/server/docker/linux)
+for Portainer's initial setup. The separate Compose media stack can be managed
+through Portainer after it is restored to the server.
 
 ### (Optional) test in a VM first
 

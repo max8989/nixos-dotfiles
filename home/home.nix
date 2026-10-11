@@ -9,6 +9,7 @@
     ./hyprland.nix
     ./quickshell.nix
     ./kitty.nix
+    ./cli.nix
     ./shell.nix
     ./desktop.nix
     ./fcitx5.nix
@@ -80,16 +81,11 @@
     wf-recorder
 
     # --- independent script dependencies ---
-    jq
     yad
     libnotify # notify-send
     pavucontrol
     (python3.withPackages (ps: with ps; [ requests ])) # rss-summarize.py
-    curl
-    # NixOS has no global /usr/bin, so these must be requested explicitly —
-    # each is called by name from a script or keybind and would otherwise
-    # fail silently at runtime.
-    psmisc # process inspection and recording helpers
+    # Shared CLI dependencies (jq, curl, psmisc) come from cli.nix.
     xdg-utils # xdg-open — desktop file/URI actions
 
     # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
@@ -109,34 +105,16 @@
     blueman # bluetooth GUI (service enabled in common.nix)
     nwg-look # GTK theme settings
 
-    # --- CLI tools ---
-    eza # backs the ls/ll/la/lt aliases in shell.nix
-    bat # backs the `cat` alias in shell.nix
-    htop
-    wget
-    fd
-    ripgrep
-    fastfetch
-    yazi
+    # --- desktop-specific terminal tools ---
+    # General CLI tools and core development runtimes come from cli.nix.
     # superfile (TUI file manager, SUPER+E) is installed from superfile.nix —
     # it comes from the upstream flake input, not nixpkgs.
-    neovim
-    bun
-    lazygit
-    dnsutils # dig / nslookup (was `bind`)
     alsa-utils # alsamixer / aplay (was `alsa-utils`)
-    zip
-    stow
     nchat # terminal chat client (Telegram, WhatsApp)
 
     # --- dev block ---
-    docker-compose
-    lazydocker
     awscli2
     azure-cli
-    uv
-    nodejs
-    yarn
     (
       with dotnetCorePackages;
       combinePackages [
@@ -152,10 +130,8 @@
     claude-code
     codex
     # --- claude-config (~/repos/claude-config) dependencies ---
-    # Only gh is declared here; its install.sh fetches the MCP server
-    # binaries (github-mcp-server, mcp-server-git) itself into the repo's
-    # bin/, and gh is what performs that release download.
-    gh
+    # install.sh uses gh (provided by cli.nix) to fetch the MCP server
+    # binaries into that repository's bin/ directory.
     jetbrains.rider
     jetbrains.datagrip
   ];
