@@ -22,6 +22,7 @@
   home.packages = with pkgs; [
     # Terminal sessions, resource usage, and file operations.
     btop
+    nvtopPackages.nvidia
     unzip
     tmux
     ncdu
