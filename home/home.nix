@@ -104,6 +104,7 @@
     solaar # Logitech device manager
     blueman # bluetooth GUI (service enabled in common.nix)
     nwg-look # GTK theme settings
+    tor-browser
 
     # --- desktop-specific terminal tools ---
     # General CLI tools and core development runtimes come from cli.nix.
