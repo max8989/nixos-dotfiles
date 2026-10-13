@@ -5,11 +5,9 @@
 # compositor, no login manager, no audio stack. Administer it over SSH.
 #
 # The media stack (Traefik, Jellyfin, the *arr suite, qBittorrent behind the
-# PIA WireGuard container, SABnzbd, Homepage, …) stays in Docker Compose,
-# exactly as it ran on Arch — NixOS provides the Docker daemon + the NVIDIA
-# container toolkit and otherwise stays out of the way. Copy the compose
-# project + volumes back onto the machine after install and `docker compose
-# up -d`.
+# PIA WireGuard container, SABnzbd, Homepage, …) stays in Docker Compose.
+# media-storage.nix mounts the Samsung 1 TB library disk. The restored project
+# on the Corsair system disk runs with its original Compose restart policies.
 { lib, username, ... }:
 {
   imports = [
@@ -17,6 +15,7 @@
     ./disko.nix
     ./hardware-configuration.nix
     ./portainer.nix
+    ./media-storage.nix
   ];
 
   # The installed system boots with BIOS GRUB from the Corsair SSD. The

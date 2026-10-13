@@ -362,6 +362,37 @@ and swap stay in `hosts/homeserver/disko.nix`. Applying this profile uses the
 existing partitions. Running the fresh-install disko commands repartitions
 and formats the Corsair SSD.
 
+### Jellyfin and media services
+
+The restored Compose project and all its application configs live at
+`~/repos/docker-compose-nas` on the Corsair system disk. The Samsung 860 EVO
+1 TB SSD has one ext4 partition, labeled `media-library`, mounted by UUID at
+`/mnt/data`. The movies, TV, music, torrent, and Usenet directories were copied
+from Arch with their existing paths. Containers continue to see `/data`, so
+Jellyfin's users, library definitions, metadata, and watch history keep the
+same paths. The Samsung 870 EVO 500 GB SSD retains the original Arch setup.
+
+The services run with `docker compose up -d` and their original restart
+policies. `hosts/homeserver/media-storage.nix` only declares the existing media
+filesystem and makes Docker wait for it at boot. The restored Compose file
+uses the NVIDIA CDI device and publishes Jellyfin's HTTP port. Jellyfin uses
+the image version recorded in the Arch container; update that version in the
+Compose file when upgrading. The existing reverse proxy and `/jellyfin` base
+path are preserved. Direct LAN access is
+`http://192.168.2.43:8096/jellyfin/`.
+
+The runtime `.env` uses the NixOS user's group ID (`100`). It contains
+credentials and stays on the server with mode `0600`.
+An untouched copy of the original project is protected at
+`/var/backups/media-stack-arch-2026-10-11`.
+
+```sh
+cd ~/repos/docker-compose-nas
+docker compose up -d
+docker compose ps
+docker compose logs --tail 50 jellyfin
+```
+
 ### Portainer
 
 After activating the server profile, open `https://192.168.2.43:9443`. The

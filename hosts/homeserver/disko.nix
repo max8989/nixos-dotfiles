@@ -3,8 +3,9 @@
 # NixOS is installed on the Corsair SSD with an MBR partition table, an
 # ext4 root partition, and an 8.8 GiB swap partition. The disko module
 # derives fileSystems and swapDevices from this existing layout; a normal
-# nixos-rebuild does not partition or format disks. The separate Samsung
-# SSD is not managed by this configuration.
+# nixos-rebuild does not partition or format disks. The Samsung 500 GB Arch
+# SSD is separate; media-storage.nix mounts the Samsung 1 TB media partition.
+# This disko layout only describes the Corsair system disk.
 #
 # Sector boundaries were read from /sys/block/sda on the installed server
 # (512-byte sectors). MBR requires disko's legacy table type.
