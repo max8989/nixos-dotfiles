@@ -168,6 +168,8 @@ in
   ## prefix and put its bin dir on PATH so those installs work.
   ##########################################################################
   home.sessionVariables = {
+    EDITOR = "nvim";
+    VISUAL = "nvim";
     NPM_CONFIG_PREFIX = "${config.home.homeDirectory}/.npm-global";
   }
   // lib.optionalAttrs desktop {

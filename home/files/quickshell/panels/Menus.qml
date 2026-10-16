@@ -35,6 +35,10 @@ PanelWindow {
     readonly property var surfaceStyle: Config.surface(surfaceName)
     readonly property bool settingsPanel: ["audio", "wifi", "display", "battery"].indexOf(Runtime.menu) >= 0
     readonly property var settingsPanelItem: Runtime.menu === "audio" ? audioPanel : Runtime.menu === "wifi" ? wifiPanel : Runtime.menu === "display" ? displayPanel : Runtime.menu === "battery" ? batteryPanel : null
+    readonly property bool controlsNavigation: Runtime.menu === "controls" || Runtime.menu === "theme" || Runtime.menuHistory.some(entry => entry.menu === "controls")
+    readonly property bool categoryPage: Runtime.menu === "controls" && !search.text.trim()
+    property bool pointerPositionKnown: false
+    property point pointerPosition: Qt.point(0, 0)
     color: fromBar || settingsPanel ? "transparent" : Qt.alpha(surfaceStyle.scrim, surfaceStyle.scrimAlpha)
     property var rows: []
     readonly property var pageRows: {
@@ -45,10 +49,16 @@ PanelWindow {
             return controls.display;
         case "desktop":
             return controls.desktop;
+        case "learn":
+            return controls.learn;
+        case "trigger":
+            return controls.trigger;
         case "capture":
             return controls.capture;
         case "settings":
             return controls.settings;
+        case "configuration":
+            return controls.configuration;
         case "style":
             return controls.style;
         case "theme":
@@ -58,7 +68,7 @@ PanelWindow {
         case "audio":
             return controls.audio.slice(0, 2).concat(rows);
         case "power":
-            return controls.power.concat(controls.display.slice(1, 4), [controls.desktop[3]]);
+            return controls.system;
         case "tray":
             return root.trayRows();
         case "trayMenu":
@@ -85,6 +95,7 @@ PanelWindow {
         }
     }
     property var filtered: Logic.search(pageRows, search.text)
+    readonly property var selectedRow: filtered[list.currentIndex] || null
     property string selectionKey: ""
     property var trayHandle: null
     property string trayTitle: ""
@@ -98,17 +109,42 @@ PanelWindow {
     property bool clipboardBusy: false
     readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(d.networks.values), [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
-    readonly property string heading: ({
-            controls: "Desktop controls",
+    readonly property string heading: headingFor(Runtime.menu, trayTitle)
+    readonly property string breadcrumb: controlsNavigation && Runtime.menuHistory.length ? Runtime.menuHistory.map(entry => headingFor(entry.menu, entry.trayTitle)).concat([heading]).join(" › ") : ""
+    readonly property string listKeyHints: {
+        var hints = ["↑ ↓  Select"];
+        if (controlsNavigation) {
+            if (Runtime.menuHistory.length)
+                hints.push("←  Back");
+            if (selectedRow)
+                hints.push(selectedRow.submenu ? "Enter / →  Open" : "Enter  Activate");
+            if (selectedRow?.adjust)
+                hints.push("Ctrl+−/+  Adjust");
+            if (!search.text && Runtime.menuHistory.length)
+                hints.push("Backspace  Back");
+        } else {
+            hints.push("Enter  Open / toggle");
+            if (selectedRow?.adjust)
+                hints.push("← →  Adjust");
+        }
+        hints.push("Esc  Back / close");
+        return hints.join("    ");
+    }
+    function headingFor(name, title) {
+        return ({
+            controls: "Desktop menu",
             display: "Display",
             desktop: "Desktop",
             capture: "Capture",
-            settings: "Settings and shortcuts",
+            settings: "Setup",
+            configuration: "Configuration files",
+            learn: "Learn",
+            trigger: "Trigger",
             style: "Style",
             theme: "Theme",
             workspaces: "Workspaces",
             tray: "System tray",
-            trayMenu: trayTitle,
+            trayMenu: title,
             apps: "Applications",
             clipboard: "Clipboard",
             files: "Files",
@@ -119,18 +155,20 @@ PanelWindow {
             battery: "Battery",
             wifi: "Wi-Fi",
             bluetooth: "Bluetooth",
-            power: "Power",
+            power: "System",
             powerProfiles: "Power profile",
             notifications: "Notifications",
             calendar: "Calendar",
-            status: "System status"
-        })[Runtime.menu] || "Desktop"
-    function row(title, action, subtitle, icon) {
+            status: "About"
+        })[name] || "Desktop";
+    }
+    function row(title, action, subtitle, icon, submenu) {
         return {
             title: title,
             action: action,
             subtitle: subtitle || "",
-            icon: icon || ""
+            icon: icon || "",
+            submenu: !!submenu
         };
     }
     ControlActions {
@@ -162,7 +200,7 @@ PanelWindow {
                     Runtime.closeMenu();
                 }, "Tray application"));
             if (item.hasMenu)
-                rows.push(row(title + " menu", () => openTrayMenu(item.menu, title), "Browse application actions"));
+                rows.push(row(title + " menu", () => openTrayMenu(item.menu, title), "Browse application actions", "", true));
         });
         return rows;
     }
@@ -225,13 +263,65 @@ PanelWindow {
         selectionKey = item ? item.id || item.title : "";
         list.positionViewAtIndex(list.currentIndex, ListView.Contain);
     }
+    function movePointer(position) {
+        if (!visible)
+            return;
+        if (!pointerPositionKnown) {
+            pointerPosition = position;
+            pointerPositionKnown = true;
+            return;
+        }
+        if (position.x === pointerPosition.x && position.y === pointerPosition.y)
+            return;
+        pointerPosition = position;
+        if (!list.visible || !list.enabled)
+            return;
+        var local = list.mapFromItem(root.contentItem, position.x, position.y);
+        if (local.x < 0 || local.y < 0 || local.x >= list.width || local.y >= list.height)
+            return;
+        var index = list.indexAt(local.x + list.contentX, local.y + list.contentY);
+        if (index >= 0)
+            selectIndex(index);
+    }
     function adjust(direction) {
         var item = filtered[list.currentIndex];
         if (!item?.adjust || confirmation || passwordPrompt)
             return false;
         item.adjust(direction);
-        focusTimer.restart();
+        if (!controlsNavigation)
+            focusTimer.restart();
         return true;
+    }
+    function horizontalKey(event, direction) {
+        // Modified arrows keep text selection/editing and Alt+Left navigation.
+        if (event.modifiers !== Qt.NoModifier || confirmation || passwordPrompt)
+            return false;
+        if (!controlsNavigation)
+            return adjust(direction);
+        if (direction < 0) {
+            if (Runtime.menuHistory.length)
+                back();
+        } else if (selectedRow?.submenu)
+            activate();
+        // A root-level Left or a leaf-level Right must not edit or activate.
+        return true;
+    }
+    function listKey(event) {
+        if (!controlsNavigation || confirmation || passwordPrompt)
+            return false;
+        var modifiers = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier);
+        if (modifiers === Qt.ControlModifier) {
+            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal)
+                return adjust(1);
+            if (event.key === Qt.Key_Minus)
+                return adjust(-1);
+        }
+        if (event.key === Qt.Key_Backspace && event.modifiers === Qt.NoModifier && !search.text) {
+            if (Runtime.menuHistory.length)
+                back();
+            return true;
+        }
+        return false;
     }
     function requestPower(action) {
         if (Config.preview) {
@@ -295,7 +385,7 @@ PanelWindow {
             });
             return;
         } else if (menu === "files") {
-            items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"), folderPath));
+            items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"), folderPath, "", true));
             items.push(row("Open this folder", () => {
                 Runtime.launch([Config.bin.xdgOpen, folderPath]);
                 Runtime.closeMenu();
@@ -345,7 +435,15 @@ PanelWindow {
             if (PowerProfiles.hasPerformanceProfile)
                 items.push(row("Performance", () => setProfile(PowerProfile.Performance)));
         } else if (menu === "status") {
-            items = [row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature) + " °C"), row("Memory " + Metrics.ram.percent + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB"), row("Battery " + (Battery.present ? Battery.percent + "%" : "AC"), () => {}, Battery.band), row("Network", () => openPage("wifi"), Metrics.networkRate), row("Bluetooth", () => openPage("bluetooth")), row("Audio and microphone", () => openPage("audio")), row("Night light", () => Display.toggleNightlight(), Preferences.nightlight ? Preferences.temperature + " K" : "Off")];
+            items = [
+                row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature) + " °C"),
+                row("Memory " + Metrics.ram.percent + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB"),
+                row("Battery " + (Battery.present ? Battery.percent + "%" : "AC"), () => {}, Battery.band),
+                row("Network", () => openPage("wifi"), Metrics.networkRate, "", true),
+                row("Bluetooth", () => openPage("bluetooth"), "", "", true),
+                row("Audio and microphone", () => openPage("audio"), "", "", true),
+                row("Night light", () => Display.toggleNightlight(), Preferences.nightlight ? Preferences.temperature + " K" : "Off")
+            ];
         }
         rows = items;
     }
@@ -361,7 +459,7 @@ PanelWindow {
                 Runtime.launch([Config.bin.xdgOpen, path]);
                 Runtime.closeMenu();
             }
-        }, directory ? "Folder" : "File");
+        }, directory ? "Folder" : "File", "", directory);
     }
     function connectNetwork(network) {
         if (Config.preview)
@@ -410,6 +508,7 @@ PanelWindow {
         refresh()
     onFolderPathChanged: search.text = ""
     onVisibleChanged: if (visible) {
+        pointerPositionKnown = false;
         reveal.restart();
         search.text = "";
         confirmation = "";
@@ -640,13 +739,20 @@ PanelWindow {
     Glass {
         id: card
         surface: root.surfaceName
-        width: Math.min(root.settingsPanel ? 540 : root.fromBar ? 480 : 720, root.width - 32)
-        height: Math.min(root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : root.fromBar ? 560 : 650, root.height - 80)
+        width: Math.min(root.settingsPanel ? 540 : Runtime.menu === "controls" || root.fromBar ? 480 : 720, root.width - 32)
+        height: Math.min(root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : Runtime.menu === "controls" ? 520 : root.fromBar ? 560 : 650, root.height - 80)
         x: root.settingsPanel ? root.width - width - 16 : root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
         y: root.fromBar || root.settingsPanel ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
         transformOrigin: root.fromBar ? (Config.preview ? Item.Bottom : Item.Top) : Item.Center
         MouseArea {
             anchors.fill: parent
+        }
+        HoverHandler {
+            // Opening or rebuilding rows under a stationary cursor is not
+            // pointer navigation. Track scene positions across layout changes.
+            parent: root.contentItem
+            blocking: false
+            onPointChanged: root.movePointer(point.scenePosition)
         }
         ColumnLayout {
             anchors {
@@ -656,6 +762,7 @@ PanelWindow {
             spacing: Config.spacing.rowGap
             RowLayout {
                 Chip {
+                    objectName: "menuBack"
                     text: "‹"
                     visible: Runtime.menuHistory.length > 0
                     Accessible.name: "Back"
@@ -672,6 +779,16 @@ PanelWindow {
                     text: "×"
                     onClicked: Runtime.closeMenu()
                 }
+            }
+            Text {
+                objectName: "menuBreadcrumb"
+                visible: root.breadcrumb !== ""
+                text: root.breadcrumb
+                textFormat: Text.PlainText
+                elide: Text.ElideMiddle
+                color: Config.theme.dim
+                font.pixelSize: Config.fonts.bodySmall
+                Layout.fillWidth: true
             }
             Text {
                 visible: Config.preview
@@ -719,7 +836,7 @@ PanelWindow {
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 placeholderTextColor: Config.theme.dim
-                placeholderText: Runtime.menu === "files" ? root.folderPath : Runtime.menu === "controls" ? "Search controls… volume, dnd, bluetooth" : "Search…"
+                placeholderText: Runtime.menu === "files" ? root.folderPath : Runtime.menu === "controls" ? "Search menu…" : "Search…"
                 color: Config.theme.text
                 font.pixelSize: Config.fonts.heading
                 selectByMouse: true
@@ -735,8 +852,9 @@ PanelWindow {
                 }
                 Keys.onDownPressed: root.selectIndex(list.currentIndex + 1)
                 Keys.onUpPressed: root.selectIndex(list.currentIndex - 1)
-                Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
-                Keys.onRightPressed: event => event.accepted = root.adjust(1)
+                Keys.onLeftPressed: event => event.accepted = root.horizontalKey(event, -1)
+                Keys.onRightPressed: event => event.accepted = root.horizontalKey(event, 1)
+                Keys.onPressed: event => event.accepted = root.listKey(event)
             }
             Text {
                 visible: Runtime.message !== ""
@@ -832,8 +950,9 @@ PanelWindow {
                 keyNavigationEnabled: true
                 Keys.onReturnPressed: root.activate()
                 Keys.onEnterPressed: root.activate()
-                Keys.onLeftPressed: event => event.accepted = root.adjust(-1)
-                Keys.onRightPressed: event => event.accepted = root.adjust(1)
+                Keys.onLeftPressed: event => event.accepted = root.horizontalKey(event, -1)
+                Keys.onRightPressed: event => event.accepted = root.horizontalKey(event, 1)
+                Keys.onPressed: event => event.accepted = root.listKey(event)
                 model: root.filtered
                 // Assigning a new model resets currentIndex to 0, so restore the
                 // selection after the reset rather than on root.filteredChanged.
@@ -845,16 +964,25 @@ PanelWindow {
                     required property var modelData
                     required property int index
                     width: list.width
-                    height: modelData.thumbnail ? 104 : subtitle.visible ? 65 : 44
+                    height: root.categoryPage ? 48 : rowDelegate.modelData?.thumbnail ? 104 : subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
                     focusPolicy: Qt.NoFocus
                     background: Rectangle {
                         radius: 9
-                        color: rowDelegate.highlighted || rowDelegate.hovered ? Qt.alpha(Config.theme.text, Config.controls.hoverFillAlpha) : "transparent"
+                        color: rowDelegate.highlighted ? Qt.alpha(Config.theme.text, Config.controls.hoverFillAlpha) : "transparent"
                         border.color: rowDelegate.highlighted ? Config.theme.accent : "transparent"
                     }
                     contentItem: RowLayout {
                         spacing: 10
+                        Text {
+                            visible: !!rowDelegate.modelData.glyph
+                            text: rowDelegate.modelData.glyph || ""
+                            font.family: Config.theme.uiFont
+                            font.pixelSize: Config.fonts.heading
+                            color: Config.theme.accent
+                            horizontalAlignment: Text.AlignHCenter
+                            Layout.preferredWidth: visible ? 26 : 0
+                        }
                         Image {
                             visible: modelData.icon !== ""
                             source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
@@ -888,7 +1016,7 @@ PanelWindow {
                             }
                             Text {
                                 id: subtitle
-                                visible: modelData.subtitle !== ""
+                                visible: !root.categoryPage && !!rowDelegate.modelData?.subtitle
                                 text: modelData.subtitle
                                 color: Config.theme.dim
                                 font.family: Config.theme.uiFont
@@ -910,8 +1038,6 @@ PanelWindow {
                         root.selectIndex(index);
                         root.activate();
                     }
-                    onHoveredChanged: if (hovered)
-                        root.selectIndex(index)
                 }
                 Label {
                     anchors.centerIn: parent
@@ -997,12 +1123,13 @@ PanelWindow {
                 Layout.fillHeight: true
             }
             Text {
+                objectName: "menuKeyHints"
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
                 font.pixelSize: Config.fonts.bodySmall
-                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : "↑ ↓  Select    Enter  Open / toggle    ← →  Adjust    Esc  Back / close"
+                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : root.listKeyHints
             }
         }
     }

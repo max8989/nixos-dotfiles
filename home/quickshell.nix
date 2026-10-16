@@ -83,7 +83,7 @@ let
       notifySend = "${pkgs.libnotify}/bin/notify-send";
       nmtui = "${pkgs.networkmanager}/bin/nmtui";
       bluetooth = "${pkgs.blueman}/bin/blueman-manager";
-      editor = lib.getExe pkgs.zed-editor;
+      editor = lib.getExe pkgs.neovim;
       inputMethod = "${pkgs.fcitx5}/bin/fcitx5-remote";
       curl = lib.getExe pkgs.curl;
       grim = lib.getExe pkgs.grim;

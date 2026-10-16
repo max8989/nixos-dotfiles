@@ -107,6 +107,18 @@ ShellRoot {
         for (var j = 0; j < item.children.length; j++)
             controls(item.children[j], result);
     }
+    function menuRows() {
+        var view = root.find(menus.contentItem, "menuList");
+        var rows = [];
+        for (var i = 0; i < view.contentItem.children.length; i++) {
+            var child = view.contentItem.children[i];
+            if (!child.modelData || child.index === undefined) continue;
+            var position = child.mapToItem(menus.contentItem, child.width / 2, child.height / 2);
+            rows.push({id: child.modelData.id || child.modelData.title, x: position.x,
+                       y: position.y, height: child.height, highlighted: child.highlighted});
+        }
+        return rows;
+    }
     IpcHandler {
         target: "qa"
         function inspect(): string {
@@ -120,9 +132,20 @@ ShellRoot {
             }
             return JSON.stringify({buttons: buttons, card: card, menu: Desktop.Runtime.menu,
                                    message: Desktop.Runtime.message,
-                                   query: root.find(menus.contentItem, "menuSearch").text,
-                                   rows: menus.filtered.map(r => ({id:r.id || r.title, title:r.title, value:r.value || ""})),
-                                   selected: menus.filtered[root.find(menus.contentItem, "menuList").currentIndex]?.id || "",
+                                    query: root.find(menus.contentItem, "menuSearch").text,
+                                    searchCursor: root.find(menus.contentItem, "menuSearch").cursorPosition,
+                                    searchSelection: root.find(menus.contentItem, "menuSearch").selectedText,
+                                    rows: menus.filtered.map(r => ({id:r.id || r.title, title:r.title, value:r.value || "", submenu:!!r.submenu})),
+                                    selected: menus.filtered[root.find(menus.contentItem, "menuList").currentIndex]?.id || "",
+                                    listFocus: root.find(menus.contentItem, "menuList").focus,
+                                    breadcrumb: menus.breadcrumb,
+                                    keyHints: root.find(menus.contentItem, "menuKeyHints").text,
+                                    backVisible: root.find(menus.contentItem, "menuBack").visible,
+                                    selectedTheme: Desktop.Config.selectedTheme,
+                                    themeCount: Desktop.Config.data.themeOrder.length,
+                                    menuRows: root.menuRows(),
+                                    listHeight: root.find(menus.contentItem, "menuList").height,
+                                    listContentHeight: root.find(menus.contentItem, "menuList").contentHeight,
                                    confirmation: menus.confirmation, requestedPower: root.requestedPower,
                                    cancelFocused: root.find(menus.contentItem, "cancelPower").activeFocus,
                                    cancelVisualFocus: root.find(menus.contentItem, "cancelPower").visualFocus,
@@ -164,6 +187,10 @@ ShellRoot {
         }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
+        function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
+        function pointMenu(x: int, y: int): void {
+            mouseEvents.mouseMove(menus.contentItem, x, y, 1, Qt.NoButton, Qt.NoModifier);
+        }
         function addNotification(): void {
             Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
         }
@@ -197,6 +224,25 @@ print(f'qa_backlight,backlight,{value},{value}%,100')
 ''')
     brightness.chmod(0o700)
     settings["bin"]["brightnessctl"] = str(brightness)
+    # Observe theme activation without changing any application or wallpaper.
+    theme_command = output / "desktop-theme"
+    theme_calls = output / "theme-calls.jsonl"
+    theme_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
+assert len(sys.argv) == 3 and sys.argv[1] == 'set'
+with pathlib.Path(__file__).with_name('theme-calls.jsonl').open('a') as calls:
+    print(json.dumps(sys.argv[2]), file=calls)
+''')
+    theme_command.chmod(0o700)
+    settings["bin"]["theme"] = str(theme_command)
+    assert settings["bin"]["editor"].endswith("/bin/nvim"), settings["bin"]["editor"]
+    editor_calls = output / "editor-calls.jsonl"
+    terminal_command = output / "editor-terminal"
+    terminal_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
+with pathlib.Path(__file__).with_name('editor-calls.jsonl').open('a') as calls:
+    print(json.dumps(sys.argv[1:]), file=calls)
+''')
+    terminal_command.chmod(0o700)
+    settings["bin"]["kitty"] = str(terminal_command)
     # Exercise the production QML Process/stdin confirmation protocol without
     # contacting Hyprland. The Python helper's rollback is tested separately.
     settings_helper = output / "settings-helper"
@@ -278,13 +324,24 @@ elif sys.argv[1] == 'battery-info':
     assert not control["visualFocus"] and not control["selected"] and control["borderAlpha"] == 0, control
     capture("bar-after-click")
 
-    def key(name):
-        run(["wtype", "-s", "80", "-k", name])
+    def key(name, *modifiers):
+        command = ["wtype", "-s", "80"]
+        for modifier in modifiers:
+            command.extend(["-M", modifier])
+        command.extend(["-k", name])
+        for modifier in reversed(modifiers):
+            command.extend(["-m", modifier])
+        run(command)
 
     def query(text):
         # Allow the new virtual keyboard's focus event to reach Qt before
         # sending modifiers, just as the other wtype calls do.
-        run(["wtype", "-s", "150", "-M", "ctrl", "-k", "l", "-m", "ctrl", "-s", "80", "-k", "BackSpace", "-d", "10", text])
+        command = ["wtype", "-s", "150", "-M", "ctrl", "-k", "l", "-m", "ctrl", "-s", "80"]
+        # An empty-search Backspace now navigates, so only delete existing text.
+        if inspect()["query"]:
+            command.extend(["-k", "BackSpace"])
+        command.extend(["-d", "10", text])
+        run(command)
         wait(lambda: inspect()["query"] == text)
 
     qa("openApps")
@@ -325,9 +382,142 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["menu"] == "controls")
     time.sleep(0.2)
     capture("controls-home")
+    state = inspect()
+    assert [r["title"] for r in state["rows"]] == ["Apps", "Learn", "Trigger", "Style", "Setup", "About", "System"]
+    assert all(r["submenu"] for r in state["rows"])
+    assert state["listContentHeight"] <= state["listHeight"]
+    assert state["selected"] == "apps"
+    # The headless seat has no physical mouse. Supply its initial position
+    # before testing a movement, as a real seat does when the window maps.
+    qa("pointMenu", round(state["card"]["x"] + 20), round(state["card"]["y"] + 20))
+    target = next(r for r in state["menuRows"] if r["id"] == "settings")
+    qa("pointMenu", round(target["x"]), round(target["y"]))
+    wait(lambda: inspect()["selected"] == "settings")
+    key("Down")
+    wait(lambda: inspect()["selected"] == "status")
+    assert [r["id"] for r in inspect()["menuRows"] if r["highlighted"]] == ["status"]
+    key("Escape")
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
+    qa("pointMenu", round(target["x"]), round(target["y"]))
+    time.sleep(.3)
+    assert inspect()["selected"] == "apps", "Opening beneath a stationary cursor stole selection"
+    capture("controls-stationary-pointer")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x600"])
+    time.sleep(.3)
+    assert inspect()["listContentHeight"] <= inspect()["listHeight"], "Root categories require scrolling on a small screen"
+    capture("controls-compact-categories")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1920x1080"])
+    time.sleep(.3)
+    print("Compact categories, stationary pointer, keyboard selection and small-screen layout passed")
+    key("Left")
+    key("BackSpace")
+    assert inspect()["menu"] == "controls" and inspect()["query"] == ""
+    for text in ("theme", "Theme", " theme "):
+        query(text)
+        wait(lambda: [r["id"] for r in inspect()["rows"]] == ["theme"])
+    query("theme")
+    key("Left")
+    assert inspect()["menu"] == "controls" and inspect()["query"] == "theme"
+    assert "→" in inspect()["keyHints"] and "Adjust" not in inspect()["keyHints"]
+    capture("controls-theme-search")
+    # Modified arrows still edit/select text instead of opening a submenu.
+    key("Home")
+    # Removing Sway's last virtual keyboard blurs the field and clears its
+    # selection. Observe selection while that keyboard is still connected.
+    selection_keyboard = subprocess.Popen(
+        ["wtype", "-s", "150", "-M", "shift", "-k", "Right", "-m", "shift", "-s", "2000"],
+        env=env, stdout=log_file, stderr=subprocess.STDOUT)
+    processes.append(selection_keyboard)
+    wait(lambda: inspect()["searchSelection"] == "t", seconds=2)
+    assert selection_keyboard.wait(timeout=5) == 0
+    key("End")
+    key("Left", "ctrl")
+    wait(lambda: inspect()["searchCursor"] == 0)
+    assert inspect()["menu"] == "controls"
+    key("End")
+    key("BackSpace")
+    wait(lambda: inspect()["query"] == "them")
+    query("Tokyo Night")
+    wait(lambda: not inspect()["rows"])
+    for name in ("Right", "Return", "Left"):
+        key(name)
+    assert inspect()["menu"] == "controls" and not inspect()["rows"]
+    query("theme")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "theme" and inspect()["query"] == "")
+    state = inspect()
+    assert len(state["rows"]) == state["themeCount"]
+    assert state["breadcrumb"] == "Desktop menu › Theme" and state["backVisible"]
+    assert [r["id"] for r in state["rows"] if r["value"] == "Selected"] == ["theme-" + state["selectedTheme"]]
+    query("light")
+    wait(lambda: bool(inspect()["rows"]) and all("Light" in r["title"] or r["title"] in ("White", "Catppuccin Latte") for r in inspect()["rows"]))
+    key("Left")
+    wait(lambda: inspect()["menu"] == "controls")
+    assert inspect()["query"] == "theme" and inspect()["selected"] == "theme"
+    key("Right")
+    wait(lambda: inspect()["menu"] == "theme")
+    key("BackSpace")
+    wait(lambda: inspect()["menu"] == "controls" and inspect()["query"] == "theme")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "theme")
+    query("gruvbox")
+    initial_theme = inspect()["selectedTheme"]
+    key("Right")
+    assert inspect()["menu"] == "theme" and inspect()["selectedTheme"] == initial_theme
+    assert not theme_calls.exists(), "Right applied a palette"
+    capture("controls-theme-picker")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["selectedTheme"] == "gruvbox")
+    assert [json.loads(line) for line in theme_calls.read_text().splitlines()] == ["gruvbox"]
+    # The direct theme shortcut has the same leaf protection without a parent.
+    qa("openTheme")
+    wait(lambda: inspect()["menu"] == "theme")
+    key("Left")
+    key("BackSpace")
+    key("Right")
+    assert inspect()["menu"] == "theme" and not inspect()["backVisible"]
+    assert len(theme_calls.read_text().splitlines()) == 1
+    key("Escape")
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
+    query("")
+    for _ in range(len(inspect()["rows"])):
+        if inspect()["selected"] == "style":
+            break
+        key("Down")
+    assert inspect()["selected"] == "style"
+    key("Right")
+    wait(lambda: inspect()["menu"] == "style")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "theme")
+    assert inspect()["breadcrumb"] == "Desktop menu › Style › Theme"
+    capture("controls-theme-breadcrumb")
+    qa("focusControl", "menuList")
+    key("Left")
+    wait(lambda: inspect()["menu"] == "style")
+    key("BackSpace")
+    wait(lambda: inspect()["menu"] == "controls" and inspect()["selected"] == "style")
+    query("keyboard shortcuts")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and editor_calls.exists())
+    assert [json.loads(line) for line in editor_calls.read_text().splitlines()] == [[
+        "-e", settings["bin"]["editor"], settings["paths"]["dotfiles"] + "/home/files/hypr/keybindings.lua"]]
+    print("Configuration files route through Kitty to Neovim passed")
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
+    query("system")
+    wait(lambda: inspect()["rows"][0]["id"] == "power")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "power")
+    assert {"presentation", "power-profile", "battery", "session-reboot"}.issubset({r["id"] for r in inspect()["rows"]})
+    key("Left")
+    wait(lambda: inspect()["menu"] == "controls")
     query("dnd")
     wait(lambda: [r["id"] for r in inspect()["rows"]] == ["dnd"])
     initial_dnd = inspect()["dnd"]
+    key("Right")
+    assert inspect()["dnd"] == initial_dnd and inspect()["menu"] == "controls"
     key("Return")
     wait(lambda: inspect()["dnd"] != initial_dnd)
     assert inspect()["selected"] == "dnd"
@@ -341,10 +531,26 @@ elif sys.argv[1] == 'battery-info':
     query("brightness")
     wait(lambda: bool(inspect()["rows"]) and inspect()["rows"][0]["value"] == "50%")
     key("Right")
-    key("Right")
     key("Left")
+    assert inspect()["rows"][0]["value"] == "50%" and inspect()["menu"] == "controls"
+    assert "Ctrl+−/+" in inspect()["keyHints"] and "→" not in inspect()["keyHints"]
+    key("equal", "ctrl")
+    wait(lambda: inspect()["rows"][0]["value"] == "55%")
+    key("plus", "ctrl", "shift")
+    wait(lambda: inspect()["rows"][0]["value"] == "60%")
+    key("minus", "ctrl")
     wait(lambda: bool(inspect()["rows"]) and inspect()["rows"][0]["value"] == "55%")
-    assert inspect()["selected"] == "brightness"
+    assert inspect()["selected"] == "brightness" and inspect()["query"] == "brightness"
+    run(["wtype", "-s", "150", "+-"])
+    wait(lambda: inspect()["query"] == "brightness+-")
+    assert (output / "brightnessctl.state").read_text() == "55"
+    query("brightness")
+    qa("focusControl", "menuList")
+    key("minus", "ctrl")
+    wait(lambda: inspect()["rows"][0]["value"] == "50%")
+    assert inspect()["listFocus"]
+    key("equal", "ctrl")
+    wait(lambda: inspect()["rows"][0]["value"] == "55%")
     capture("controls-brightness")
 
     query("wifi")
@@ -381,6 +587,8 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["menu"] == "controls")
 
     query("restart")
+    key("Right")
+    assert not inspect()["confirmation"] and not inspect()["requestedPower"]
     key("Return")
     wait(lambda: inspect()["confirmation"] == "reboot")
     assert inspect()["cancelFocused"] and inspect()["cancelVisualFocus"] and inspect()["requestedPower"] == ""
@@ -393,7 +601,7 @@ elif sys.argv[1] == 'battery-info':
     key("Tab")
     key("Return")  # The fixture records the signal; it cannot power off the host.
     wait(lambda: inspect()["requestedPower"] == "reboot" and inspect()["menu"] == "")
-    print("Controls search, live DND/brightness, submenu history, calendar, notification focus and power confirmation passed")
+    print("Controls picker search, arrow navigation, breadcrumbs, value shortcuts, submenu history, calendar, notification focus and power confirmation passed")
 
     # The actual panel controls run against private service fixtures; keyboard
     # input exercises sliders, routing, radio, credentials and power profiles.
@@ -444,7 +652,10 @@ elif sys.argv[1] == 'battery-info':
     assert inspect()["menu"] == "wifi" and not inspect()["wifiPassword"]
     qa("selectGuestWifi")
     wait(lambda: inspect()["focused"] == "wifiPassword")
-    run(["wtype", "-s", "150", "test-password", "-k", "Return"])
+    run(["wtype", "-s", "150", "test-passwor"])
+    key("Left")
+    key("Right")
+    run(["wtype", "-s", "150", "d", "-k", "Return"])
     wait(lambda: inspect()["wifiPassword"])
     key("Escape")
 
@@ -562,7 +773,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "learn", "trigger", "configuration", "style", "theme", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
@@ -599,7 +810,7 @@ try:
     shell.terminate()
     shell.wait(timeout=5)
     interaction_checks()
-    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "appFrequency": True, "appFrequencyPersistence": True, "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
+    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "appFrequency": True, "appFrequencyPersistence": True, "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "themePickerSearch": True, "menuArrowNavigation": True, "menuBreadcrumbs": True, "controlValueShortcuts": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
     print(f"{len(menu_names)} menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
 except Exception:
     fixture_path = output / "interactions.qml"

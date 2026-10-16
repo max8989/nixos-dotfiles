@@ -93,6 +93,8 @@
     google-chrome
     libreoffice-fresh
     vlc
+    snapshot # GNOME Camera — photos and videos through PipeWire
+    cameractrls-gtk4 # Webcam exposure, white balance, and sharpness controls
     discord
     slack
     spotify
@@ -105,6 +107,7 @@
     blueman # bluetooth GUI (service enabled in common.nix)
     nwg-look # GTK theme settings
     tor-browser
+    zoom-us
 
     # --- desktop-specific terminal tools ---
     # General CLI tools and core development runtimes come from cli.nix.

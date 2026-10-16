@@ -33,6 +33,8 @@ in
       '';
   shell-integration =
     assert home.programs.quickshell.enable;
+    assert home.home.sessionVariables.EDITOR == "nvim";
+    assert home.home.sessionVariables.VISUAL == "nvim";
     assert !home.programs.waybar.enable;
     assert !home.services.swaync.enable;
     assert !home.programs.hyprlock.enable;

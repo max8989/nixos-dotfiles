@@ -1,10 +1,10 @@
 # Handoff — custom Quickshell desktop
 
-**Updated:** 2026-09-28
-**Status:** Desktop controls and the four settings panels are active in the g12
-user session. The running bundle matches the tested source and all four direct
-shortcuts are registered. The final system generation is built; its activation
-requires the user's sudo password. Preferences remain outside the Nix store.
+**Updated:** 2026-10-15
+**Status:** The global Desktop menu and four settings panels are active in the g12
+user session. The applied bundle matches the tested source, and all four direct
+shortcuts remain registered. The system generation is activated. Preferences
+remain outside the Nix store.
 
 ## Settings panels
 
@@ -28,14 +28,14 @@ requires the user's sudo password. Preferences remain outside the Nix store.
 - Battery shows native UPower state and kernel capacity, health, cycles and
   charge thresholds. Power profile buttons remain in the panel after selection.
   Charge thresholds are read-only; panel font size affects these four panels.
-- Final bundle: `/nix/store/wkyl27i3lpys7wbxjqgs363q3841d4bk-quickshell-desktop`.
-  Final system: `/nix/store/2ydvq4dmc9mr1xxsf3m01ilvpjlnihz1-nixos-system-thinkpad-x1-carbon-g12-26.11.20260907.dc5d91f`.
+- Active bundle: `/nix/store/ymbp2nqxp00dfwn5p07ykg50iq3jr8bj-quickshell-desktop`.
+  Active system: `/nix/store/dsala7m6w5v427r9yddlbsnrl180aiqi-nixos-system-thinkpad-x1-carbon-g12-26.11.20261003.a7868a7`.
 - Validation: flake checks and complete system/user builds pass; 10 helper
   regressions cover DNS rollback, IPv6, scale validation/quoting, timeout/EOF
   rollback and confirmed persistence. The full isolated UI suite passes all
-  22 menus, settings keyboard interactions, Wi-Fi credentials, scale confirmation,
+  27 menus, settings keyboard interactions, Wi-Fi credentials, scale confirmation,
   compact layouts and existing clipboard/notification/power regressions.
-  Results: `/tmp/quickshell-settings-final-qa/result.json`.
+  Results: `/tmp/quickshell-global-menu-qa-verified/result.json`.
 - Real hardware readers confirmed 53.4 Wh capacity, 94% health, 121 cycles,
   a 100% charge limit, current Wi-Fi details, and valid eDP-1 scale presets.
   UI tests use isolated fixtures; they do not change physical DNS, audio routing,
@@ -47,14 +47,29 @@ requires the user's sudo password. Preferences remain outside the Nix store.
 
 ## Desktop controls
 
-- Super+M opens the searchable controls menu. Exact action titles rank ahead
+- Super+M opens the compact global Desktop menu: Apps, Learn, Trigger, Style,
+  Setup, About and System. Seven single-line category rows fit at 1024×600.
+  Setup groups device/connection/notification settings and configuration files;
+  System groups session actions, presentation mode, power profiles and battery.
+  Trigger groups capture, clipboard, desktop utilities and media; Learn has editor
+  references. Exact action titles rank ahead
   of matches in descriptions; aliases include `dnd`, `wifi` and `restart`.
 - Sound, microphone, brightness, night light, DND, connectivity, power profiles,
   media, workspaces, calendar, notifications, reminders, clipboard, capture,
   source settings and tray application menus share the existing shell services.
-- Up/Down selects, Enter opens or toggles, and Left/Right adjusts levels.
-  Escape/Alt+Left goes back and restores the parent query/selection. Ctrl+L
-  selects the search text. Calendar and notification actions have keyboard focus.
+- Root search finds controls and pickers; `theme` returns only Theme. Palette
+  names and light/dark choices are searchable inside Theme.
+- Mapping the menu or rebuilding rows beneath a stationary pointer keeps keyboard
+  selection. A passive hover handler selects rows only when scene coordinates
+  change; the first pointer position establishes a baseline. Apps is selected on open.
+- Configuration actions launch Neovim in Kitty with separate filename arguments;
+  `EDITOR` and `VISUAL` are `nvim`. Neovim's separately managed config is untouched.
+- Up/Down selects, Right opens submenus, and Left goes back without closing the
+  root. Enter activates actions; Right never runs a leaf action. Ctrl+Minus/Plus
+  adjusts levels (Ctrl+Equal also increases). Ordinary minus/plus types in search.
+  Empty-search Backspace and Escape/Alt+Left restore the parent query/selection.
+  Ctrl+L selects the search text. Breadcrumbs and row-specific hints show the path
+  and available keys. Sliders, calendar and password fields retain their arrows.
 - Logout, reboot, shutdown and hibernate focus Cancel first and require an
   explicit confirmation. The isolated fixture records the power signal without
   taking any real session action.
@@ -62,10 +77,18 @@ requires the user's sudo password. Preferences remain outside the Nix store.
   The former `quickshell/desktop` path was a config alias into the Nix store,
   causing saves to fail. The UI regression fixture reproduces that alias and
   verifies that DND saves outside it.
-- Validation: both Nix checks pass; the private Sway harness passes 21 menus,
-  live DND/backlight state, ranked search, submenu history, calendar, notification
-  focus, visible confirmation focus, clipboard regressions and monitor layouts.
-  Latest results: `/tmp/quickshell-controls-persistence-qa/result.json`.
+- Validation (2026-10-15): flake checks and the full system build pass. The private
+  Sway harness passes 27 menus, compact categories at 1024×600, stationary-pointer
+  and keyboard selection, Neovim launch arguments, picker-only theme search, navigation/history,
+  breadcrumbs, modified text editing, value shortcuts, native settings panels,
+  Cancel-first power actions, clipboard regressions and monitor layouts.
+  Latest results: `/tmp/quickshell-global-menu-qa-verified/result.json`.
+- Live verification: the applied bundle matches the UI-tested files; the seven
+  categories fit on the root page, Setup opens with Right, and Left returns to
+  the root. Theme search returns only Theme and preserves the query when going
+  back. Super+M remains registered, and the current invocation has no QML errors.
+  Screenshots: `/tmp/quickshell-global-menu-live.png` and
+  `/tmp/quickshell-global-menu-live-theme.png`.
 
 ## Decisions and scope
 

@@ -32,9 +32,10 @@ QtObject {
             icon: ""
         };
     }
-    function page(id, title, subtitle, keywords) {
+    function page(id, title, subtitle, keywords, glyph) {
         var item = action(id, title, () => root.openMenu(id), subtitle, keywords);
         item.submenu = true;
+        item.glyph = glyph || "";
         return item;
     }
     function launch(args) {
@@ -46,7 +47,7 @@ QtObject {
         }
     }
     function edit(relativePath) {
-        launch([Config.bin.editor, Config.paths.dotfiles + "/" + relativePath]);
+        launch([Config.bin.kitty, "-e", Config.bin.editor, Config.paths.dotfiles + "/" + relativePath]);
     }
     function setTheme(name) {
         if (Config.preview) return;
@@ -71,7 +72,7 @@ QtObject {
             Battery.setProfile(profiles[next]);
     }
     readonly property var presentation: action("presentation", "Presentation mode", () => Runtime.presentation = !Runtime.presentation, "Keep the screen awake", "idle sleep inhibit caffeine", Runtime.presentation ? "On" : "Off")
-    readonly property var powerProfile: action("power-profile", "Power profile", () => stepProfile(1, true), "Enter cycles · ←/→ steps", "battery saver balanced performance", profile, direction => stepProfile(direction, false))
+    readonly property var powerProfile: action("power-profile", "Power profile", () => stepProfile(1, true), "Enter cycles · Ctrl+−/+ steps", "battery saver balanced performance", profile, direction => stepProfile(direction, false))
     readonly property var audio: [action("volume", "Volume", () => Audio.mute(false), Audio.sink?.description || "No output device", "sound speaker output mute unmute", audioValue(Audio.sink), direction => Audio.change(false, direction * 5)), action("microphone", "Microphone", () => Audio.mute(true), Audio.source?.description || "No input device", "mic input volume mute unmute", audioValue(Audio.source), direction => Audio.change(true, direction * 5)), page("audio", "Audio devices", "Choose speakers, headphones or microphone", "sound output input headset")]
     readonly property var notificationActions: [action("dnd", "Do Not Disturb", () => Preferences.dnd = !Preferences.dnd, "Silence notification popups; keep history", "dnd quiet notifications", Preferences.dnd ? "On" : "Off"), page("notifications", "Notification history", Notifications.entries.length + " saved notifications", "alerts messages"), action("clear-notifications", "Clear notifications", () => Notifications.clear(), "Dismiss all saved notifications", "history alerts")]
     readonly property var display: [action("brightness", "Brightness", () => Display.brightness(5), "Screen backlight · Enter increases by 5%", "display screen dim brighter", Display.brightnessPercent < 0 ? "—" : Display.brightnessPercent + "%", direction => Display.brightness(direction * 5)), action("nightlight", "Night light", () => Display.toggleNightlight(), "Warmer screen colours", "display blue light nightlight", Preferences.nightlight ? "On" : "Off"), action("temperature", "Colour temperature", () => Display.toggleNightlight(), "Night light · lower values are warmer", "display color nightlight kelvin", Preferences.nightlight ? Preferences.temperature + " K" : "Off", direction => Display.adjustNightlight(direction * 500)), presentation, action("bar", "Show top bar", () => Preferences.barHidden = !Preferences.barHidden, "Toggle bar visibility", "waybar panel hide show", Preferences.barHidden ? "Off" : "On")]
@@ -86,8 +87,11 @@ QtObject {
         var theme = Config.data.themes[name];
         return action("theme-" + name, theme.displayName, () => setTheme(name), theme.mode === "light" ? "Light theme and wallpaper" : "Dark theme and wallpaper", name + " " + theme.mode + " omarchy", Config.selectedTheme === name ? "Selected" : "");
     })
-    readonly property var style: [page("theme", "Theme", "Choose a desktop palette and wallpaper", "style light dark appearance")]
-    readonly property var settings: [action("keybindings", "Keyboard shortcuts", () => edit("home/files/hypr/keybindings.lua"), "Edit shortcuts in your dotfiles", "hotkeys bindings settings"), action("hyprland-settings", "Hyprland settings", () => edit("home/files/hypr/hyprland.lua"), "Edit monitor, input and window settings", "display keyboard mouse resolution scale layout"), action("shell-settings", "Bar and shell appearance", () => edit("home/quickshell.nix"), "Edit colours, fonts and shell settings", "theme settings waybar quickshell"), action("desktop-settings", "Wallpaper and idle settings", () => edit("home/desktop.nix"), "Edit the Nix configuration; rebuild to apply", "background sleep settings"), page("vim", "Vim reference", "Search editing shortcuts", "help keyboard"), page("lazyvim", "LazyVim reference", "Search editor shortcuts", "help keyboard")]
+    readonly property var configuration: [action("keybindings", "Keyboard shortcuts", () => edit("home/files/hypr/keybindings.lua"), "Edit shortcuts in Neovim", "hotkeys bindings settings"), action("hyprland-settings", "Hyprland settings", () => edit("home/files/hypr/hyprland.lua"), "Edit monitor, input and window settings", "display keyboard mouse resolution scale layout"), action("shell-settings", "Bar and shell appearance", () => edit("home/quickshell.nix"), "Edit colours, fonts and shell settings", "appearance colours fonts settings waybar quickshell"), action("desktop-settings", "Wallpaper and idle settings", () => edit("home/desktop.nix"), "Edit the Nix configuration; rebuild to apply", "background sleep settings")]
+    readonly property var learn: [page("vim", "Vim reference", "Search editing shortcuts", "help keyboard"), page("lazyvim", "LazyVim reference", "Search editor shortcuts", "help keyboard")]
+    readonly property var style: [page("theme", "Theme", "Choose a desktop palette and wallpaper", "style light dark appearance")].concat(configuration.slice(2, 4))
+    readonly property var configurationPage: page("configuration", "Configuration files", "Edit your dotfiles in Neovim", "config editor nix")
+    readonly property var settings: [page("audio", "Sound", "Speakers, headphones and microphone", "volume audio"), page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"), ...connections.slice(0, 2), page("notifications", "Notifications", "Do Not Disturb and saved notifications", "alerts history"), configurationPage, connections[3], desktop.find(item => item.id === "input")]
     readonly property var power: ["Lock", "Suspend", "Hibernate", "Logout", "Reboot", "Shutdown"].map(title => action("session-" + title.toLowerCase(), title, () => root.powerRequested(title.toLowerCase()), "Session and power", title === "Reboot" ? "restart" : title === "Shutdown" ? "power off turn off" : ""))
     readonly property var workspaces: Array.from({
         length: 10
@@ -104,6 +108,17 @@ QtObject {
             Runtime.closeMenu();
         }, workspace ? workspace.toplevels.values.length + " windows" : "Empty workspace", "desktop", workspace?.focused ? "Active" : "");
     })
-    readonly property var home: [presentation, powerProfile, page("audio", "Sound", audioValue(Audio.sink) + " · speakers and microphone", "volume audio"), notificationActions[0], notificationActions[1], page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"), page("style", "Style", "Theme and appearance", "theme light dark"), ...connections, page("desktop", "Desktop", "Calendar, reminders, workspaces and media", "utilities"), page("capture", "Capture", "Screenshots and screen recording", "video"), page("settings", "Settings and shortcuts", "Configuration files and keyboard references", "help"), page("power", "Power and session", "Lock, suspend, restart or shut down", "logout")]
-    readonly property var all: [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")].concat(audio, notificationActions, display, [powerProfile], style, themes, connections, desktop, capture, settings, power)
+    readonly property var trigger: [page("capture", "Capture", "Screenshots and screen recording", "video")].concat(desktop.filter(item => ["clipboard", "files", "calendar", "todos", "workspaces"].indexOf(item.id) >= 0), media)
+    readonly property var system: power.concat([presentation, powerProfile, connections[2]])
+    readonly property var home: [
+        page("apps", "Apps", "Launch an installed application", "applications launcher programs", "󰀻"),
+        page("learn", "Learn", "Keyboard and editor references", "help reference", "󰘥"),
+        page("trigger", "Trigger", "Capture, clipboard and desktop actions", "utilities media", "󱓟"),
+        page("style", "Style", "Appearance and desktop colours", "appearance colours", "󰏘"),
+        page("settings", "Setup", "Devices, connectivity and configuration", "setup settings", "󰒓"),
+        page("status", "About", "System information and activity", "about status information", "󰋼"),
+        page("power", "System", "Power profiles and session actions", "system power session", "󰐥")
+    ]
+    // Search finds controls and pickers; their choices stay inside each picker.
+    readonly property var all: home.concat([page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")], audio, notificationActions, display, [powerProfile], style, connections, desktop, capture, configuration, learn, [configurationPage], power).filter((item, index, items) => items.findIndex(other => other.id === item.id) === index)
 }

@@ -595,16 +595,33 @@ quickshell ipc --config desktop call session lock
 journalctl --user -u quickshell -e
 ```
 
-**Super+M** opens Desktop controls. Type to search across actions (for example
+**Super+M** opens the global Desktop menu. Its first page fits without scrolling:
+**Apps, Learn, Trigger, Style, Setup, About, System**. Setup groups device,
+connection, notification and configuration settings. System groups presentation
+mode, power profiles, battery and session actions. Learn contains editor references;
+Trigger groups capture, clipboard, files, workspaces, calendar, reminders and media.
+The first category stays selected when the menu opens beneath a stationary cursor;
+moving the pointer deliberately selects the row beneath it.
+
+Type to search across actions (for example
 `volume`, `dnd`, `wifi` or `restart`), use Up/Down to select, and Enter to open
-or toggle. Left/Right adjusts volume, microphone level, brightness and night
-light temperature; Enter on a sound level toggles mute. Escape or Alt+Left
-returns to the previous menu, restoring its search and selection; Escape at
-the root closes it. Ctrl+L focuses and selects the search text.
+or toggle. Right opens the selected submenu; actions such as mute, theme
+selection and restart require Enter. Left returns to the previous menu,
+restoring its search and selection, and does nothing at the root. Backspace
+also goes back when the search is empty. A breadcrumb shows the current path.
+Ctrl+Minus/Ctrl+Plus adjusts volume, microphone level, brightness and night
+light temperature; Ctrl+Equal also increases the value. Ordinary minus/plus
+characters still type into search. Escape or Alt+Left returns to the previous
+menu; Escape at the root closes it. Ctrl+L focuses and selects the search text.
+Sliders, the calendar and password fields retain their own arrow controls.
+Configuration files open in **Neovim inside Kitty**, and `EDITOR` / `VISUAL`
+default to `nvim`.
 
 Open **Style → Theme** there to choose Tokyo Night, Catppuccin Latte, Flexoki
 Light, White, Osaka Jade, Catppuccin Mocha, Gruvbox or Nord, or press
 **Super+Ctrl+Shift+Space** to open the theme menu directly.
+Searching `theme` at the root shows only **Theme**; palette names and light/dark
+choices are searchable inside that picker.
 From a terminal, use `desktop-theme list`, `desktop-theme current`, or
 `desktop-theme set flexoki-light` (or `white`, `osaka-jade`, `catppuccin`, `gruvbox`, `nord`,
 `catppuccin-latte`, `tokyo-night`). The selection persists in XDG state across
