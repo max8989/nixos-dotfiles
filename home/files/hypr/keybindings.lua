@@ -15,7 +15,6 @@ hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd(shell.wifi), { description = "
 hl.bind(mainMod .. " + CTRL + D", hl.dsp.exec_cmd(shell.display), { description = "display settings" })
 hl.bind(mainMod .. " + CTRL + SHIFT + Space", hl.dsp.exec_cmd(shell.themes), { description = "desktop theme selector" })
 hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd(shell.battery), { description = "battery and power profile" })
-hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd(shell.lock), { description = "lock screen" })
 
 -- Programs
 local terminal    = "kitty"

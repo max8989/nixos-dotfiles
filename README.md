@@ -344,7 +344,7 @@ The same menu offers **Test fingerprint** and **Enrolled fingerprints**;
 the terminal equivalents are `desktop-fingerprint verify` and
 `desktop-fingerprint list`.
 
-Lock with **Super + Ctrl + L**, then touch the enrolled finger. An enrolled
+Press **Super + N**, choose **Lock**, then touch the enrolled finger. An enrolled
 reader shows a fingerprint prompt; failed scans retry automatically. Device
 errors back off and show an unavailable message while password entry stays
 available. A transient enrollment-query error is retried, while a confirmed
