@@ -74,7 +74,7 @@ Scope {
             return;
         pendingPassword = "";
         passwordPam.abort();
-        fingerprintPam.abort();
+        fingerprint.stop();
         marker.setText("false");
         requested = false;
         Runtime.locked = false;
@@ -118,7 +118,6 @@ Scope {
         onSecureStateChanged: {
             if (secure) {
                 root.performPendingAction();
-                fingerprintPam.start();
             }
         }
         WlSessionLockSurface {
@@ -129,6 +128,8 @@ Scope {
                 snapshot: root.captures[surface.screen?.name] ? "file://"
                                                                 + root.captures[surface.screen.name] : ""
                 authMessage: root.authMessage
+                fingerprintMessage: fingerprint.message
+                fingerprintUnavailable: fingerprint.unavailable
                 busy: passwordPam.active
                 onSubmitted: password => root.submit(password)
             }
@@ -152,17 +153,10 @@ Scope {
                 root.authMessage = "驗證失敗，請再試一次";
         }
     }
-    PamContext {
-        id: fingerprintPam
-        config: "quickshell-fingerprint"
-        onPamMessage: {
-            if (responseRequired)
-                abort();
-        }
-        onCompleted: function (result) {
-            if (result === PamResult.Success)
-                root.finishAuthentication();
-        }
+    FingerprintAuth {
+        id: fingerprint
+        enabled: root.secure && root.requested && !Config.preview
+        onAuthenticated: root.finishAuthentication()
     }
     IpcHandler {
         target: "session"

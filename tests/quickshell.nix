@@ -24,6 +24,8 @@ in
       ''
         python3 ${./quickshell-lint.py} ${bundle} ${pkgs.quickshell}/lib/qt-6/qml ${pkgs.qt6.qtdeclarative}/lib/qt-6/qml lint.json
         node ${./quickshell-logic.mjs} ${../home/files/quickshell/Logic.js}
+        node ${./fingerprint-model.mjs} ${../home/files/quickshell/lock/FingerprintModel.js}
+        python3 ${./fingerprint-helper.py} ${../home/files/scripts/desktop-fingerprint.sh}
         python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}
         luac -p ${../home/files/hypr/hyprland.lua} ${../home/files/hypr/keybindings.lua} ${../home/files/hypr/capture_bindings.lua}
         luac -p ${home.xdg.configFile."hypr/shell_commands.lua".source}
@@ -41,6 +43,12 @@ in
     assert !home.programs.wofi.enable;
     assert !server.programs.quickshell.enable;
     assert desktop.security.pam.services.quickshell.enable;
+    assert !desktop.security.pam.services.quickshell.fprintAuth;
+    assert !desktop.security.pam.services.quickshell-fingerprint.unixAuth;
+    assert desktop.security.pam.services.quickshell-fingerprint.fprintAuth;
+    assert desktop.security.pam.services.sudo.fprintAuth;
+    assert desktop.security.pam.services.polkit-1.fprintAuth;
+    assert !self.nixosConfigurations.homeserver.config.services.fprintd.enable;
     assert home.programs.kitty.font.name == "JetBrainsMono Nerd Font";
     assert home.programs.kitty.font.size == 9;
     assert home.programs.btop.settings.color_theme == "active";

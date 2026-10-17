@@ -108,6 +108,7 @@
     nwg-look # GTK theme settings
     tor-browser
     zoom-us
+    ticktick
 
     # --- desktop-specific terminal tools ---
     # General CLI tools and core development runtimes come from cli.nix.

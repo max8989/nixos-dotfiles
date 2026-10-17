@@ -57,6 +57,8 @@ PanelWindow {
             return controls.capture;
         case "settings":
             return controls.settings;
+        case "fingerprint":
+            return controls.fingerprint;
         case "configuration":
             return controls.configuration;
         case "style":
@@ -137,6 +139,7 @@ PanelWindow {
             desktop: "Desktop",
             capture: "Capture",
             settings: "Setup",
+            fingerprint: "Fingerprint",
             configuration: "Configuration files",
             learn: "Learn",
             trigger: "Trigger",

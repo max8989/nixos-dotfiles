@@ -299,7 +299,7 @@ step) — then **immediately** change it and enroll the fingerprint reader:
 
 ```sh
 passwd
-fprintd-enroll
+desktop-fingerprint setup
 ```
 
 ### Where the repo lives after install
@@ -329,6 +329,46 @@ sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 `switch` builds the new generation and activates it immediately. Use
 `boot` instead of `switch` to apply only on next reboot, or `test` to activate
 without making it the boot default.
+
+### Fingerprint authentication
+
+The desktop copies Omarchy's fingerprint workflow for **lock-screen unlock,
+sudo, and graphical administrator prompts (polkit)**. The system configuration
+lives in `hosts/fingerprint.nix`; the Quickshell lock uses separate password and
+fingerprint PAM conversations so you can type your password while it scans.
+
+After rebuilding, open **Desktop menu → Setup → Fingerprint → Enroll
+fingerprint**, or run `desktop-fingerprint setup` in a terminal. Follow the
+enrollment and verification prompts to choose and scan the requested finger.
+The same menu offers **Test fingerprint** and **Enrolled fingerprints**;
+the terminal equivalents are `desktop-fingerprint verify` and
+`desktop-fingerprint list`.
+
+Lock with **Super + Ctrl + L**, then touch the enrolled finger. An enrolled
+reader shows a fingerprint prompt; failed scans retry automatically. Device
+errors back off and show an unavailable message while password entry stays
+available. A transient enrollment-query error is retried, while a confirmed
+empty enrollment hides the fingerprint prompt. Each lock checks enrollment
+again, so adding a finger does not require restarting the shell.
+
+For sudo and polkit, the fingerprint check precedes the normal password
+fallback. A closed laptop lid skips that check so a docked session can prompt
+for a password immediately. After suspend, the system queues a restart of an
+active fingerprint daemon, and the lock retries after the reader recovers.
+Fingerprint enrollment is local machine state and must be completed on each
+new installation.
+
+To apply a working tree that still has untracked new files, use the path flake:
+
+```sh
+sudo -A nixos-rebuild switch --flake path:.#thinkpad-x1-carbon-g12
+desktop-fingerprint setup
+```
+
+Upstream references: Omarchy's [setup script](https://github.com/omacom/omarchy/blob/quattro/bin/omarchy-setup-security-fingerprint),
+[lock fingerprint model](https://github.com/omacom/omarchy/blob/quattro/shell/plugins/lock/FingerprintModel.js),
+and [resume hook](https://github.com/omacom/omarchy/blob/quattro/default/systemd/system-sleep/fprintd-resume).
+The adaptation uses NixOS modules rather than editing `/etc/pam.d` at runtime.
 
 ### Installed home server
 

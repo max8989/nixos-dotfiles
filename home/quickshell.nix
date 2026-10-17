@@ -89,6 +89,8 @@ let
       grim = lib.getExe pkgs.grim;
       remove = "${pkgs.coreutils}/bin/rm";
       settings = lib.getExe settingsHelper;
+      fingerprint = lib.getExe fingerprintHelper;
+      fprintdList = toString fingerprintList;
       theme = lib.getExe config.localTheme.switcher;
     };
   };
@@ -98,6 +100,18 @@ let
       [ "${pkgs.python3}/bin/python3" "${pkgs.networkmanager}/bin/nmcli" "${hyprland}/bin/hyprctl" ]
       (builtins.readFile ./files/scripts/quickshell-settings.py)
   );
+  fingerprintHelper = pkgs.writeShellApplication {
+    name = "desktop-fingerprint";
+    runtimeInputs = [
+      pkgs.fprintd
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ./files/scripts/desktop-fingerprint.sh;
+  };
+  fingerprintList = pkgs.writeShellScript "quickshell-fingerprint-list" ''
+    export LC_ALL=C
+    exec ${pkgs.fprintd}/bin/fprintd-list "$@"
+  '';
   clipboard = pkgs.writeShellApplication {
     name = "quickshell-clipboard";
     runtimeInputs = [
@@ -208,6 +222,8 @@ in
       StateDirectory = "quickshell-desktop";
       StateDirectoryMode = "0700";
       RestartSec = 2;
+      # Reap active PAM workers before restarting a crashed shell.
+      KillMode = "control-group";
       UMask = "0077";
       StandardOutput = "journal";
       StandardError = "journal";
@@ -217,5 +233,8 @@ in
   # QS_SETTINGS includes the bundle path so every QML generation changes the
   # unit and triggers a restart. Launch and IPC must both use the config name:
   # Quickshell 0.3.1 hashes a symlink path differently from its store target.
-  home.packages = [ development ];
+  home.packages = [
+    development
+    fingerprintHelper
+  ];
 }

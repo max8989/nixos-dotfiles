@@ -15,6 +15,7 @@
 }:
 {
   imports = [
+    ./fingerprint.nix
     # Share the VPN tunnel with a guest over Wi-Fi AP or Thunderbolt.
     ./vpn-hotspot.nix
   ];
@@ -108,14 +109,6 @@
   ##########################################################################
   ## Desktop / laptop peripherals & services
   ##########################################################################
-  # ThinkPad fingerprint reader. Enroll with `fprintd-enroll`.
-  services.fprintd.enable = true;
-  # Separate conversations allow password entry while fingerprint auth waits.
-  security.pam.services.quickshell.fprintAuth = false;
-  security.pam.services.quickshell-fingerprint = {
-    unixAuth = false;
-    fprintAuth = true;
-  };
   # Power profiles and battery data are consumed by Quickshell over D-Bus.
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;

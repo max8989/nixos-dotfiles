@@ -11,6 +11,8 @@ Item {
     id: root
     property string snapshot: ""
     property string authMessage: ""
+    property string fingerprintMessage: ""
+    property bool fingerprintUnavailable: false
     property bool busy: false
     signal submitted(string password)
 
@@ -316,6 +318,19 @@ Item {
             width: parent.width
             text: root.busy ? "正在驗證…" : root.authMessage || "按 Enter 解鎖"
             color: root.authMessage && !root.busy ? root.style.textError : root.muted
+            font.family: Config.theme.uiFont
+            font.pixelSize: 13
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+        }
+        Text {
+            objectName: "lockFingerprint"
+            width: parent.width
+            topPadding: 10
+            visible: root.fingerprintMessage.length > 0
+            text: "󰈷  " + root.fingerprintMessage
+            color: root.fingerprintUnavailable ? Config.theme.warning : root.accent
             font.family: Config.theme.uiFont
             font.pixelSize: 13
             horizontalAlignment: Text.AlignHCenter

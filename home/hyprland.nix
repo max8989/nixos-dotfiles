@@ -102,6 +102,10 @@ in
         vim = menu "vim";
         lazyvim = menu "lazyvim";
         power = menu "power";
+        lock = ipc [
+          "session"
+          "lock"
+        ];
         audio = menu "audio";
         wifi = menu "wifi";
         display = menu "display";

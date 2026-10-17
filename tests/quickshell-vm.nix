@@ -1,7 +1,23 @@
 { pkgs, bundle }:
 let
+  fingerprintList = pkgs.writeShellScript "test-fingerprint-list" ''
+    if [[ -e /run/quickshell-test/fingerprint-probe-error ]]; then
+      echo "D-Bus error: service unavailable" >&2
+      exit 1
+    elif [[ -e /run/quickshell-test/fingerprint-enrolled ]]; then
+      printf 'found 1 devices\n - #0: right-index-finger\n'
+    else
+      echo "User $1 has no fingers enrolled for test sensor."
+    fi
+  '';
+  fingerprintMatch = pkgs.writeShellScript "test-fingerprint-match" ''
+    echo attempt >> /run/quickshell-test/fingerprint-attempts
+    echo "Scan your finger"
+    ${pkgs.coreutils}/bin/sleep 1
+    test -e /run/quickshell-test/fingerprint-match
+  '';
   settings = pkgs.runCommand "quickshell-test-settings.json" { nativeBuildInputs = [ pkgs.jq ]; } ''
-    jq '.user = "alice" | .paths.home = "/home/alice" | .paths.todo = "/home/alice/TODO.md"' ${bundle}/generated.json > "$out"
+    jq '.user = "alice" | .paths.home = "/home/alice" | .paths.todo = "/home/alice/TODO.md" | .bin.fprintdList = "${fingerprintList}"' ${bundle}/generated.json > "$out"
   '';
   shell = pkgs.writeShellScript "test-quickshell" ''
     echo "$$" > "$XDG_RUNTIME_DIR/quickshell.pid"
@@ -40,8 +56,8 @@ pkgs.testers.runNixOSTest {
     };
     security.pam.services.quickshell.fprintAuth = false;
     security.pam.services.quickshell-fingerprint.text = ''
-      auth requisite ${pkgs.pam}/lib/security/pam_deny.so
-      account requisite ${pkgs.pam}/lib/security/pam_deny.so
+      auth required ${pkgs.pam}/lib/security/pam_exec.so stdout ${fingerprintMatch}
+      account required ${pkgs.pam}/lib/security/pam_permit.so
     '';
     security.polkit.enable = true;
     security.polkit.enablePkexecWrapper = true;
@@ -118,10 +134,26 @@ pkgs.testers.runNixOSTest {
         machine.succeed(user("wtype -s 200 -d 30 wrong-password -k Return"))
         machine.sleep(duration=timedelta(seconds=3))
         machine.succeed(ipc("call session isSecure") + " | grep -qx true")
+        machine.fail("test -e /run/quickshell-test/fingerprint-attempts")
         machine.succeed(user("wtype -s 200 -d 30 quickshell-test -k Return"))
         machine.wait_until_succeeds(ipc("call session isSecure") + " | grep -qx false", timeout=30)
         machine.succeed(user("grim /tmp/unlocked.png"))
         machine.copy_from_machine("/tmp/unlocked.png", "unlocked.png")
+        # A transient probe error must not disable fingerprints for this lock.
+        # Failed scans retry and stay locked; only a successful PAM scan unlocks.
+        machine.succeed("touch /run/quickshell-test/fingerprint-enrolled /run/quickshell-test/fingerprint-probe-error")
+        machine.succeed(ipc("call session lock"))
+        machine.wait_until_succeeds(ipc("call session isSecure") + " | grep -qx true", timeout=30)
+        machine.sleep(duration=timedelta(seconds=1))
+        machine.fail("test -e /run/quickshell-test/fingerprint-attempts")
+        machine.succeed("rm /run/quickshell-test/fingerprint-probe-error")
+        machine.wait_until_succeeds("test $(wc -l < /run/quickshell-test/fingerprint-attempts) -ge 2", timeout=30)
+        machine.succeed(ipc("call session isSecure") + " | grep -qx true")
+        machine.succeed(user("grim /tmp/fingerprint.png"))
+        machine.copy_from_machine("/tmp/fingerprint.png", "fingerprint.png")
+        machine.succeed("touch /run/quickshell-test/fingerprint-match")
+        machine.wait_until_succeeds(ipc("call session isSecure") + " | grep -qx false", timeout=30)
+        machine.succeed("rm /run/quickshell-test/fingerprint-match")
         machine.wait_until_succeeds(ipc("call auth isRegistered") + " | grep -qx true", timeout=30)
         def challenge():
             machine.succeed("rm -f /run/quickshell-test/polkit-status")
@@ -137,7 +169,19 @@ pkgs.testers.runNixOSTest {
         machine.succeed("grep -qx 0 /run/quickshell-test/polkit-result")
         machine.succeed(ipc("call session lock"))
         machine.wait_until_succeeds(ipc("call session isSecure") + " | grep -qx true", timeout=30)
-        machine.succeed("kill -9 $(cat /run/quickshell-test/quickshell.pid)")
+        # Password recovery still works while fingerprint scans keep failing.
+        # Match the real user service's KillMode=control-group. A running PAM
+        # worker inherits descriptors and must not outlive the crashed shell.
+        shell_pid = int(machine.succeed("cat /run/quickshell-test/quickshell.pid").strip())
+        machine.succeed(f"kill -STOP {shell_pid}")
+        processes = [tuple(map(int, line.split())) for line in machine.succeed("ps -eo pid=,ppid=").splitlines()]
+        shell_processes = {shell_pid}
+        while True:
+            descendants = shell_processes | {pid for pid, parent in processes if parent in shell_processes}
+            if descendants == shell_processes:
+                break
+            shell_processes = descendants
+        machine.succeed("kill -9 " + " ".join(map(str, sorted(shell_processes - {shell_pid}))) + f" {shell_pid}")
         # A client crash must not expose the desktop's solid #203040 wallpaper.
         # Compositors may reject capture or return their abandoned-lock surface.
         machine.sleep(duration=timedelta(seconds=1))
@@ -155,6 +199,6 @@ pkgs.testers.runNixOSTest {
         machine.succeed("! grep -E 'TypeError|ReferenceError|Failed to load configuration|Binding loop' /run/quickshell-test/shell.log")
     finally:
         print(machine.execute("journalctl -u quickshell-test.service --no-pager -n 40")[1])
-        print(machine.execute("cat /run/quickshell-test/shell.log")[1])
+        print(machine.execute("cat /run/quickshell-test/shell.log")[1].replace(chr(0), ""))
   '';
 }
