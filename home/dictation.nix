@@ -1,5 +1,14 @@
 { lib, pkgs, ... }:
 let
+  voxtypePackage = pkgs.voxtype-vulkan;
+  # nixpkgs ships the OSD launcher and audio bridge, but not its QML assets.
+  # Use the matching upstream source already pinned by the Voxtype package.
+  voxtypeQuickshell = pkgs.runCommand "voxtype-quickshell-${voxtypePackage.version}" { } ''
+    mkdir "$out"
+    cp -r ${voxtypePackage.src}/quickshell/. "$out/"
+    cp ${voxtypePackage.src}/LICENSE "$out/LICENSE"
+  '';
+
   # Omarchy's local Voxtype backend, with a multilingual model instead of
   # base.en. Fetch at build time so the daemon works offline from first use.
   whisperModel = pkgs.fetchurl {
@@ -13,24 +22,33 @@ in
 
   services.voxtype = {
     enable = true;
-    package = pkgs.voxtype-vulkan;
+    package = voxtypePackage;
 
     # Inherit WAYLAND_DISPLAY from the graphical session rather than pinning
     # a socket name. The HM module only adds these tools for a fixed display.
-    environment.PATH = lib.makeBinPath [
-      pkgs.coreutils
-      pkgs.which
-      pkgs.wtype
-      pkgs.wl-clipboard
-      pkgs.playerctl
-      pkgs.libnotify
-    ];
+    environment = {
+      VOXTYPE_OSD_QML_PATH = "${voxtypeQuickshell}";
+      PATH = lib.makeBinPath [
+        voxtypePackage
+        pkgs.quickshell
+        pkgs.coreutils
+        pkgs.which
+        pkgs.wtype
+        pkgs.wl-clipboard
+        pkgs.playerctl
+        pkgs.libnotify
+      ];
+    };
 
     settings = {
       state_file = "auto";
       hotkey.enabled = false;
-      # Recording feedback uses the desktop's existing notification service.
-      osd.enabled = false;
+      # Omarchy's waveform HUD: real microphone levels while recording,
+      # processing feedback during transcription, hidden again when idle.
+      osd = {
+        enabled = true;
+        frontend = "quickshell";
+      };
       audio = {
         device = "default";
         sample_rate = 16000;
@@ -47,8 +65,8 @@ in
         fallback_to_clipboard = true;
         type_delay_ms = 1;
         notification = {
-          on_recording_start = true;
-          on_recording_stop = true;
+          on_recording_start = false;
+          on_recording_stop = false;
           on_transcription = false;
         };
       };

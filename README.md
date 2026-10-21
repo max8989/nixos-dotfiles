@@ -105,8 +105,12 @@ recognition settings in `home/dictation.nix`; Home
 Manager generates `~/.config/voxtype/config.toml`.
 
 Voxtype starts with the graphical session, records the default microphone,
-pauses media while recording, and limits recordings to 60 seconds. Notifications
-show recording/transcription; if automatic typing fails, the text is copied to
+pauses media while recording, and limits recordings to 60 seconds. Its
+[upstream waveform HUD](https://github.com/peteonrails/voxtype/tree/v1.0.1/quickshell)
+shows live microphone levels while recording, stays visible during transcription,
+and disappears when finished. Recording/transcription notifications are disabled.
+The matching Quickshell assets and audio bridge are wired declaratively through
+the Voxtype service. If automatic typing fails, the text is copied to
 the clipboard. Check the desktop's microphone mute/input settings if recordings
 are silent. Caps+V applies to keyboards managed by Kanata; the existing
 Keychron exclusions remain in `home/files/kanata/config.kbd`. The Omarchy

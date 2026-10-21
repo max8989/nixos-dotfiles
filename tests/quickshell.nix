@@ -25,6 +25,25 @@ in
         lua ${./dictation-bindings.lua} ${../home/files/hypr/dictation_bindings.lua}
         mkdir -p "$out"
         voxtype --config ${home.xdg.configFile."voxtype/config.toml".source} config > "$out/config.toml"
+        # Exercise the real OSD launcher with its production assets and PATH.
+        # A headless qs stand-in verifies the launcher reaches a complete QML
+        # tree, resolves its style, and can execute the waveform audio bridge.
+        mkdir -p "$TMPDIR/bin" "$TMPDIR/runtime"
+        cat > "$TMPDIR/bin/qs" <<'SH'
+        #!${pkgs.bash}/bin/bash
+        set -euo pipefail
+        test "$1" = -p
+        test -f "$2/shell.qml"
+        test -f "$2/OsdSurface.qml"
+        test -f "$2/voxtype-shared/AudioBridge.qml"
+        test -s "$VOXTYPE_OSD_STYLE_FILE"
+        voxtype-audio-bridge --help > /dev/null
+        SH
+        chmod +x "$TMPDIR/bin/qs"
+        export XDG_RUNTIME_DIR="$TMPDIR/runtime"
+        export VOXTYPE_OSD_QML_PATH=${home.services.voxtype.environment.VOXTYPE_OSD_QML_PATH}
+        export PATH="$TMPDIR/bin:${home.services.voxtype.environment.PATH}"
+        voxtype-osd-quickshell --no-daemonize --config ${home.xdg.configFile."voxtype/config.toml".source}
       '';
   quickshell =
     pkgs.runCommand "quickshell-check"
