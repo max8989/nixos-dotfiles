@@ -7,6 +7,7 @@
   imports = [
     ./theme.nix
     ./hyprland.nix
+    ./dictation.nix
     ./quickshell.nix
     ./kitty.nix
     ./cli.nix

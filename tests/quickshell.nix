@@ -11,6 +11,21 @@ let
   bundle = self.packages.${system}.quickshell-config;
 in
 {
+  dictation =
+    pkgs.runCommand "dictation-check"
+      {
+        nativeBuildInputs = [
+          pkgs.kanata
+          pkgs.lua
+          home.services.voxtype.package
+        ];
+      }
+      ''
+        kanata --check --cfg ${../home/files/kanata/config.kbd}
+        lua ${./dictation-bindings.lua} ${../home/files/hypr/dictation_bindings.lua}
+        mkdir -p "$out"
+        voxtype --config ${home.xdg.configFile."voxtype/config.toml".source} config > "$out/config.toml"
+      '';
   quickshell =
     pkgs.runCommand "quickshell-check"
       {
@@ -27,7 +42,7 @@ in
         node ${./fingerprint-model.mjs} ${../home/files/quickshell/lock/FingerprintModel.js}
         python3 ${./fingerprint-helper.py} ${../home/files/scripts/desktop-fingerprint.sh}
         python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}
-        luac -p ${../home/files/hypr/hyprland.lua} ${../home/files/hypr/keybindings.lua} ${../home/files/hypr/capture_bindings.lua}
+        luac -p ${../home/files/hypr/hyprland.lua} ${../home/files/hypr/keybindings.lua} ${../home/files/hypr/capture_bindings.lua} ${../home/files/hypr/dictation_bindings.lua}
         luac -p ${home.xdg.configFile."hypr/shell_commands.lua".source}
         lua ${./capture-bindings.lua} ${../home/files/hypr/capture_bindings.lua}
         mkdir -p "$out"

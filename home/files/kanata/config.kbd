@@ -3,6 +3,7 @@
 ;; - Tap: Escape
 ;; - Hold + h/j/k/l: Arrow keys (left/down/up/right)
 ;; - Hold + j+k (together): Escape
+;; - Hold + v: Dictation (F13; release v to transcribe and type)
 ;; - Hold + u/o: Home/End
 ;; - Hold + q: Toggle Caps Lock
 ;; - Hold + 1-0: F1-F10
@@ -24,15 +25,15 @@
 )
 
 (defsrc
-  caps h j k l u o q 1 2 3 4 5 6 7 8 9 0 - = bspc \
+  caps h j k l u o q 1 2 3 4 5 6 7 8 9 0 - = bspc \ v
 )
 
 (deflayer base
-  @cap h j k l u o q 1 2 3 4 5 6 7 8 9 0 - = bspc \
+  @cap h j k l u o q 1 2 3 4 5 6 7 8 9 0 - = bspc \ v
 )
 
 (deflayer nav
-  _ left down up right Home End caps f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 del del
+  _ left down up right Home End caps f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 del del f13
 )
 
 (defalias

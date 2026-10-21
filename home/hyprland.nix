@@ -62,6 +62,7 @@ in
     # generated hyprland.lua, so hyprland.lua must not require it itself.
     extraLuaFiles.keybindings = ./files/hypr/keybindings.lua;
     extraLuaFiles.capture_bindings = ./files/hypr/capture_bindings.lua;
+    extraLuaFiles.dictation_bindings = ./files/hypr/dictation_bindings.lua;
 
     extraConfig = builtins.readFile ./files/hypr/hyprland.lua;
 
@@ -108,6 +109,9 @@ in
         themes = menu "theme";
         battery = menu "battery";
         cycleInput = lib.getExe cycleInput;
+        dictationStart = "${lib.getExe config.services.voxtype.package} record start";
+        dictationStop = "${lib.getExe config.services.voxtype.package} record stop";
+        dictationToggle = "${lib.getExe config.services.voxtype.package} record toggle";
         volumeUp = ipc [
           "audio"
           "volume"
