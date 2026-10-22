@@ -99,7 +99,6 @@
     discord
     slack
     spotify
-    bitwarden-desktop
     obsidian
     qbittorrent
     localsend

@@ -401,6 +401,17 @@ active fingerprint daemon, and the lock retries after the reader recovers.
 Fingerprint enrollment is local machine state and must be completed on each
 new installation.
 
+Bitwarden is installed system-wide by `hosts/desktop.nix` so polkit loads its
+unlock policy. GNOME Keyring provides the secure storage it needs, and greetd
+unlocks the keyring with your Linux login password. In Bitwarden, enable
+**File → Settings → Security → Unlock with system authentication**. If a keyring
+setup dialog appears, use your Linux login password so it unlocks at login.
+
+`home/zen.nix` registers Bitwarden's native messaging helper in the Zen wrapper.
+After rebuilding it, fully restart Zen, keep the Bitwarden desktop app running,
+and enable **Settings → Account security → Unlock with biometrics** in the
+extension.
+
 To apply a working tree that still has untracked new files, use the path flake:
 
 ```sh
