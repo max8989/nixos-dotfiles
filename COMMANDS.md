@@ -58,6 +58,34 @@ The light choices are `catppuccin-latte`, `flexoki-light` and `white`.
 The choice persists across rebuilds. Some applications need reopening to read
 their new colors.
 
+### Change wallpaper
+
+Open **Style → Wallpaper** with Super+M, or press **Super+Ctrl+Space**.
+Browse folders and select a PNG, JPEG, WebP or BMP image. The image becomes the
+saved wallpaper for the current theme and returns whenever you switch back to
+that theme, including after login and rebuilds. **Restore theme default** resets
+only that theme's wallpaper.
+
+From a terminal, omit the theme name to use the current theme, or specify one:
+
+```
+desktop-theme wallpaper set "$HOME/Pictures/wallpaper.jpg"
+desktop-theme wallpaper set "$HOME/Pictures/wallpaper.jpg" nord
+desktop-theme wallpaper current
+desktop-theme wallpaper current nord
+desktop-theme wallpaper reset
+desktop-theme wallpaper reset nord
+```
+
+Choosing a wallpaper for an inactive theme leaves the current desktop as it is.
+Selected images are copied into `~/.local/state/desktop-theme/wallpapers`
+(or `$XDG_STATE_HOME/desktop-theme/wallpapers`), so moving the source is safe.
+Hyprpaper uses a separate current-wallpaper link in this state directory.
+
+This follows Omarchy's [background selection and theme memory](https://github.com/omacom/omarchy/blob/quattro/bin/omarchy-theme-set)
+and [background picker shortcut](https://github.com/omacom/omarchy/blob/quattro/manual/39-backgrounds.md),
+adapted to this desktop's immutable Nix assets and Hyprpaper service.
+
 ## Update and troubleshoot
 
 ### Update flake inputs

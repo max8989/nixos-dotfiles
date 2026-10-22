@@ -107,6 +107,16 @@ ShellRoot {
         for (var j = 0; j < item.children.length; j++)
             controls(item.children[j], result);
     }
+    function thumbnail(item) {
+        if (item.sourceSize !== undefined && item.source && item.visible)
+            return {ready: item.status === Image.Ready, width: item.width,
+                    height: item.height, paintedWidth: item.paintedWidth};
+        for (var i = 0; i < item.children.length; i++) {
+            var result = thumbnail(item.children[i]);
+            if (result) return result;
+        }
+        return null;
+    }
     function menuRows() {
         var view = root.find(menus.contentItem, "menuList");
         var rows = [];
@@ -115,7 +125,8 @@ ShellRoot {
             if (!child.modelData || child.index === undefined) continue;
             var position = child.mapToItem(menus.contentItem, child.width / 2, child.height / 2);
             rows.push({id: child.modelData.id || child.modelData.title, x: position.x,
-                       y: position.y, height: child.height, highlighted: child.highlighted});
+                       y: position.y, height: child.height, highlighted: child.highlighted,
+                       thumbnail: root.thumbnail(child)});
         }
         return rows;
     }
@@ -188,6 +199,7 @@ ShellRoot {
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
+        function openWallpaper(): void { Desktop.Runtime.toggleMenu("wallpaper", null); }
         function pointMenu(x: int, y: int): void {
             mouseEvents.mouseMove(menus.contentItem, x, y, 1, Qt.NoButton, Qt.NoModifier);
         }
@@ -227,13 +239,26 @@ print(f'qa_backlight,backlight,{value},{value}%,100')
     # Observe theme activation without changing any application or wallpaper.
     theme_command = output / "desktop-theme"
     theme_calls = output / "theme-calls.jsonl"
-    theme_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
-assert len(sys.argv) == 3 and sys.argv[1] == 'set'
-with pathlib.Path(__file__).with_name('theme-calls.jsonl').open('a') as calls:
-    print(json.dumps(sys.argv[2]), file=calls)
+    wallpaper_calls = output / "wallpaper-calls.jsonl"
+    theme_command.write_text("#!" + sys.executable + "\nREAL_THEME = " + repr(settings["bin"]["theme"]) + "\n" + '''import json, pathlib, subprocess, sys
+if sys.argv[1:3] == ['wallpaper', 'list']:
+    subprocess.run([REAL_THEME, *sys.argv[1:]], check=True)
+elif sys.argv[1] == 'set':
+    assert len(sys.argv) == 3
+    with pathlib.Path(__file__).with_name('theme-calls.jsonl').open('a') as calls:
+        print(json.dumps(sys.argv[2]), file=calls)
+else:
+    assert sys.argv[1] == 'wallpaper'
+    with pathlib.Path(__file__).with_name('wallpaper-calls.jsonl').open('a') as calls:
+        print(json.dumps(sys.argv[2:]), file=calls)
 ''')
     theme_command.chmod(0o700)
     settings["bin"]["theme"] = str(theme_command)
+    wallpaper_folder = output / "home" / "Pictures #%, ;"
+    wallpaper_folder.mkdir()
+    wallpaper_image = wallpaper_folder / "Wallpaper [one] #%, ;.PNG"
+    shutil.copyfile(Path(settings["paths"]["themeRoot"]) / "nord/wallpaper.png", wallpaper_image)
+    (wallpaper_folder / "not-an-image.txt").write_text("Do not show in the wallpaper picker")
     assert settings["bin"]["editor"].endswith("/bin/nvim"), settings["bin"]["editor"]
     editor_calls = output / "editor-calls.jsonl"
     terminal_command = output / "editor-terminal"
@@ -415,7 +440,7 @@ elif sys.argv[1] == 'battery-info':
     assert inspect()["menu"] == "controls" and inspect()["query"] == ""
     for text in ("theme", "Theme", " theme "):
         query(text)
-        wait(lambda: [r["id"] for r in inspect()["rows"]] == ["theme"])
+        wait(lambda: [r["id"] for r in inspect()["rows"]] == ["theme", "wallpaper"])
     query("theme")
     key("Left")
     assert inspect()["menu"] == "controls" and inspect()["query"] == "theme"
@@ -498,6 +523,38 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["menu"] == "style")
     key("BackSpace")
     wait(lambda: inspect()["menu"] == "controls" and inspect()["selected"] == "style")
+    query("wallpaper")
+    wait(lambda: inspect()["rows"][0]["id"] == "wallpaper")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "wallpaper")
+    assert inspect()["breadcrumb"] == "Desktop menu › Wallpaper · Gruvbox"
+    query(wallpaper_folder.name)
+    wait(lambda: len(inspect()["rows"]) == 1 and inspect()["rows"][0]["submenu"])
+    key("Right")
+    wait(lambda: any(row["title"] == wallpaper_image.name for row in inspect()["rows"]))
+    assert "not-an-image.txt" not in [row["title"] for row in inspect()["rows"]]
+    query("Wallpaper [one]")
+    wait(lambda: len(inspect()["rows"]) == 1)
+    key("Right")
+    assert not wallpaper_calls.exists(), "Right selected a wallpaper"
+    wait(lambda: any(row["thumbnail"] and row["thumbnail"]["ready"]
+                     and row["thumbnail"]["paintedWidth"] > 0
+                     for row in inspect()["menuRows"]))
+    capture("controls-wallpaper-picker")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and wallpaper_calls.exists())
+    assert [json.loads(line) for line in wallpaper_calls.read_text().splitlines()] == [[
+        "set", str(wallpaper_image), "gruvbox"]]
+    qa("openWallpaper")
+    wait(lambda: inspect()["menu"] == "wallpaper")
+    query("Restore theme default")
+    wait(lambda: len(inspect()["rows"]) == 1)
+    key("Return")
+    wait(lambda: inspect()["menu"] == "")
+    assert json.loads(wallpaper_calls.read_text().splitlines()[-1]) == ["reset", "gruvbox"]
+    print("Wallpaper image filtering, folder navigation, per-theme selection and reset passed")
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
     query("keyboard shortcuts")
     key("Return")
     wait(lambda: inspect()["menu"] == "" and editor_calls.exists())
@@ -773,7 +830,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "learn", "trigger", "configuration", "style", "theme", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)

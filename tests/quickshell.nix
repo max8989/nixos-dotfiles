@@ -52,6 +52,9 @@ in
     assert home.programs.kitty.font.name == "JetBrainsMono Nerd Font";
     assert home.programs.kitty.font.size == 9;
     assert home.programs.btop.settings.color_theme == "active";
+    assert
+      (builtins.head home.services.hyprpaper.settings.wallpaper).path
+      == "${home.localTheme.stateDir}/wallpaper.png";
     assert home.programs.fzf.colors == { };
     assert home.programs.starship.settings == { };
     assert server.programs.starship.settings.palette == "jade";
@@ -69,6 +72,7 @@ in
           pkgs.python3
           home.programs.starship.package
           home.programs.kitty.package
+          pkgs.imagemagick
         ];
       }
       ''
@@ -142,6 +146,7 @@ in
           home.xdg.configFile."kitty/dark-theme.auto.conf".source
         })" = "${home.localTheme.stateDir}/kitty.conf"
         kitty +runpy 'import runpy, sys; path = sys.argv.pop(1); runpy.run_path(path, run_name="__main__")' ${./desktop-theme-kitty.py} "$themeScript"
+        python3 ${./desktop-theme-wallpaper.py} "$themeScript"
         if bash "$themeScript" set unknown; then exit 1; fi
         if bash "$themeScript" set ../; then exit 1; fi
         # A failed appearance update must not report a successful theme switch.

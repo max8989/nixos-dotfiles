@@ -87,7 +87,7 @@
       wallpaper = [
         {
           monitor = "";
-          path = "${config.localTheme.currentDir}/wallpaper.png";
+          path = "${config.localTheme.stateDir}/wallpaper.png";
         }
       ];
     };

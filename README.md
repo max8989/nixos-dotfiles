@@ -542,7 +542,11 @@ after any input update and fix anything that has since moved):
   is joined by Flexoki Light and White as light options, each with its Omarchy
   wallpaper. Nix builds all eight themes;
   `desktop-theme set <name>` changes the selected theme immediately and stores
-  the choice across rebuilds. The headless profile retains its Jade CLI palette.
+  the choice across rebuilds. **Style → Wallpaper** (Super+Ctrl+Space) selects a
+  custom image and remembers it separately for each theme; **Restore theme
+  default** returns that theme to its bundled image. Selected images survive
+  rebuilds and moving the original file. See [wallpaper commands](COMMANDS.md#change-wallpaper)
+  for terminal usage. The headless profile retains its Jade CLI palette.
   GTK uses Adwaita/Yaru icons, and Qt uses Kvantum with matching palettes. Snapshot
   assets and license notices live in `home/files/omarchy/`.
 - **Retained desktop features.** The transparent 26px top bar keeps reminders,

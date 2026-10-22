@@ -14,6 +14,7 @@ hl.bind(mainMod .. " + CTRL + A", hl.dsp.exec_cmd(shell.audio), { description = 
 hl.bind(mainMod .. " + CTRL + W", hl.dsp.exec_cmd(shell.wifi), { description = "Wi-Fi settings" })
 hl.bind(mainMod .. " + CTRL + D", hl.dsp.exec_cmd(shell.display), { description = "display settings" })
 hl.bind(mainMod .. " + CTRL + SHIFT + Space", hl.dsp.exec_cmd(shell.themes), { description = "desktop theme selector" })
+hl.bind(mainMod .. " + CTRL + Space", hl.dsp.exec_cmd(shell.wallpaper), { description = "wallpaper for current theme" })
 hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd(shell.battery), { description = "battery and power profile" })
 
 -- Programs
@@ -34,11 +35,6 @@ hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(shell.controls), { description = "des
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind("ALT + space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(shell.files))
-
--- NOTE: no wallpaper switcher (was SUPER+CTRL+W). The script rewrote
--- ~/.config/hypr/hyprpaper.conf, which Home Manager makes a read-only Nix
--- store symlink, so it could never work here. Change the wallpaper by editing
--- services.hyprpaper in home/desktop.nix and rebuilding.
 
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(shell.clipboard))

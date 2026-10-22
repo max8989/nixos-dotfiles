@@ -372,6 +372,7 @@ let
       pkgs.coreutils
       pkgs.util-linux
       pkgs.jq
+      pkgs.imagemagick
       pkgs.glib
       pkgs.fcitx5
       pkgs.quickshell

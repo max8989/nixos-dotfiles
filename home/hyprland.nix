@@ -106,6 +106,7 @@ in
         wifi = menu "wifi";
         display = menu "display";
         themes = menu "theme";
+        wallpaper = menu "wallpaper";
         battery = menu "battery";
         cycleInput = lib.getExe cycleInput;
         volumeUp = ipc [

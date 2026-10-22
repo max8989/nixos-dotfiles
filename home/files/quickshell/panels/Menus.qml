@@ -35,7 +35,7 @@ PanelWindow {
     readonly property var surfaceStyle: Config.surface(surfaceName)
     readonly property bool settingsPanel: ["audio", "wifi", "display", "battery"].indexOf(Runtime.menu) >= 0
     readonly property var settingsPanelItem: Runtime.menu === "audio" ? audioPanel : Runtime.menu === "wifi" ? wifiPanel : Runtime.menu === "display" ? displayPanel : Runtime.menu === "battery" ? batteryPanel : null
-    readonly property bool controlsNavigation: Runtime.menu === "controls" || Runtime.menu === "theme" || Runtime.menuHistory.some(entry => entry.menu === "controls")
+    readonly property bool controlsNavigation: Runtime.menu === "controls" || Runtime.menu === "theme" || Runtime.menu === "wallpaper" || Runtime.menuHistory.some(entry => entry.menu === "controls")
     readonly property bool categoryPage: Runtime.menu === "controls" && !search.text.trim()
     property bool pointerPositionKnown: false
     property point pointerPosition: Qt.point(0, 0)
@@ -105,10 +105,12 @@ PanelWindow {
     property var pendingWifi: null
     property string confirmation: ""
     property string folderPath: Config.paths.home || "/"
+    property string wallpaperFolderPath: Config.paths.home || "/"
     Component.onCompleted: if (Preferences.initialized && Preferences.folder)
         folderPath = Preferences.folder
     property int requestSerial: 0
     property bool clipboardBusy: false
+    property bool wallpaperBusy: false
     readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(d.networks.values), [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
     readonly property string heading: headingFor(Runtime.menu, trayTitle)
@@ -145,6 +147,7 @@ PanelWindow {
             trigger: "Trigger",
             style: "Style",
             theme: "Theme",
+            wallpaper: "Wallpaper · " + Config.theme.displayName,
             workspaces: "Workspaces",
             tray: "System tray",
             trayMenu: title,
@@ -387,6 +390,26 @@ PanelWindow {
                 });
             });
             return;
+        } else if (menu === "wallpaper") {
+            var themeName = Config.selectedTheme;
+            var defaultRow = row("Restore theme default", () => root.changeWallpaper("", themeName), "Restore the bundled wallpaper for " + Config.theme.displayName);
+            defaultRow.thumbnail = "file://" + Config.paths.themeRoot + "/" + themeName + "/wallpaper.png";
+            items.push(defaultRow);
+            items.push(row("↑ Parent directory", () => navigate(wallpaperFolderPath.replace(/\/?[^/]+\/?$/, "") || "/"), wallpaperFolderPath, "", true));
+            var wallpaperSerial = ++requestSerial;
+            rows = items;
+            // Use the helper for local paths: Qt's folder model reparses decoded
+            // paths as URLs, losing '#' and '?' in directory names.
+            Runtime.run([Config.bin.theme, "wallpaper", "list", wallpaperFolderPath], function(code, out) {
+                if (wallpaperSerial !== root.requestSerial || Runtime.menu !== "wallpaper") return;
+                if (code) {
+                    Runtime.report("This folder could not be opened. Choose another folder.");
+                    return;
+                }
+                var entries = Logic.parseJson(out, []);
+                root.rows = items.concat(entries.map(entry => root.fileRow(entry.name, entry.path, entry.directory, "file://" + encodeURIComponent(entry.path).replace(/%2F/g, "/"))));
+            });
+            return;
         } else if (menu === "files") {
             items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"), folderPath, "", true));
             items.push(row("Open this folder", () => {
@@ -395,7 +418,7 @@ PanelWindow {
             }));
             for (var i = 0; i < folders.count; i++) {
                 var name = folders.get(i, "fileName"), directory = folders.get(i, "fileIsDir"), path = folders.get(i, "filePath");
-                items.push(fileRow(name, path, directory));
+                items.push(fileRow(name, path, directory, folders.get(i, "fileUrl")));
             }
         } else if (menu === "vim" || menu === "lazyvim") {
             items = reference.text().split("\n").filter(Boolean).map(line => row(line, () => {}, "Reference"));
@@ -451,18 +474,40 @@ PanelWindow {
         rows = items;
     }
     function navigate(path) {
+        if (Runtime.menu === "wallpaper") {
+            wallpaperFolderPath = path;
+            return;
+        }
         folderPath = path;
         Preferences.folder = path;
     }
-    function fileRow(name, path, directory) {
-        return row((directory ? "▸ " : "") + name, () => {
+    function fileRow(name, path, directory, url) {
+        var themeName = Runtime.menu === "wallpaper" ? Config.selectedTheme : "";
+        var item = row((directory ? "▸ " : "") + name, () => {
             if (directory)
                 navigate(path);
+            else if (themeName)
+                root.changeWallpaper(path, themeName);
             else {
                 Runtime.launch([Config.bin.xdgOpen, path]);
                 Runtime.closeMenu();
             }
-        }, directory ? "Folder" : "File", "", directory);
+        }, directory ? "Folder" : themeName ? name + " · Save for " + Config.theme.displayName : "File", "", directory);
+        if (themeName && !directory) item.thumbnail = url.toString();
+        return item;
+    }
+    function changeWallpaper(path, themeName) {
+        if (Config.preview || wallpaperBusy) return;
+        wallpaperBusy = true;
+        var serial = requestSerial;
+        var args = [Config.bin.theme, "wallpaper", path ? "set" : "reset"];
+        if (path) args.push(path);
+        args.push(themeName);
+        Runtime.run(args, function(code) {
+            root.wallpaperBusy = false;
+            if (code) Runtime.report("Wallpaper could not be changed. Choose a readable PNG, JPEG, WebP or BMP image.");
+            else if (serial === root.requestSerial && Runtime.menu === "wallpaper") Runtime.closeMenu();
+        });
     }
     function connectNetwork(network) {
         if (Config.preview)
@@ -510,6 +555,10 @@ PanelWindow {
     onBluetoothDevicesChanged: if (Runtime.menu === "bluetooth")
         refresh()
     onFolderPathChanged: search.text = ""
+    onWallpaperFolderPathChanged: {
+        search.text = "";
+        if (Runtime.menu === "wallpaper") refresh();
+    }
     onVisibleChanged: if (visible) {
         pointerPositionKnown = false;
         reveal.restart();
@@ -538,6 +587,12 @@ PanelWindow {
             }
             root.refresh();
             focusTimer.restart();
+        }
+    }
+    Connections {
+        target: Config
+        function onSelectedThemeChanged() {
+            if (Runtime.menu === "wallpaper") root.refresh();
         }
     }
     Connections {

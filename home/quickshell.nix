@@ -57,6 +57,7 @@ let
       home = config.home.homeDirectory;
       dotfiles = "${config.home.homeDirectory}/repos/nixos-dotfiles";
       themeState = "${config.localTheme.stateDir}/selected";
+      themeRoot = "${config.localTheme.themeRoot}";
       screenshot = lib.getExe capture.screenshot;
       editScreenshot = lib.getExe capture.edit;
       screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
