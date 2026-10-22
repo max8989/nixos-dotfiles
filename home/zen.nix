@@ -15,12 +15,30 @@
 # Deliberately no `profiles.<name>` block here: Home Manager only writes
 # profiles.ini when `programs.zen-browser.profiles != {}`, and doing so would
 # create a *new* profile dir alongside the live "Default Profile" one.
-{ inputs, ... }:
+{
+  inputs,
+  pkgs,
+  ...
+}:
 {
   imports = [ inputs.zen-browser.homeModules.beta ];
 
   programs.zen-browser = {
     enable = true;
+
+    # Bitwarden registers the legacy ~/.mozilla path itself. Register its
+    # bridge in Zen's wrapper so XDG-based profiles can also reach the app.
+    nativeMessagingHosts = [
+      (pkgs.writeTextDir "lib/mozilla/native-messaging-hosts/com.8bit.bitwarden.json" (
+        builtins.toJSON {
+          name = "com.8bit.bitwarden";
+          description = "Bitwarden desktop browser integration";
+          path = "${pkgs.bitwarden-desktop}/libexec/desktop_proxy";
+          type = "stdio";
+          allowed_extensions = [ "{446900e4-71c2-419f-a6a7-df9c091e268b}" ];
+        }
+      ))
+    ];
 
     policies = {
       ExtensionSettings = {

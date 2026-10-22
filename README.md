@@ -36,6 +36,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | System (boot, nix, network, user, SSH, Docker, …) | `hosts/common.nix` (every host) + `hosts/<host>/configuration.nix` | NixOS options |
 | Desktop system (audio, login, fonts, fcitx5, fingerprint, …) | `hosts/desktop.nix` (graphical hosts only) | NixOS options |
 | Compositor + keybindings | `home/hyprland.nix` + `home/files/hypr/*.lua` | Lua config (`configType = "lua"`), wired in via `extraConfig` / `extraLuaFiles` |
+| Dictation | `home/dictation.nix` + Kanata + Hyprland | Hold Caps + V; local Voxtype/Whisper transcription into the focused input |
 | Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
 | Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
@@ -78,10 +79,52 @@ home/
   cli.nix                      # CLI essentials shared by both profiles
   server.nix                   # shell + shared CLI + administration (headless hosts)
   hyprland.nix  quickshell.nix  kitty.nix  shell.nix
-  desktop.nix  scripts.nix  theming.nix
+  desktop.nix  dictation.nix  scripts.nix  theming.nix
   starship.toml
   files/                       # CSS, rasi, hypr/*.lua, scripts, icons, backgrounds, …
 ```
+
+## Speech to text
+
+Hold **Caps Lock**, then hold **V** and speak. Release **V** to transcribe and
+type into the focused text field. Omarchy's shortcuts also work: hold **F9**
+or **Right Alt**, or press **Super + Ctrl + X** to start/stop recording.
+Use F9 on layouts where Right Alt is AltGr. Caps keeps its existing
+Escape/navigation behavior; ordinary V and Super + V (clipboard history)
+keep working. Caps+V uses Kanata's F13 keycode directly because the default
+keyboard map names that key `XF86Tools`.
+
+This adapts [Omarchy's Voxtype backend](https://github.com/basecamp/omarchy/blob/quattro/bin/omarchy-dictation-voxtype)
+and [press/release bindings](https://github.com/basecamp/omarchy/blob/quattro/default/hypr/bindings/dictation.lua).
+The [Omarchy manual](https://github.com/basecamp/omarchy/blob/quattro/manual/11-text-extraction-dictation.md)
+also offers Superwhisper; this configuration uses local Voxtype/Whisper.
+The multilingual Whisper base model (148 MB) is pinned and downloaded by Nix
+during the build. Language detection is automatic, with no translation or
+cloud service. The Vulkan build uses the desktop GPU for recognition. Change
+recognition settings in `home/dictation.nix`; Home
+Manager generates `~/.config/voxtype/config.toml`.
+
+Voxtype starts with the graphical session, records the default microphone,
+pauses media while recording, and limits recordings to 60 seconds. Its
+[upstream waveform HUD](https://github.com/peteonrails/voxtype/tree/v1.0.1/quickshell)
+shows live microphone levels while recording, stays visible during transcription,
+and disappears when finished. Recording/transcription notifications are disabled.
+The matching Quickshell assets and audio bridge are wired declaratively through
+the Voxtype service. If automatic typing fails, the text is copied to
+the clipboard. Check the desktop's microphone mute/input settings if recordings
+are silent. Caps+V applies to keyboards managed by Kanata; the existing
+Keychron exclusions remain in `home/files/kanata/config.kbd`. The Omarchy
+shortcuts work independently of Kanata.
+
+Apply with the normal rebuild, then restart Kanata so it reads the new mapping:
+
+```sh
+sudo -A nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
+systemctl --user restart kanata
+```
+
+For diagnostics, use `systemctl --user status voxtype` and
+`journalctl --user -u voxtype -b`.
 
 ## Make it your own
 
@@ -357,6 +400,17 @@ for a password immediately. After suspend, the system queues a restart of an
 active fingerprint daemon, and the lock retries after the reader recovers.
 Fingerprint enrollment is local machine state and must be completed on each
 new installation.
+
+Bitwarden is installed system-wide by `hosts/desktop.nix` so polkit loads its
+unlock policy. GNOME Keyring provides the secure storage it needs, and greetd
+unlocks the keyring with your Linux login password. In Bitwarden, enable
+**File → Settings → Security → Unlock with system authentication**. If a keyring
+setup dialog appears, use your Linux login password so it unlocks at login.
+
+`home/zen.nix` registers Bitwarden's native messaging helper in the Zen wrapper.
+After rebuilding it, fully restart Zen, keep the Bitwarden desktop app running,
+and enable **Settings → Account security → Unlock with biometrics** in the
+extension.
 
 To apply a working tree that still has untracked new files, use the path flake:
 

@@ -7,6 +7,7 @@
   imports = [
     ./theme.nix
     ./hyprland.nix
+    ./dictation.nix
     ./quickshell.nix
     ./kitty.nix
     ./cli.nix
@@ -98,7 +99,6 @@
     discord
     slack
     spotify
-    bitwarden-desktop
     obsidian
     qbittorrent
     localsend

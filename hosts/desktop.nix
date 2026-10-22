@@ -87,6 +87,14 @@
     };
   };
 
+  # Bitwarden's biometric unlock needs Secret Service secure storage and its
+  # polkit policy in the system profile; Home Manager alone does not register it.
+  environment.systemPackages = [ pkgs.bitwarden-desktop ];
+  services.gnome.gnome-keyring.enable = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
+  # Only the keyring is needed here; keep the SSH agent configuration separate.
+  services.gnome.gcr-ssh-agent.enable = false;
+
   ##########################################################################
   ## Audio — PipeWire
   ##########################################################################
