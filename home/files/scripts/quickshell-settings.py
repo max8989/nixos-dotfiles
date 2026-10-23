@@ -13,6 +13,8 @@ import time
 
 NMCLI = "@nmcli@"
 HYPRCTL = "@hyprctl@"
+SYSTEMCTL = "@systemctl@"
+QUICKSHELL = "@quickshell@"
 DNS = {
     "auto": ("", ""),
     "cloudflare": ("1.1.1.1,1.0.0.1", "2606:4700:4700::1111,2606:4700:4700::1001"),
@@ -47,6 +49,32 @@ def network_ready(timeout=10):
             pass
         time.sleep(min(0.2, max(0, deadline - time.monotonic())))
     raise RuntimeError("NetworkManager did not become ready before desktop startup")
+
+
+def network_recover():
+    """Recover a missing backend once per daemon, without interrupting authentication."""
+    ipc = [QUICKSHELL, "ipc", "--config", "desktop", "call"]
+    if command([*ipc, "network", "isAvailable"]) != "false":
+        return {"restarted": False}
+    network_ready(timeout=1)
+    generation = command([SYSTEMCTL, "show", "NetworkManager.service", "--property=InvocationID", "--value"])
+    if not re.fullmatch(r"[0-9a-f]{32}", generation):
+        raise RuntimeError("NetworkManager has no active service invocation")
+    marker = Path(os.environ["XDG_RUNTIME_DIR"]) / "quickshell-network-recovery"
+    if marker.exists() and marker.read_text().strip() == generation:
+        return {"restarted": False}
+    if any(command([*ipc, target, method]) != "false"
+           for target, method in [("session", "isSecure"), ("auth", "isActive")]):
+        return {"restarted": False}
+    # Persist before requesting the restart: a backend failure must not cause a
+    # restart loop. A later NetworkManager invocation permits another recovery.
+    marker.write_text(generation + "\n")
+    try:
+        command([SYSTEMCTL, "--user", "--no-block", "restart", "quickshell.service"])
+    except (RuntimeError, OSError, subprocess.TimeoutExpired):
+        marker.unlink(missing_ok=True)
+        raise
+    return {"restarted": True}
 
 
 def fields(output):
@@ -233,6 +261,8 @@ def main():
     action, *args = sys.argv[1:]
     if action == "network-ready" and not args:
         emit(network_ready())
+    elif action == "network-recover" and not args:
+        emit(network_recover())
     elif action == "network-info" and len(args) == 1:
         emit(network_info(args[0]))
     elif action == "dns" and len(args) == 2:

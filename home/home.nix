@@ -3,6 +3,27 @@
   username,
   ...
 }:
+let
+  # Fabric does not support Invoke 3 yet. Pin it throughout Azure CLI's
+  # package set so Fabric and Paramiko share one compatible version.
+  # Remove once https://github.com/fabric/fabric/issues/2376 is resolved.
+  azureCliPkgs = pkgs.extend (
+    _: prev: {
+      pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+        (_: pythonPrev: {
+          invoke = pythonPrev.invoke.overridePythonAttrs (_: {
+            version = "2.2.1";
+            src = pkgs.fetchPypi {
+              pname = "invoke";
+              version = "2.2.1";
+              hash = "sha256-UVv0m0pIkyt5sCRZA0jaIvOcSULf+ZGtH7i4uuob5wc=";
+            };
+          });
+        })
+      ];
+    }
+  );
+in
 {
   imports = [
     ./theme.nix
@@ -92,7 +113,7 @@
     # --- GUI apps (migrated from arch-linux-setup install_packages.sh) ---
     firefox
     google-chrome
-    libreoffice-fresh
+    libreoffice
     vlc
     snapshot # GNOME Camera — photos and videos through PipeWire
     cameractrls-gtk4 # Webcam exposure, white balance, and sharpness controls
@@ -119,7 +140,7 @@
 
     # --- dev block ---
     awscli2
-    azure-cli
+    azureCliPkgs.azure-cli
     (
       with dotnetCorePackages;
       combinePackages [
@@ -137,8 +158,8 @@
     # --- claude-config (~/repos/claude-config) dependencies ---
     # install.sh uses gh (provided by cli.nix) to fetch the MCP server
     # binaries into that repository's bin/ directory.
-    jetbrains.rider
-    jetbrains.datagrip
+    # jetbrains.rider
+    # jetbrains.datagrip
   ];
 
   # Shell menus, sound, notifications and locking are owned by quickshell.nix.

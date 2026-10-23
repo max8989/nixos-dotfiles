@@ -97,8 +97,14 @@ let
   };
   settingsHelper = pkgs.writeScriptBin "quickshell-settings" (
     builtins.replaceStrings
-      [ "@python@" "@nmcli@" "@hyprctl@" ]
-      [ "${pkgs.python3}/bin/python3" "${pkgs.networkmanager}/bin/nmcli" "${hyprland}/bin/hyprctl" ]
+      [ "@python@" "@nmcli@" "@hyprctl@" "@systemctl@" "@quickshell@" ]
+      [
+        "${pkgs.python3}/bin/python3"
+        "${pkgs.networkmanager}/bin/nmcli"
+        "${hyprland}/bin/hyprctl"
+        "${pkgs.systemd}/bin/systemctl"
+        (lib.getExe pkgs.quickshell)
+      ]
       (builtins.readFile ./files/scripts/quickshell-settings.py)
   );
   fingerprintHelper = pkgs.writeShellApplication {
@@ -212,6 +218,7 @@ in
       # Quickshell 0.3.1 selects its network backend only once. During a rebuild
       # the user service can start before the system NetworkManager service.
       # Bound the wait and allow failure so networking cannot prevent locking.
+      # Network.qml recovers the backend if the daemon takes longer to start.
       ExecStartPre = "-${lib.getExe settingsHelper} network-ready";
       ExecStart = lib.mkForce "${lib.getExe pkgs.quickshell} --config desktop --no-color";
       Environment = [

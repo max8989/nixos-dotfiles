@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Networking
 import ".."
 import "../Logic.js" as Logic
@@ -19,7 +20,16 @@ Singleton {
     property var details: ({})
     property bool refreshing: false
     property bool changingDns: false
+    property bool recovering: false
     readonly property var traffic: Metrics.networkDevices[deviceName] || ({})
+    function recover() {
+        if (Config.preview || Config.development || available || Runtime.locked || recovering || !Config.bin.settings)
+            return;
+        recovering = true;
+        Runtime.run([Config.bin.settings, "network-recover"], function() {
+            root.recovering = false;
+        });
+    }
     function toggle() {
         if (!Config.preview && available && hardwareEnabled)
             Networking.wifiEnabled = !Networking.wifiEnabled;
@@ -60,4 +70,14 @@ Singleton {
         function onMenuChanged() { if (Runtime.menu === "wifi") root.refresh(); }
     }
     Timer { interval: 5000; repeat: true; running: Runtime.menu === "wifi"; onTriggered: root.refresh() }
+    Timer {
+        interval: 5000
+        repeat: true
+        running: Config.valid && !Config.preview && !Config.development && !root.available && !Runtime.locked
+        onTriggered: root.recover()
+    }
+    IpcHandler {
+        target: "network"
+        function isAvailable(): bool { return root.available; }
+    }
 }

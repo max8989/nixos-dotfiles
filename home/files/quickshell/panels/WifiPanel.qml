@@ -35,7 +35,7 @@ SettingsScroll {
     SettingsText {
         objectName: "wifiBackendWarning"
         visible: !root.network.available
-        text: "The desktop could not connect to NetworkManager. Restart the desktop shell after NetworkManager is running."
+        text: "Waiting for NetworkManager. Network controls will recover automatically when the service is ready."
         Layout.fillWidth: true
         color: Config.theme.warning
     }

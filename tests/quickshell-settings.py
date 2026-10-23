@@ -1,4 +1,4 @@
-"""Hardware-independent regressions for DNS transactions and scale recovery."""
+"""Hardware-independent regressions for network, DNS and display recovery."""
 import importlib.util
 import io
 import itertools
@@ -37,6 +37,48 @@ class SettingsTests(unittest.TestCase):
         self.assertGreater(run.call_count, 0)
         self.assertLess(run.call_count, 5)
         self.assertTrue(all(0 < call.kwargs["timeout"] <= 0.5 for call in run.call_args_list))
+
+    def test_network_recovery_restarts_only_once_per_daemon(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(settings.os.environ, {"XDG_RUNTIME_DIR": directory}), patch.object(settings, "network_ready"):
+            for generation in ["a" * 32, "b" * 32]:
+                with patch.object(settings, "command", side_effect=["false", generation, "false", "false", ""]) as command:
+                    self.assertEqual(settings.network_recover(), {"restarted": True})
+                    self.assertEqual(command.call_args.args[0], [settings.SYSTEMCTL, "--user", "--no-block", "restart", "quickshell.service"])
+                with patch.object(settings, "command", side_effect=["false", generation]):
+                    self.assertEqual(settings.network_recover(), {"restarted": False})
+
+    def test_network_recovery_waits_until_lock_and_authentication_finish(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(settings.os.environ, {"XDG_RUNTIME_DIR": directory}), patch.object(settings, "network_ready"):
+            for guards in [["true"], ["false", "true"], ["unexpected"]]:
+                with patch.object(settings, "command", side_effect=["false", "a" * 32, *guards]):
+                    self.assertEqual(settings.network_recover(), {"restarted": False})
+                self.assertFalse((Path(directory) / "quickshell-network-recovery").exists())
+            with patch.object(settings, "command", side_effect=["false", "a" * 32, "false", "false", ""]):
+                self.assertEqual(settings.network_recover(), {"restarted": True})
+
+    def test_network_recovery_leaves_healthy_backend_and_offline_daemon_alone(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(settings.os.environ, {"XDG_RUNTIME_DIR": directory}), patch.object(settings, "network_ready") as ready:
+            with patch.object(settings, "command", return_value="true") as command:
+                self.assertEqual(settings.network_recover(), {"restarted": False})
+                command.assert_called_once()
+                ready.assert_not_called()
+            ready.side_effect = RuntimeError("NetworkManager did not become ready")
+            with patch.object(settings, "command", return_value="false") as command:
+                with self.assertRaisesRegex(RuntimeError, "did not become ready"):
+                    settings.network_recover()
+                command.assert_called_once()
+            self.assertFalse((Path(directory) / "quickshell-network-recovery").exists())
+
+    def test_network_recovery_retries_failed_restart_request(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(settings.os.environ, {"XDG_RUNTIME_DIR": directory}), patch.object(settings, "network_ready"):
+            for result in [RuntimeError("Settings command failed"), ""]:
+                with patch.object(settings, "command", side_effect=["false", "a" * 32, "false", "false", result]):
+                    if isinstance(result, Exception):
+                        with self.assertRaisesRegex(RuntimeError, "Settings command failed"):
+                            settings.network_recover()
+                        self.assertFalse((Path(directory) / "quickshell-network-recovery").exists())
+                    else:
+                        self.assertEqual(settings.network_recover(), {"restarted": True})
 
     def setUp(self):
         self.monitor = dict(name="DP-1", description="Test display", width=1920, height=1200,
