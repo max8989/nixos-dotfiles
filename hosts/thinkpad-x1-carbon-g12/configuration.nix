@@ -13,6 +13,9 @@
     ./hardware-configuration.nix
   ];
 
+  # OpenLolo owner page for the iPhone on this laptop's Wi-Fi network.
+  networking.firewall.interfaces.wlp0s20f3.allowedTCPPorts = [ 8788 ];
+
   # Disk-backed overflow for cold anonymous memory. nixpkgs detects btrfs and
   # creates this with `btrfs filesystem mkswapfile`, so the file is NODATACOW
   # and uncompressed despite the root mount's compress=zstd option. Keep it at
