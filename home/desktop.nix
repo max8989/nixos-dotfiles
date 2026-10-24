@@ -173,6 +173,27 @@
   };
 
   #########################################################################
+  ## TickTick — open at login, once the desktop and system tray are ready.
+  #########################################################################
+  systemd.user.services.ticktick = {
+    Unit = {
+      Description = "TickTick task manager";
+      Requires = [ "tray.target" ];
+      After = [
+        "graphical-session.target"
+        "tray.target"
+      ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = lib.getExe' pkgs.ticktick "ticktick";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  #########################################################################
   ## Default applications — Dolphin is the main file manager.
   ##
   ## inode/directory is the only type Dolphin's desktop file declares, and it
