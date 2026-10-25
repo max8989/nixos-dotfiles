@@ -32,6 +32,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # osu!stable and its low-latency Proton runtime. Keep upstream's nixpkgs
+    # input so its packages match the nix-gaming binary cache.
+    nix-gaming.url = "github:fufexan/nix-gaming";
+
     # Zen Browser (no nixpkgs package; community flake).
     # Output used: homeModules.beta, imported by home/zen.nix. That module is
     # built on Home Manager's own mkFirefoxModule, so home-manager MUST follow

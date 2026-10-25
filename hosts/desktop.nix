@@ -21,14 +21,16 @@
   ];
 
   ##########################################################################
-  ## Nix — Hyprland flake is not built by Hydra / cache.nixos.org; pull its
-  ## prebuilt binaries from the official Cachix instead of compiling locally.
-  ## Valid only because we do NOT override hyprland's nixpkgs input (see
-  ## flake.nix).
+  ## Nix — upstream binary caches for Hyprland and nix-gaming. Keep their
+  ## nixpkgs inputs intact so the packages match these prebuilt binaries.
   ##########################################################################
-  nix.settings.substituters = [ "https://hyprland.cachix.org" ];
+  nix.settings.substituters = [
+    "https://hyprland.cachix.org"
+    "https://nix-gaming.cachix.org"
+  ];
   nix.settings.trusted-public-keys = [
     "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+    "nix-gaming.cachix.org-1:nbjlureqMbRAxR1gJ/f3hxemL9svXaZF/Ees8vCUUs4="
   ];
   # bitwarden-desktop currently bundles an EOL Electron that nixpkgs flags as
   # insecure. Permit just that version; drop this once bitwarden bumps Electron.

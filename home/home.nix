@@ -1,4 +1,5 @@
 {
+  inputs,
   pkgs,
   username,
   ...
@@ -130,6 +131,12 @@ in
     tor-browser
     zoom-us
     ticktick
+
+    # --- games ---
+    # The guide's Windows osu!stable, with a patched low-latency runtime.
+    (inputs.nix-gaming.packages.${pkgs.stdenv.hostPlatform.system}.osu-stable.override {
+      useGameMode = false; # This desktop does not run a GameMode daemon.
+    })
 
     # --- desktop-specific terminal tools ---
     # General CLI tools and core development runtimes come from cli.nix.
