@@ -16,7 +16,7 @@ PanelWindow {
     id: root
     required property var modelData
     screen: modelData
-    visible: !Preferences.barHidden && !Runtime.locked
+    visible: !Preferences.barHidden && !Runtime.locked && (Config.preview || !fullscreen)
     anchors {
         left: true
         right: true
@@ -34,6 +34,12 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-bar"
     exclusionMode: Config.preview ? ExclusionMode.Ignore : ExclusionMode.Auto
     readonly property var monitor: Hyprland.monitorFor(screen)
+    // Track real fullscreen windows so unlocking cannot remap the bar over them.
+    // Maximized windows keep the bar, and other monitors remain independent.
+    readonly property var windowHandles: ToplevelManager.toplevels
+    readonly property bool fullscreen: windowHandles.values.length > 0
+                                      && Hyprland.toplevels.values.some(toplevel =>
+                                          toplevel.wayland?.fullscreen && toplevel.workspace === root.monitor?.activeWorkspace)
     readonly property var connection: Networking.devices.values.find(d => d.connected)
     readonly property var wifi: connection?.networks.values.find(n => n.connected)
     readonly property string networkTip: (wifi ? wifi.name + " · " + Math.round(wifi.signalStrength * 100) + "%" : connection ? connection.name : "Disconnected") + (connection ? " · " + connection.address : "") + "\n" + Metrics.networkRate
