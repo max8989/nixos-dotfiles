@@ -612,10 +612,13 @@ after any input update and fix anything that has since moved):
 - **Alt-Tab is `hyprshell`, not `hyprswitch`.** Upstream renamed the project and
   changed the CLI, so the Arch binds/`exec-once` were dropped. The switcher is
   back as `services.hyprshell` in `home/desktop.nix` — a Home Manager systemd
-  user service that registers ALT+TAB itself via Hyprland's global-shortcuts
-  protocol, so there is no bind in `keybindings.lua`. Hold ALT, tap TAB
-  (SHIFT+TAB or grave to go backwards), release ALT to focus. The SUPER overview
-  / launcher half of hyprshell is left off.
+  user service that registers its own shortcuts, so there is no bind in
+  `keybindings.lua`. Hold ALT and tap TAB to cycle through all app windows
+  across every workspace and monitor; ALT+SHIFT+TAB cycles backwards. While
+  holding ALT after opening the switcher, use the arrow keys to navigate;
+  release ALT to focus the selection. `key = "Tab"` is case-sensitive. A local
+  compatibility patch lets Hyprshell read Hyprland 0.56's inactive special
+  workspace data. The SUPER overview / launcher half of hyprshell is left off.
 - **Audio output selection** (SUPER+F12 / bar click) uses Quickshell's native PipeWire service.
 - **Night light** uses the retained hyprsunset daemon, controlled by Quickshell. Preferences persist outside the Nix store.
 - **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.

@@ -1,0 +1,44 @@
+Hyprland 0.56 omits the numeric id in an inactive specialWorkspace object.
+Default it to zero, the existing "no special workspace" sentinel, so monitor
+queries and Alt-Tab window collection succeed with both IPC formats.
+
+Applies to Hyprshell 4.10.8's bundled hyprland-rs; remove once fixed upstream.
+
+--- a/dep-crates/hyprland-rs/src/data/regular.rs
++++ b/dep-crates/hyprland-rs/src/data/regular.rs
+@@ -44,6 +44,29 @@
+-pub struct WorkspaceBasic {
+-    /// The workspace Id
+-    pub id: WorkspaceId,
+-    /// The workspace's name
+-    pub name: String,
+-}
++pub struct WorkspaceBasic {
++    /// The workspace Id (zero when no special workspace is active).
++    #[serde(default)]
++    pub id: WorkspaceId,
++    /// The workspace's name
++    pub name: String,
++}
++
++#[cfg(test)]
++mod workspace_basic_tests {
++    use super::WorkspaceBasic;
++
++    #[test]
++    fn inactive_special_workspace_without_id() {
++        let workspace: WorkspaceBasic =
++            serde_json::from_str(r#"{"address":"","type":"","name":""}"#).unwrap();
++        assert_eq!(workspace.id, 0);
++        assert_eq!(workspace.name, "");
++    }
++
++    #[test]
++    fn existing_workspace_ids_are_preserved() {
++        for id in [0, 3, -99] {
++            let json = format!(r#"{{"id":{id},"name":"workspace"}}"#);
++            let workspace: WorkspaceBasic = serde_json::from_str(&json).unwrap();
++            assert_eq!(workspace.id, id);
++        }
++    }
++}

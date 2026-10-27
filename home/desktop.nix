@@ -96,11 +96,12 @@
   #########################################################################
   ## Hyprshell — Alt-Tab window switcher (HM systemd user service)
   ##
-  ## Successor to hyprswitch. It registers its own Alt+Tab shortcut through
-  ## Hyprland's global-shortcuts protocol, so there is deliberately no bind in
+  ## Successor to hyprswitch. It registers its own Alt+Tab shortcuts with
+  ## Hyprland, so there is deliberately no bind in
   ## home/files/hypr/keybindings.lua — configuring `switch` here *is* the
-  ## keybind. Hold ALT and tap TAB (SHIFT+TAB / grave to go backwards), release
-  ## ALT to focus the selection.
+  ## keybind. Hold ALT and tap TAB (SHIFT+TAB / grave to go backwards), or
+  ## navigate with the arrow keys, then release ALT to focus the selection.
+  ## The key name is case-sensitive: `tab` disables the keyboard controller.
   ##
   ## `version` is mandatory and must match the schema hyprshell ships with (4
   ## as of 4.10.x). Omitting it, or leaving it behind, makes hyprshell try to
@@ -118,13 +119,21 @@
   #########################################################################
   services.hyprshell = {
     enable = true;
+    # Hyprland 0.56 omits `id` for an inactive special workspace. Hyprshell's
+    # bundled IPC parser still requires it, so every window-list read fails.
+    package = pkgs.hyprshell.overrideAttrs (old: {
+      patches = (old.patches or [ ]) ++ [ ./files/hyprshell-empty-special-workspace.patch ];
+    });
     style = ''@import url("file://${config.localTheme.currentDir}/hyprshell.css");'';
     settings = {
       version = 4;
       windows = {
         switch = {
           modifier = "alt";
-          key = "tab";
+          key = "Tab";
+          # Include every app across all workspaces and monitors.
+          filter_by = [ ];
+          switch_workspaces = false;
         };
       };
     };
