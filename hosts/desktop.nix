@@ -119,6 +119,8 @@
   ##########################################################################
   ## Desktop / laptop peripherals & services
   ##########################################################################
+  # Configurable tablet input for osu!, including the GUI and user daemon.
+  hardware.opentabletdriver.enable = true;
   # Power profiles and battery data are consumed by Quickshell over D-Bus.
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;

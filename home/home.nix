@@ -133,6 +133,7 @@ in
     ticktick
 
     # --- games ---
+    osu-lazer-bin # Official native Linux client, alongside osu!stable.
     # The guide's Windows osu!stable, with a patched low-latency runtime.
     (inputs.nix-gaming.packages.${pkgs.stdenv.hostPlatform.system}.osu-stable.override {
       useGameMode = false; # This desktop does not run a GameMode daemon.
