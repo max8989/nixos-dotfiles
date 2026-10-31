@@ -160,15 +160,12 @@ flakes only see git-tracked files inside the flake root.
   checks. QML metadata exceptions are narrowly listed in `tests/quickshell-lint.py`
   for upstream 0.3.1 defects; do not disable import/property checks globally.
   `nix build .#quickshell-vm-test` tests authentication in an isolated NixOS VM.
-- **Alt-Tab comes from `services.hyprshell`** (`home/desktop.nix`), not from a
-  bind in `keybindings.lua` — hyprshell claims ALT+TAB itself through Hyprland's
-  global-shortcuts protocol. Its `settings` are validated strictly (an unknown
-  key rejects the whole config) and `version` is mandatory: it must match the
-  schema of the packaged hyprshell (4 as of 4.10.x), otherwise hyprshell tries
-  to migrate the file in place and fails, because Home Manager makes
-  `~/.config/hyprshell/config.json` a read-only store symlink. Check with
-  `hyprshell config check` / `hyprshell config explain`. `hyprswitch`, the old
-  name, is gone from nixpkgs.
+- **Alt-Tab belongs to Quickshell.** `keybindings.lua` calls the `switcher`
+  IPC target in `panels/WindowSwitcher.qml`. Its recent-window snapshot reads
+  `hyprctl -j clients` and keeps focus-history order stable while open. Workspace
+  names are labels, never numeric parser requirements. Keep the compositor's
+  Alt release binding: it accepts quick taps before the popup gets focus.
+  Hyprshell and its compatibility patch are removed.
 - **Nix string interpolation:** in `''…''` and `"…"` strings only `${` triggers
   interpolation. Hyprlock/Waybar command strings contain `$(…)`, `$3`, `%`, `{…}`
   — all literal. If you ever need a literal `${`, escape it as `''${`.

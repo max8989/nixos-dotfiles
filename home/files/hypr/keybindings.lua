@@ -156,10 +156,11 @@ end
 hl.bind("CTRL + space", hl.dsp.exec_cmd(shell.cycleInput), { description = "cycle us / ca / pinyin" })
 hl.bind("CTRL + ALT + space", hl.dsp.exec_raw("fcitx5-remote -t"))
 
--- NOTE: there is no Alt-Tab bind here on purpose. The switcher is hyprshell
--- (successor to hyprswitch), configured in home/desktop.nix as
--- `services.hyprshell`. It registers ALT+TAB / ALT+SHIFT+TAB itself and handles
--- arrow keys while ALT is held, across every workspace and monitor.
+-- Quickshell keeps recent window order stable until Alt is released. The
+-- release bind also handles quick taps before the popup gains keyboard focus.
+hl.bind("ALT + Tab", hl.dsp.exec_cmd(shell.switchNext), { description = "next recent window" })
+hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(shell.switchPrevious), { description = "previous recent window" })
+hl.bind("Alt_L", hl.dsp.exec_cmd(shell.switchAccept), { release = true, ignore_mods = true, non_consuming = true })
 
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_right", hl.dsp.focus({ workspace = "e+1" }))

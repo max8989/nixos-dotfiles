@@ -38,6 +38,7 @@ ShellRoot {
         }
     }
     Overlays {}
+    WindowSwitcher {}
     LazyLoader {
         id: locker
         active: Config.valid && Config.features.lock && !Config.preview

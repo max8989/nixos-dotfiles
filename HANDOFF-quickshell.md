@@ -168,8 +168,8 @@ blurred screenshots, Chinese date/phrases, weather, reminders and media metadata
 
 The old Waybar, Wofi/Rofi, SwayNC, SwayOSD, wlogout, Hyprlock and GNOME polkit
 configuration/packages and their replaced helper scripts are removed. Hypridle,
-Hyprpaper, Hyprsunset, Hyprshell Alt-Tab, clipboard capture and independent
-screenshot/recording/RSS utilities remain.
+Hyprpaper, Hyprsunset, clipboard capture and independent screenshot/recording/RSS
+utilities remain. Quickshell now owns Alt-Tab through its recent-window picker.
 
 ## Service, state and security
 

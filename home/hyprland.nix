@@ -109,6 +109,18 @@ in
         themes = menu "theme";
         wallpaper = menu "wallpaper";
         battery = menu "battery";
+        switchNext = ipc [
+          "switcher"
+          "next"
+        ];
+        switchPrevious = ipc [
+          "switcher"
+          "previous"
+        ];
+        switchAccept = ipc [
+          "switcher"
+          "accept"
+        ];
         cycleInput = lib.getExe cycleInput;
         dictationStart = "${lib.getExe config.services.voxtype.package} record start";
         dictationStop = "${lib.getExe config.services.voxtype.package} record stop";

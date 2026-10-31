@@ -58,6 +58,7 @@ in
       ''
         python3 ${./quickshell-lint.py} ${bundle} ${pkgs.quickshell}/lib/qt-6/qml ${pkgs.qt6.qtdeclarative}/lib/qt-6/qml lint.json
         node ${./quickshell-logic.mjs} ${../home/files/quickshell/Logic.js}
+        node ${./window-history.mjs} ${../home/files/quickshell/panels/WindowHistory.js}
         node ${./fingerprint-model.mjs} ${../home/files/quickshell/lock/FingerprintModel.js}
         python3 ${./fingerprint-helper.py} ${../home/files/scripts/desktop-fingerprint.sh}
         python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}
@@ -75,6 +76,7 @@ in
     assert !home.services.swaync.enable;
     assert !home.programs.hyprlock.enable;
     assert !home.programs.wofi.enable;
+    assert !home.services.hyprshell.enable;
     assert !server.programs.quickshell.enable;
     assert desktop.security.pam.services.quickshell.enable;
     assert !desktop.security.pam.services.quickshell.fprintAuth;

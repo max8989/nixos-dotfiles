@@ -282,20 +282,6 @@ let
     let
       themeFiles = {
         "hypr-theme.lua" = "return " + lib.generators.toLua { } (builtins.removeAttrs p [ "wallpaper" ]);
-        "hyprshell.css" = ''
-          :root {
-            --border-color: ${p.border};
-            --border-color-active: ${p.accent};
-            --bg-color: ${p.base};
-            --bg-color-hover: ${p.raised};
-            --bg-window-color: ${p.background};
-            --text-color: ${p.text};
-            --border-radius: 14px;
-            --border-size: 2px;
-            --border-style: solid;
-          }
-          .window { font-family: Figtree; }
-        '';
         "kitty.conf" =
           if id == "tokyo-night" || id == "catppuccin-latte" then
             kittyColors p
