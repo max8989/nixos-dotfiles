@@ -57,7 +57,12 @@ in
       };
       whisper = {
         model = "${whisperModel}";
-        language = "auto";
+        # Constrain detection to the languages used for dictation.
+        language = [
+          "fr"
+          "en"
+        ];
+        initial_prompt = "Dictée en français canadien (Québec) et en anglais. Québec, Montréal, courriel.";
         translate = false;
       };
       output = {

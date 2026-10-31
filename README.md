@@ -40,6 +40,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
 | Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
+| Firefox | `home/firefox.nix` + `home/files/firefox/userChrome.css` | Compact density, top toolbar and vertical tabs revealed from the top/left edge |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
 | CLI packages | `home/cli.nix` + `home/server.nix` | Shared utilities, Git/Docker tools and core runtimes; extra headless administration tools |
 | Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, Swappy editing, recording and RSS tools |
@@ -99,10 +100,11 @@ and [press/release bindings](https://github.com/basecamp/omarchy/blob/quattro/de
 The [Omarchy manual](https://github.com/basecamp/omarchy/blob/quattro/manual/11-text-extraction-dictation.md)
 also offers Superwhisper; this configuration uses local Voxtype/Whisper.
 The multilingual Whisper base model (148 MB) is pinned and downloaded by Nix
-during the build. Language detection is automatic, with no translation or
-cloud service. The Vulkan build uses the desktop GPU for recognition. Change
-recognition settings in `home/dictation.nix`; Home
-Manager generates `~/.config/voxtype/config.toml`.
+during the build. Language detection is limited to French and English, with a
+French Canadian (Québec) vocabulary hint and no translation or cloud service.
+Speak either language using the same shortcut. The Vulkan build uses the
+desktop GPU for recognition. Change recognition settings in `home/dictation.nix`;
+Home Manager generates `~/.config/voxtype/config.toml`.
 
 Voxtype starts with the graphical session, records the default microphone,
 pauses media while recording, and limits recordings to 60 seconds. Its
@@ -423,6 +425,28 @@ Upstream references: Omarchy's [setup script](https://github.com/omacom/omarchy/
 [lock fingerprint model](https://github.com/omacom/omarchy/blob/quattro/shell/plugins/lock/FingerprintModel.js),
 and [resume hook](https://github.com/omacom/omarchy/blob/quattro/default/systemd/system-sleep/fprintd-resume).
 The adaptation uses NixOS modules rather than editing `/etc/pam.d` at runtime.
+
+### Firefox compact layout
+
+`home/firefox.nix` manages Firefox's compact density and vertical tabs.
+`home/files/firefox/userChrome.css` hides the top toolbars and collapsed tab rail,
+leaving a 4px hover target at the top and an 8px target at the left. Revealed bars
+overlay the page. `Ctrl+L` reveals and focuses the address bar; menus and popups
+keep the toolbar visible while in use. Toolbar customization and website
+fullscreen use Firefox's normal layout.
+
+Rebuild, then fully quit and reopen Firefox. The ThinkPad configuration adopts
+the existing `iuvdm42p.default` profile, preserving its session, extensions and
+bookmarks. When reinstalling, update that host's
+`programs.firefox.profiles.default.path` to the existing profile's directory
+before rebuilding, or remove the override for a fresh `default` profile.
+
+The sidebar uses Firefox's [native hover expansion](https://firefox-source-docs.mozilla.org/browser/components/sidebar/docs/index.html).
+The toolbar and rail hiding use [userChrome.css](https://support.mozilla.org/en-US/kb/contributors-guide-firefox-advanced-customization),
+which can need adjustments after Firefox updates. To disable the custom hiding,
+set `toolkit.legacyUserProfileCustomizations.stylesheets` to `false` in
+`about:config` and restart Firefox. Remove `userChrome` from `home/firefox.nix`
+for a persistent rollback through Home Manager.
 
 ### Installed home server
 
