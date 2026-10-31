@@ -168,11 +168,11 @@
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
-      # Zen handles web links and saved web pages.
-      "x-scheme-handler/http" = [ "zen-beta.desktop" ];
-      "x-scheme-handler/https" = [ "zen-beta.desktop" ];
-      "text/html" = [ "zen-beta.desktop" ];
-      "application/xhtml+xml" = [ "zen-beta.desktop" ];
+      # Firefox handles web links and saved web pages.
+      "x-scheme-handler/http" = [ "firefox.desktop" ];
+      "x-scheme-handler/https" = [ "firefox.desktop" ];
+      "text/html" = [ "firefox.desktop" ];
+      "application/xhtml+xml" = [ "firefox.desktop" ];
 
       "inode/directory" = [ "org.kde.dolphin.desktop" ];
 
