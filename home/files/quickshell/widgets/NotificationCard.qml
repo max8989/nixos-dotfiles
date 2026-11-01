@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import ".."
 import "../services"
@@ -48,31 +49,63 @@ Glass {
                 onClicked: Notifications.dismiss(root.entry.id)
             }
         }
-        Text {
-            id: summary
-            text: root.entry.notification ? root.entry.notification.summary : root.entry.title
-            color: Config.theme.text
-            font.bold: true
-            font.family: Config.theme.uiFont
-            font.pixelSize: Config.fonts.heading
-            textFormat: Text.PlainText
-            wrapMode: Text.Wrap
-            maximumLineCount: root.expanded ? 2147483647 : 3
-            elide: Text.ElideRight
+        Button {
+            id: subject
+            objectName: "notificationOpen"
             Layout.fillWidth: true
-        }
-        Text {
-            id: body
-            text: root.entry.notification ? root.entry.notification.body : root.entry.body
-            visible: text.length > 0
-            color: Config.theme.text
-            font.family: Config.theme.uiFont
-            font.pixelSize: Config.fonts.body
-            textFormat: Text.PlainText
-            wrapMode: Text.Wrap
-            maximumLineCount: root.expanded ? 2147483647 : 6
-            elide: Text.ElideRight
-            Layout.fillWidth: true
+            padding: 0
+            hoverEnabled: true
+            enabled: Notifications.canActivate(root.entry)
+            focusPolicy: Qt.TabFocus
+            Keys.onReturnPressed: clicked()
+            Keys.onEnterPressed: clicked()
+            Accessible.name: "Open notification from " + root.entry.app + ": " + root.entry.title
+            onActiveFocusChanged: if (activeFocus)
+                root.focusRequested(this)
+            onClicked: Notifications.activate(root.entry.id)
+            background: Rectangle {
+                radius: 4
+                color: Qt.alpha(Config.theme.text, subject.hovered || subject.visualFocus ? Config.controls.hoverFillAlpha : 0)
+                border.width: subject.visualFocus ? 1 : 0
+                border.color: Config.theme.accent
+            }
+            contentItem: ColumnLayout {
+                spacing: 6
+                Text {
+                    id: summary
+                    text: root.entry.notification ? root.entry.notification.summary : root.entry.title
+                    color: Config.theme.text
+                    font.bold: true
+                    font.family: Config.theme.uiFont
+                    font.pixelSize: Config.fonts.heading
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    maximumLineCount: root.expanded ? 2147483647 : 3
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+                Text {
+                    id: body
+                    text: root.entry.notification ? root.entry.notification.body : root.entry.body
+                    visible: text.length > 0
+                    color: Config.theme.text
+                    font.family: Config.theme.uiFont
+                    font.pixelSize: Config.fonts.body
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    maximumLineCount: root.expanded ? 2147483647 : 6
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+                Image {
+                    source: root.entry.image || ""
+                    visible: source.toString().length > 0
+                    Layout.preferredHeight: visible ? 100 : 0
+                    Layout.fillWidth: true
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                }
+            }
         }
         Chip {
             objectName: "notificationExpand"
@@ -87,19 +120,11 @@ Glass {
                     Qt.callLater(() => root.focusRequested(this));
             }
         }
-        Image {
-            source: root.entry.image || ""
-            visible: source.toString().length > 0
-            Layout.preferredHeight: visible ? 100 : 0
-            Layout.fillWidth: true
-            fillMode: Image.PreserveAspectFit
-            asynchronous: true
-        }
         Flow {
             Layout.fillWidth: true
             spacing: 4
             Repeater {
-                model: root.entry.notification ? root.entry.notification.actions : []
+                model: root.entry.notification ? root.entry.notification.actions.filter(action => action.identifier !== "default") : []
                 Chip {
                     required property var modelData
                     onActiveFocusChanged: if (activeFocus)

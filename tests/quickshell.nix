@@ -11,6 +11,27 @@ let
   bundle = self.packages.${system}.quickshell-config;
 in
 {
+  workspace-activity =
+    pkgs.runCommand "workspace-activity-check"
+      {
+        nativeBuildInputs = [
+          pkgs.quickshell
+          pkgs.qt6.qtdeclarative
+          pkgs.python3
+          pkgs.nodejs
+          pkgs.sway
+          pkgs.grim
+          pkgs.wtype
+          pkgs.dbus
+        ];
+        QML_IMPORT_PATH = "${pkgs.quickshell}/lib/qt-6/qml:${pkgs.qt6.qtdeclarative}/lib/qt-6/qml";
+      }
+      ''
+        node ${./window-activity.mjs} ${../home/files/quickshell/services/WindowActivity.js}
+        python3 ${./workspace-activity.py} ${bundle} "$TMPDIR/activity"
+        mkdir -p "$out"
+        cp "$TMPDIR/activity/workspace-attention.png" "$TMPDIR/activity/attention-state.json" "$out/"
+      '';
   dictation =
     pkgs.runCommand "dictation-check"
       {
@@ -59,6 +80,7 @@ in
         python3 ${./quickshell-lint.py} ${bundle} ${pkgs.quickshell}/lib/qt-6/qml ${pkgs.qt6.qtdeclarative}/lib/qt-6/qml lint.json
         node ${./quickshell-logic.mjs} ${../home/files/quickshell/Logic.js}
         node ${./window-history.mjs} ${../home/files/quickshell/panels/WindowHistory.js}
+        node ${./window-activity.mjs} ${../home/files/quickshell/services/WindowActivity.js}
         node ${./fingerprint-model.mjs} ${../home/files/quickshell/lock/FingerprintModel.js}
         python3 ${./fingerprint-helper.py} ${../home/files/scripts/desktop-fingerprint.sh}
         python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}

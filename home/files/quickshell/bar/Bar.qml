@@ -50,14 +50,18 @@ PanelWindow {
     function menuSelected(name) {
         return Runtime.menu === name && Runtime.menuScreen === root.screen;
     }
-    function workspace(id) {
+    function workspace(entry) {
         if (Config.preview)
             return;
-        var existing = Hyprland.workspaces.values.find(w => w.id === id);
-        if (existing)
-            existing.activate();
-        else
-            Hyprland.dispatch(Hyprland.usingLua ? "hl.dsp.focus({ workspace = " + id + " })" : "workspace " + id);
+        if (entry.name.indexOf("special:") === 0) {
+            const name = entry.name.slice("special:".length);
+            Hyprland.dispatch(Hyprland.usingLua ? "hl.dsp.workspace.toggle_special(" + JSON.stringify(name) + ")"
+                                               : "togglespecialworkspace " + name);
+        } else if (entry.workspace) {
+            entry.workspace.activate();
+        } else {
+            Hyprland.dispatch(Hyprland.usingLua ? "hl.dsp.focus({ workspace = " + entry.id + " })" : "workspace " + entry.id);
+        }
     }
     function scrollWorkspace(direction) {
         if (Config.preview)
@@ -98,18 +102,27 @@ PanelWindow {
             spacing: 1
             Repeater {
                 model: {
-                    var list = Hyprland.workspaces.values.filter(w => w.id > 0 && (w.monitor === root.monitor || w.focused)).map(w => w.id);
-                    if (list.indexOf(1) < 0)
-                        list.push(1);
-                    return list.sort((a, b) => a - b);
+                    var list = Hyprland.workspaces.values.filter(w =>
+                        w.name.indexOf("special:") === 0 || w.id > 0 && (w.monitor === root.monitor || w.focused)
+                    ).map(w => ({id: w.id, name: w.name, workspace: w}));
+                    if (!list.some(w => w.id === 1))
+                        list.push({id: 1, name: "1", workspace: null});
+                    return list.sort((a, b) => (a.id < 0 ? 1 : 0) - (b.id < 0 ? 1 : 0) || a.id - b.id);
                 }
-                Chip {
-                    compact: true
-                    required property int modelData
-                    text: String(modelData)
-                    highlighted: !!root.monitor && root.monitor.activeWorkspace?.id === modelData
-                    tipTitle: "Workspace " + modelData
-                    tip: "Click to switch · scroll to cycle"
+                WorkspaceChip {
+                    required property var modelData
+                    readonly property bool special: modelData.name.indexOf("special:") === 0
+                    readonly property var activity: WindowActivity.workspaceState(modelData.name, Notifications.entries)
+                    text: special ? "S" : String(modelData.id)
+                    highlighted: special ? WindowActivity.activeWorkspace === modelData.name
+                                         : !!root.monitor && root.monitor.activeWorkspace?.id === modelData.id
+                    attention: activity.urgent || !!modelData.workspace?.urgent
+                    fullscreenWindow: activity.fullscreen
+                    windowCount: activity.count
+                    tipTitle: special ? "Scratchpad " + modelData.name.slice("special:".length) : "Workspace " + modelData.id
+                    tip: windowCount + (windowCount === 1 ? " open window" : " open windows")
+                         + (attention ? " · Needs attention" : "") + (fullscreenWindow ? " · Fullscreen window" : "")
+                         + (special ? "\nClick to show or hide · Super+S" : "\nClick to switch · scroll to cycle")
                     onClicked: root.workspace(modelData)
                     onScrolled: direction => root.scrollWorkspace(direction)
                 }
