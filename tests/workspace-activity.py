@@ -213,8 +213,8 @@ try:
     assert compositor["activeAddress"] == "", "MRU rank zero must not activate a window on an empty workspace"
     assert compositor["clients"] == [
         {"address": "0xa", "activated": False, "fullscreen": True},
-        {"address": "0xb", "activated": False, "fullscreen": False},
-    ], "only actual fullscreen, rather than maximized, gets the fullscreen marker"
+        {"address": "0xb", "activated": False, "fullscreen": True},
+    ], "fullscreen and maximized modes both get the square outline"
     (output / "activewindow.json").write_text(json.dumps({"address": "0xa"}))
     qa("refreshCompositor")
     wait(lambda: state()["model"]["activeAddress"] == "0xa" and not state()["model"]["refreshing"])

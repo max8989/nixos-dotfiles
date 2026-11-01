@@ -121,7 +121,7 @@ PanelWindow {
                     windowCount: activity.count
                     tipTitle: special ? "Scratchpad " + modelData.name.slice("special:".length) : "Workspace " + modelData.id
                     tip: windowCount + (windowCount === 1 ? " open window" : " open windows")
-                         + (attention ? " · Needs attention" : "") + (fullscreenWindow ? " · Fullscreen window" : "")
+                         + (attention ? " · Needs attention" : "") + (fullscreenWindow ? " · Fullscreen or maximized window" : "")
                          + (special ? "\nClick to show or hide · Super+S" : "\nClick to switch · scroll to cycle")
                     onClicked: root.workspace(modelData)
                     onScrolled: direction => root.scrollWorkspace(direction)

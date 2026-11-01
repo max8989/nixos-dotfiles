@@ -644,7 +644,7 @@ after any input update and fix anything that has since moved):
 - **Night light** uses the retained hyprsunset daemon, controlled by Quickshell. Preferences persist outside the Nix store.
 - **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.
 - **Discord and TickTick** start at login in the hidden scratchpad; **Super+S** shows or hides both apps.
-- **Workspace indicators** show an attention-colored dot for unread notifications or urgent windows, and a square outline when a workspace contains a fullscreen window. The **S** button opens the scratchpad. Notification text opens the sender's default action or brings its existing window forward; the attention marker clears when that window is focused. Links can bring an existing application and its workspace forward.
+- **Workspace indicators** show an attention-colored dot for unread notifications or urgent windows, and a square outline when a workspace contains a fullscreen (**Super+F**) or maximized (**Super+D**) window. The **S** button opens the scratchpad. Notification text opens the sender's default action or brings its existing window forward; the attention marker clears when that window is focused. Links can bring an existing application and its workspace forward.
 - **Neovim is managed separately.** Its configuration and explicit theme remain
   owned by the user's `nvim-config` repository.
 

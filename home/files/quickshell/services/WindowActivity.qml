@@ -27,7 +27,8 @@ Singleton {
                 hidden: !!ipc.hidden,
                 focusHistoryID: ipc.focusHistoryID,
                 urgent: !!ipc.urgent || !!nativeWindow?.urgent,
-                fullscreen: (ipc.fullscreen & 2) !== 0,
+                // Super+D maximized and Super+F fullscreen both get a square.
+                fullscreen: (ipc.fullscreen & 3) !== 0,
                 activated: ipc.address === root.compositor.activeAddress
             };
         })
