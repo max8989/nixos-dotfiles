@@ -643,6 +643,7 @@ after any input update and fix anything that has since moved):
 - **Audio output selection** (SUPER+F12 / bar click) uses Quickshell's native PipeWire service.
 - **Night light** uses the retained hyprsunset daemon, controlled by Quickshell. Preferences persist outside the Nix store.
 - **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.
+- **Discord and TickTick** start at login in the hidden scratchpad; **Super+S** shows or hides both apps.
 - **Neovim is managed separately.** Its configuration and explicit theme remain
   owned by the user's `nvim-config` repository.
 

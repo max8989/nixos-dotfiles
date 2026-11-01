@@ -295,6 +295,14 @@ hl.config({
 ---- WINDOW RULES ----
 ----------------------
 
+-- Start Discord and TickTick in the hidden scratchpad without switching to it.
+-- Super+S toggles this workspace (see keybindings.lua).
+hl.window_rule({
+    name = "discord-ticktick-scratchpad",
+    match = { class = "^([Dd]iscord|[Tt]ick[Tt]ick)$" },
+    workspace = "special:magic silent",
+})
+
 -- Keep new windows in the tiling layout when apps request maximization.
 -- Explicit Super+D / Super+F actions still work.
 hl.window_rule({

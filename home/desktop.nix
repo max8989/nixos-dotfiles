@@ -136,8 +136,27 @@
   };
 
   #########################################################################
-  ## TickTick — open at login, once the desktop and system tray are ready.
+  ## Discord and TickTick — open at login once the desktop and tray are ready.
+  ## hyprland.lua places their windows in the hidden Super+S workspace.
   #########################################################################
+  systemd.user.services.discord = {
+    Unit = {
+      Description = "Discord chat";
+      Requires = [ "tray.target" ];
+      After = [
+        "graphical-session.target"
+        "tray.target"
+      ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = lib.getExe' pkgs.discord "Discord";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
   systemd.user.services.ticktick = {
     Unit = {
       Description = "TickTick task manager";
