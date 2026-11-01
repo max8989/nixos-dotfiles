@@ -30,6 +30,8 @@ let
 
     n = "nvim .";
     note = "cd ~/Documents/obsidian && nvim .";
+    audio-notes = "${config.home.homeDirectory}/repos/audio-notes/audio-notes";
+    an = "${config.home.homeDirectory}/repos/audio-notes/audio-notes";
 
     pwdc = "pwd | wl-copy";
     cdo = ''pwd | xargs -I{} echo "cd {} && opencode" | wl-copy'';
