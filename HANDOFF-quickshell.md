@@ -1,13 +1,33 @@
 # Handoff — custom Quickshell desktop
 
 **Updated:** 2026-11-01
-**Status:** Desktop naming and the Shortcuts category are implemented and verified
-with the isolated UI suite. The new bundle is built; it has not been activated in
-the live session. Apply it with the normal NixOS rebuild. Preferences remain
-outside the Nix store. The existing QML lint failures are described below.
+**Status:** Desktop naming and the Shortcuts category are active on g12. The full
+system build and activation succeeded; the running shell uses the exact bundle
+that passed the isolated UI suite. Live menu pages render without new QML errors.
+Preferences remain outside the Nix store. Existing QML lint failures are described
+below.
 
 ## Desktop names
 
+- Activation: local `main` was fast-forwarded to the tested desktop-naming commits
+  and applied with `sudo -A nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12`.
+  Active system:
+  `/nix/store/kfpv7npn6y0ncn1w7z0vbwrgv639gvzk-nixos-system-thinkpad-x1-carbon-g12-26.11.20261023.3ec6363`.
+  Quickshell is running with the bundle below. The closure comparison contained
+  only the Quickshell configuration change; the previous system generation is
+  retained for rollback.
+- Live verification opened Desktop menu, Shortcuts and Manage desktops through
+  existing IPC on the 1920×1200 display, reviewed their screenshots, confirmed no
+  new QML runtime errors and checked that saved desktop names were unchanged.
+  Screenshots: `/tmp/desktop-names-live-menu.png`,
+  `/tmp/desktop-names-live-shortcuts.png`, `/tmp/desktop-names-live-manager.png`.
+  A synthetic-keyboard navigation attempt on Hyprland did not advance the menu;
+  live page checks therefore used IPC. Full keyboard, naming and right-click
+  interactions remain covered by the isolated Sway suite.
+- Previous system:
+  `/nix/store/3p9gbihfzmx6jqrrmrf1hd000ggl9glg-nixos-system-thinkpad-x1-carbon-g12-26.11.20261023.3ec6363`.
+  Its activation executable remains available. No desktop names were assigned
+  during deployment verification.
 - Super+M → Shortcuts → Name current desktop opens the name editor. Manage
   desktops lists desktops 1–10, any additional open desktops and all saved names;
   search by number or name, then Enter to edit. The editor also offers Go to
