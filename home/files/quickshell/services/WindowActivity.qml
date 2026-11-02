@@ -12,6 +12,9 @@ Singleton {
     readonly property var snapshot: compositor.windows
     property bool refreshing: false
     property bool refreshAgain: false
+    property var notificationEntries: []
+    property bool updatingAttention: false
+    onNotificationEntriesChanged: refreshDelay.restart()
     // The compositor snapshot also covers XWayland and internally fullscreen
     // windows whose native Wayland handles do not expose their current state.
     property var clients: snapshot.map(ipc => {
@@ -27,6 +30,7 @@ Singleton {
                 hidden: !!ipc.hidden,
                 focusHistoryID: ipc.focusHistoryID,
                 urgent: !!ipc.urgent || !!nativeWindow?.urgent,
+                tags: ipc.tags || [],
                 // Super+D maximized and Super+F fullscreen both get a square.
                 fullscreen: (ipc.fullscreen & 3) !== 0,
                 activated: ipc.address === root.compositor.activeAddress
@@ -67,11 +71,29 @@ Singleton {
                 }
                 root.compositor = { windows: next, activeAddress: address };
                 root.refreshing = false;
+                root.syncAttention();
                 if (root.refreshAgain) {
                     root.refreshAgain = false;
                     refreshDelay.restart();
                 }
             });
+        });
+    }
+    function syncAttention() {
+        if (Config.preview || !Config.valid || updatingAttention)
+            return;
+        const changes = Activity.attentionChanges(clients, notificationEntries, activeAddress);
+        if (!changes.length)
+            return;
+        const commands = changes.map(change => 'dispatch hl.dsp.window.tag({window = "address:' + change.address
+            + '", tag = "' + (change.attention ? "+" : "-") + 'quickshell-notification"})');
+        updatingAttention = true;
+        Runtime.run([Config.bin.hyprctl, "--batch", commands.join("; ")], function(code) {
+            root.updatingAttention = false;
+            if (code)
+                console.warn("Could not update notification window borders");
+            else
+                refreshDelay.restart();
         });
     }
     Component.onCompleted: refreshDelay.restart()

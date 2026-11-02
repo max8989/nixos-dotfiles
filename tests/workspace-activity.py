@@ -27,13 +27,16 @@ env.update(XDG_RUNTIME_DIR=str(runtime), XDG_CACHE_HOME=str(output / "cache"),
            WLR_BACKENDS="headless", WLR_RENDERER="pixman", WLR_LIBINPUT_NO_DEVICES="1",
            QT_QUICK_BACKEND="software", QT_QUICK_CONTROLS_STYLE="Basic")
 (output / "clients.json").write_text(json.dumps([
-    {"address": "0xa", "class": "discord", "workspace": {"name": "1"}, "mapped": True, "focusHistoryID": 0, "fullscreen": 2},
+    {"address": "0xa", "class": "discord", "workspace": {"name": "1"}, "mapped": True, "focusHistoryID": 0, "fullscreen": 2,
+     "tags": ["personal-tag", "quickshell-notification"]},
     {"address": "0xb", "class": "kitty", "workspace": {"name": "2"}, "mapped": True, "focusHistoryID": 1, "fullscreen": 1},
 ]))
 (output / "activewindow.json").write_text("{}")
 fake = output / "hyprctl"
 fake.write_text(f'''#!{sys.executable}
 from pathlib import Path
+import json
+import re
 import sys
 root = Path({str(output)!r})
 if sys.argv[1:] == ["-j", "clients"]:
@@ -41,6 +44,21 @@ if sys.argv[1:] == ["-j", "clients"]:
     sys.exit(0)
 if sys.argv[1:] == ["-j", "activewindow"]:
     print((root / "activewindow.json").read_text())
+    sys.exit(0)
+if len(sys.argv) == 3 and sys.argv[1] == "--batch":
+    clients = json.loads((root / "clients.json").read_text())
+    for command in sys.argv[2].split("; "):
+        match = re.fullmatch(r'dispatch hl\\.dsp\\.window\\.tag\\(\\{{window = "address:(0x[0-9a-f]+)", tag = "([+-])quickshell-notification"\\}}\\)', command)
+        assert match, command
+        address, action = match.groups()
+        for client in clients:
+            if client["address"] == address:
+                tags = [tag for tag in client.get("tags", []) if tag != "quickshell-notification"]
+                client["tags"] = tags + (["quickshell-notification"] if action == "+" else [])
+    temp = root / "clients.next"
+    temp.write_text(json.dumps(clients))
+    temp.replace(root / "clients.json")
+    print("ok")
     sys.exit(0)
 assert len(sys.argv) == 3 and sys.argv[1] == "dispatch"
 assert sys.argv[2] in ['hl.dsp.focus({{window = "address:0xb"}})', 'hl.dsp.focus({{window = "address:0xc"}})']
@@ -101,11 +119,6 @@ ShellRoot {
     function click(item) { mouseEvents.mouseClick(item, item.width / 2, item.height / 2, Qt.LeftButton, Qt.NoModifier, 1); }
     function initializeCards() {
         Desktop.Preferences.dnd = false;
-        Services.WindowActivity.clients = [
-            {address: "0xa", class: "kitty", workspace: {name: "1"}, mapped: true, activated: true, focusHistoryID: 0},
-            {address: "0xb", class: "discord", workspace: {name: "2"}, mapped: true, fullscreen: true, focusHistoryID: 1},
-            {address: "0xc", class: "ticktick", workspace: {name: "special:magic"}, mapped: true, hidden: true, focusHistoryID: 2}
-        ];
         Services.Notifications.receive(notice.value);
     }
     PanelWindow {
@@ -150,9 +163,6 @@ ShellRoot {
         function clickDelete(): void { root.click(root.find(card, "Delete")); }
         function focusBody(): void { root.find(card, "notificationOpen").forceActiveFocus(Qt.TabFocusReason); }
         function locked(value: bool): void { Desktop.Runtime.locked = value; }
-        function active(address: string): void {
-            Services.WindowActivity.clients = Services.WindowActivity.clients.map(c => Object.assign({}, c, {activated: c.address === address}));
-        }
     }
 }
 ''')
@@ -198,6 +208,15 @@ def dispatches():
     path = output / "dispatches"
     return path.read_text().splitlines() if path.exists() else []
 
+def attention():
+    return {client["address"] for client in json.loads((output / "clients.json").read_text())
+            if "quickshell-notification" in client.get("tags", [])}
+
+def activate(address):
+    (output / "activewindow.json").write_text(json.dumps({"address": address}))
+    qa("refreshCompositor")
+    wait(lambda: state()["model"]["activeAddress"] == address and not state()["model"]["refreshing"])
+
 try:
     bus = run(["dbus-daemon", "--config-file", str(bus_config), "--fork", "--print-address=1", "--print-pid=1"]).stdout.splitlines()
     env["DBUS_SESSION_BUS_ADDRESS"], bus_pid = bus[0], int(bus[1])
@@ -215,19 +234,26 @@ try:
         {"address": "0xa", "activated": False, "fullscreen": True},
         {"address": "0xb", "activated": False, "fullscreen": True},
     ], "fullscreen and maximized modes both get the square outline"
-    (output / "activewindow.json").write_text(json.dumps({"address": "0xa"}))
-    qa("refreshCompositor")
-    wait(lambda: state()["model"]["activeAddress"] == "0xa" and not state()["model"]["refreshing"])
+    wait(lambda: not attention())
+    assert json.loads((output / "clients.json").read_text())[0]["tags"] == ["personal-tag"], "startup clears stale attention while preserving other tags"
+    activate("0xa")
     assert state()["model"]["clients"][0]["activated"]
+    (output / "clients.json").write_text(json.dumps([
+        {"address": "0xa", "class": "kitty", "workspace": {"name": "1"}, "mapped": True, "focusHistoryID": 0},
+        {"address": "0xb", "class": "discord", "workspace": {"name": "2"}, "mapped": True, "fullscreen": 1, "focusHistoryID": 1},
+        {"address": "0xc", "class": "ticktick", "workspace": {"name": "special:magic"}, "mapped": True, "hidden": True, "focusHistoryID": 2},
+    ]))
+    qa("refreshCompositor")
+    wait(lambda: len(state()["model"]["clients"]) == 3 and not state()["model"]["refreshing"])
     qa("startCards")
-    wait(lambda: state()["dot"] and state()["enabled"])
+    wait(lambda: state()["dot"] and state()["enabled"] and attention() == {"0xb"})
     before = state()
     assert before["firstRadius"] == before["firstHeight"] / 2 and before["secondRadius"] == 4
     assert before["secondBorder"] == 1 and before["firstColor"] != before["secondColor"]
     (output / "attention-state.json").write_text(json.dumps(before, indent=2))
     run(["grim", str(output / "workspace-attention.png")])
     qa("clickBody")
-    wait(lambda: state()["opened"] == 1)
+    wait(lambda: state()["opened"] == 1 and not attention())
     assert state()["deleted"] == 0 and not dispatches() and not state()["entry"]["unread"]
     qa("notify", "default")
     qa("focusBody")
@@ -237,31 +263,35 @@ try:
     qa("clickDelete")
     assert state()["deleted"] == 1 and state()["opened"] == 2
     qa("notify", "expired")
-    wait(lambda: state()["expired"] == 1 and not state()["entry"]["live"])
+    wait(lambda: state()["expired"] == 1 and not state()["entry"]["live"] and attention() == {"0xb"})
     assert state()["entry"] == {"unread": True, "live": False, "windowAddress": "0xb", "desktopEntry": "discord.desktop"}
     qa("clickBody")
-    wait(lambda: len(dispatches()) == 1)
+    wait(lambda: len(dispatches()) == 1 and not attention())
     assert dispatches() == ['dispatch hl.dsp.focus({window = "address:0xb"})']
     assert not state()["dot"] and not state()["entry"]["unread"]
     qa("notify", "expired")
-    wait(lambda: state()["expired"] == 2)
-    qa("active", "0xb")
-    wait(lambda: not state()["entry"]["unread"] and not state()["dot"])
-    qa("active", "0xa")
+    wait(lambda: state()["expired"] == 2 and attention() == {"0xb"})
+    activate("0xb")
+    wait(lambda: not state()["entry"]["unread"] and not state()["dot"] and not attention())
+    qa("notify", "default")
+    assert not state()["entry"]["unread"] and not state()["dot"] and not attention(), "active senders need no attention marker"
+    activate("0xa")
     qa("notify", "scratchpad")
-    wait(lambda: state()["expired"] == 3 and state()["specialDot"])
+    wait(lambda: state()["expired"] == 3 and state()["specialDot"] and attention() == {"0xc"})
     assert not state()["entry"]["live"] and state()["entry"]["windowAddress"] == "0xc"
     qa("clickBody")
-    wait(lambda: len(dispatches()) == 2)
+    wait(lambda: len(dispatches()) == 2 and not attention())
     assert dispatches()[-1] == 'dispatch hl.dsp.focus({window = "address:0xc"})'
     assert not state()["specialDot"] and state()["deleted"] == 1
     qa("locked", "true")
-    qa("active", "0xb")
+    activate("0xb")
     qa("notify", "default")
     assert state()["entry"]["unread"], "an activated sender remains unread while the session is locked"
     assert state()["popups"] == 0
-    qa("active", "0xa")
-    qa("active", "0xb")
+    activate("0xa")
+    wait(lambda: attention() == {"0xb"})
+    activate("0xb")
+    wait(lambda: not attention())
     assert state()["entry"]["unread"], "focus changes during lock must not mark notifications read"
     qa("clickBody")
     assert state()["opened"] == 2 and state()["deleted"] == 1 and len(dispatches()) == 2
@@ -270,7 +300,7 @@ try:
     errors = [line for line in (output / "shell.log").read_text().splitlines()
               if any(word in line for word in ("TypeError", "ReferenceError", "Binding loop", "Unable to assign"))]
     assert not errors, errors
-    print("Workspace activity passed: attention/fullscreen styling, mouse/Return/default actions, archived/scratchpad focus, read-on-focus and locked-session unread state")
+    print("Workspace activity passed: notification border tags and workspace dots, startup cleanup, popup expiry, active/archived/scratchpad senders, read-on-focus and locked-session unread state")
 finally:
     for process in reversed(processes):
         process.terminate()

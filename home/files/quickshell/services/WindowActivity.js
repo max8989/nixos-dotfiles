@@ -47,6 +47,20 @@ function workspaceState(name, clients, entries) {
     };
 }
 
+function attentionChanges(clients, entries, activeAddress) {
+    var live = liveClients(clients);
+    var unread = (entries || []).filter(function(entry) { return entry.unread; }).map(function(entry) {
+        return notificationTarget(entry, live)?.address;
+    });
+    return live.filter(function(client) {
+        var attention = client.address !== activeAddress && (!!client.urgent || unread.indexOf(client.address) >= 0);
+        var tagged = (client.tags || []).indexOf("quickshell-notification") >= 0;
+        return attention !== tagged;
+    }).map(function(client) {
+        return {address: client.address, attention: (client.tags || []).indexOf("quickshell-notification") < 0};
+    });
+}
+
 function defaultAction(actions) {
     return Array.prototype.find.call(actions || [], function(action) {
         return action.identifier === "default";

@@ -106,6 +106,39 @@ assert.deepEqual(state('2', replacedClients, unread), {count: 1, urgent: false, 
 assert.deepEqual(state('replacement', replacedClients, unread),
     {count: 1, urgent: true, fullscreen: false});
 
+// Window borders use the same unread/native attention and clear on focus.
+const attentionTag = 'quickshell-notification';
+const changes = (clients, entries = [], active = '') =>
+    JSON.parse(JSON.stringify(model.attentionChanges(clients, entries, active)));
+assert.deepEqual(changes(workspaceClients, unread, '0x21'), [
+    {address: '0x20', attention: true}, {address: '0x24', attention: true},
+]);
+assert.deepEqual(changes(workspaceClients, [...unread, ...unread], '0x20'),
+    [{address: '0x24', attention: true}], 'the active sender never receives an attention border');
+const taggedClients = freeze(workspaceClients.map(client => client.address === '0x20'
+    ? {...client, tags: ['personal-tag', attentionTag]} : client));
+assert.deepEqual(changes(taggedClients, unread), [{address: '0x24', attention: true}],
+    'an existing attention border does not need another compositor update');
+assert.deepEqual(changes(taggedClients, [{...unread[0], notification: null}]),
+    [{address: '0x24', attention: true}], 'popup expiry keeps the border');
+assert.deepEqual(changes(taggedClients, unread, '0x20'), [
+    {address: '0x20', attention: false}, {address: '0x24', attention: true},
+], 'focus removes the border even before the notification is marked read');
+assert.deepEqual(changes(taggedClients, [{...unread[0], unread: false}]), [
+    {address: '0x20', attention: false}, {address: '0x24', attention: true},
+], 'reading removes notification borders and preserves other urgent windows');
+assert.deepEqual(changes(taggedClients, [], '0x24'), [{address: '0x20', attention: false}],
+    'clearing history or restarting the shell removes stale attention tags');
+assert.deepEqual(changes(movedClients, unread), changes(workspaceClients, unread),
+    'moving a window keeps its border and moves the workspace marker');
+assert.deepEqual(changes(closedClients, unread), [{address: '0x24', attention: true}],
+    'closed and unmapped windows never receive tag commands');
+assert.deepEqual(changes(workspaceClients, [{app: 'TickTick', unread: true}], '0x24'),
+    [{address: '0x23', attention: true}], 'hidden scratchpad senders get attention borders');
+assert.deepEqual(changes(null, null), []);
+assert.deepEqual(taggedClients[0].tags, ['personal-tag', attentionTag],
+    'attention reconciliation must not change unrelated window tags');
+
 // Notification-body clicks must never run an arbitrary first action.
 const deleteAction = freeze({identifier: 'delete', text: 'Delete'});
 const defaultAction = freeze({identifier: 'default', text: 'Open'});

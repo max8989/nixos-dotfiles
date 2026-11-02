@@ -10,6 +10,7 @@ import "WindowActivity.js" as Activity
 Singleton {
     id: root
     property var entries: []
+    onEntriesChanged: WindowActivity.notificationEntries = entries
     readonly property var popups: entries.filter(e => e.popup && !Preferences.dnd && !Runtime.locked)
     function snapshot(n) {
         var target = WindowActivity.target({app: n.appName, desktopEntry: n.desktopEntry});

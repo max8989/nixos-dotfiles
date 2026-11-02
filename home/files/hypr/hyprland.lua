@@ -296,6 +296,14 @@ hl.config({
 ---- WINDOW RULES ----
 ----------------------
 
+-- Quickshell keeps this tag in sync with unread notifications and urgency.
+-- Focusing the sender restores its normal border immediately.
+hl.window_rule({
+    name = "notification-attention-border",
+    match = { tag = "quickshell-notification", focus = false },
+    border_color = rgba(theme.urgent),
+})
+
 -- Start Discord and TickTick in the hidden scratchpad without switching to it.
 -- Super+S toggles this workspace (see keybindings.lua).
 hl.window_rule({
