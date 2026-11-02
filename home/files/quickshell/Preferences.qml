@@ -17,7 +17,16 @@ Singleton {
     property int panelTextSize: Config.fonts.body
     property var monitorScales: ({})
     property var appLaunchCounts: Object.create(null)
+    property var workspaceNames: Object.create(null)
     property string folder: ""
+    function setWorkspaceName(id, name) {
+        if (!initialized || !Logic.validWorkspaceId(id) || typeof name !== "string")
+            return false;
+        var names = Object.assign(Object.create(null), workspaceNames);
+        names[id] = name;
+        workspaceNames = Logic.restoreWorkspaceNames(names);
+        return true;
+    }
     function recordAppLaunch(id) {
         var counts = Object.assign(Object.create(null), appLaunchCounts);
         counts[id] = Math.min(Number.MAX_SAFE_INTEGER, (counts[id] || 0) + 1);
@@ -36,6 +45,7 @@ Singleton {
     onPanelTextSizeChanged: save()
     onMonitorScalesChanged: save()
     onAppLaunchCountsChanged: save()
+    onWorkspaceNamesChanged: save()
     onFolderChanged: save()
     FileView {
         id: file
@@ -55,6 +65,7 @@ Singleton {
             root.panelTextSize = state.panelTextSize;
             root.monitorScales = state.monitorScales;
             root.appLaunchCounts = state.appLaunchCounts;
+            root.workspaceNames = state.workspaceNames;
             root.folder = state.folder;
             root.initialized = true;
         }
@@ -74,6 +85,7 @@ Singleton {
             panelTextSize: root.panelTextSize,
             monitorScales: root.monitorScales,
             appLaunchCounts: root.appLaunchCounts,
+            workspaceNames: root.workspaceNames,
             folder: root.folder
         }))
     }

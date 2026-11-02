@@ -71,7 +71,31 @@ function restoreState(value) {
         panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 12))),
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
+        workspaceNames: restoreWorkspaceNames(value.workspaceNames),
         folder: typeof value.folder === "string" ? value.folder : "" };
+}
+function validWorkspaceId(id) {
+    return /^[1-9]\d*$/.test(String(id)) && Number(id) <= 2147483647;
+}
+function restoreWorkspaceNames(value) {
+    var names = Object.create(null);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+        Object.keys(value).forEach(function(id) {
+            if (!validWorkspaceId(id) || typeof value[id] !== "string") return;
+            var name = value[id].replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 80);
+            if (name) names[id] = name;
+        });
+    }
+    return names;
+}
+function workspaceEntries(workspaces, names) {
+    var ids = Object.create(null);
+    for (var id = 1; id <= 10; id++) ids[id] = true;
+    Object.keys(names).forEach(function(id) { if (validWorkspaceId(id)) ids[id] = true; });
+    workspaces.forEach(function(workspace) { if (validWorkspaceId(workspace.id)) ids[workspace.id] = true; });
+    return Object.keys(ids).map(Number).sort(function(a, b) { return a - b; }).map(function(id) {
+        return {id: id, name: names[id] || "", workspace: workspaces.find(function(workspace) { return workspace.id === id; }) || null};
+    });
 }
 function restoreAppLaunchCounts(value) {
     var counts = Object.create(null);

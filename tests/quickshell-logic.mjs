@@ -51,6 +51,22 @@ assert.deepEqual(plain(context.rankApplications(apps, context.restoreState({}).a
     ["unused","archive","editor","zen"]);
 assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({appLaunchCounts:appCounts}))).appLaunchCounts),
     plain(appCounts));
+for (const value of [undefined, null, [], "broken", 42]) {
+    assert.deepEqual(plain(context.restoreState({workspaceNames:value}).workspaceNames), {});
+}
+const workspaceNames = context.restoreState({workspaceNames: JSON.parse('{"2":"  Event config  ","12":"中文 · planning","3":"   ","4":42,"0":"zero","-1":"scratchpad","01":"alias","2147483648":"too large","__proto__":"unsafe"}')}).workspaceNames;
+assert.deepEqual(plain(workspaceNames), {2:"Event config", 12:"中文 · planning"});
+assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({workspaceNames}))).workspaceNames),
+    plain(workspaceNames));
+assert.equal(context.restoreState({workspaceNames:{2:"one\nline\tname"}}).workspaceNames[2], "one line name");
+assert.equal(context.restoreState({workspaceNames:{2:"x".repeat(100)}}).workspaceNames[2].length, 80);
+const liveWorkspaces = [{id:21,name:"21"}, {id:2,name:"2"}, {id:-99,name:"special:magic"}];
+const desktops = context.workspaceEntries(liveWorkspaces, workspaceNames);
+assert.deepEqual(plain(desktops).map(entry => entry.id), [1,2,3,4,5,6,7,8,9,10,12,21]);
+assert.equal(desktops.find(entry => entry.id === 2).name, "Event config");
+assert.equal(desktops.find(entry => entry.id === 12).workspace, null);
+assert.equal(desktops.find(entry => entry.id === 21).workspace, liveWorkspaces[0]);
+assert.deepEqual(liveWorkspaces.map(entry => entry.id), [21,2,-99]);
 const appRows = rankedApps.map(app => ({...app,title:app.name,subtitle:"Application"}));
 assert.equal(context.search(appRows,"editor")[0].id,"editor");
 assert.deepEqual(plain(context.search(appRows,"application")).map(app => app.id),["zen","archive","editor","unused"]);
