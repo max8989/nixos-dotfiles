@@ -1,10 +1,48 @@
 # Handoff — custom Quickshell desktop
 
-**Updated:** 2026-10-15
-**Status:** The global Desktop menu and four settings panels are active in the g12
-user session. The applied bundle matches the tested source, and all four direct
-shortcuts remain registered. The system generation is activated. Preferences
-remain outside the Nix store.
+**Updated:** 2026-11-01
+**Status:** Desktop naming and the Shortcuts category are implemented and verified
+with the isolated UI suite. The new bundle is built; it has not been activated in
+the live session. Apply it with the normal NixOS rebuild. Preferences remain
+outside the Nix store. The existing QML lint failures are described below.
+
+## Desktop names
+
+- Super+M → Shortcuts → Name current desktop opens the name editor. Manage
+  desktops lists desktops 1–10, any additional open desktops and all saved names;
+  search by number or name, then Enter to edit. The editor also offers Go to
+  desktop and Clear name.
+- Right-click a desktop number in the bar to edit that desktop's name. The
+  active desktop shows its number and name, for example `2 · Event config`.
+  Inactive desktops keep compact numbers and show their names in hover tips.
+  Long labels shorten within the bar; hover tips retain the full name.
+- Enter or Save stores the name; Escape or Cancel leaves it unchanged. Saving
+  an empty field or choosing Clear name restores the number-only label. Editing
+  captures the desktop ID, so changing focus cannot rename another desktop.
+- Names are plain text, up to 80 characters, stored by numeric ID in
+  `workspaceNames` in `$XDG_STATE_HOME/quickshell-desktop/state.json` (default
+  `~/.local/state/quickshell-desktop/state.json`). Existing preference files
+  default to an empty name map. Labels survive empty desktops and shell restarts.
+  The manager can reopen an empty named desktop; the bar retains its existing
+  visibility rules.
+- Labels are separate from Hyprland workspace names. Numeric navigation,
+  name-based window activity tracking and the scratchpad keep their existing
+  identities. `services/Workspaces.qml` shares listing and activation between
+  the menu and editor; `Preferences.qml` owns saved names.
+- Validation: the built bundle is
+  `/nix/store/hrs2hvk8bjf6laqmqyb7d2k3ms4wpgyb-quickshell-desktop`.
+  `/tmp/quickshell-desktop-names-final/result.json` records a passing full UI run
+  across 30 menus, including right-click naming, focus changes while editing,
+  cancellation, both clearing paths, Unicode/plain-text labels, long bar labels,
+  empty desktops, persistence after a process restart and the 1024×600 menu.
+  Existing logic/helper tests and Lua syntax checks pass. An in-memory mutation
+  of workspace ID validation is rejected by the state-recovery tests.
+- The standard `checks.x86_64-linux.quickshell` target fails QML lint on both
+  baseline `5ae521dd418bb0c40ee669845585bc24569a5b05` and this implementation.
+  Both produce the same 46 diagnostics after normalizing store paths and line
+  shifts, with no additional diagnostics. They include existing Quickshell type
+  metadata, block-scope `var` and slider-ID warnings. No lint exceptions or test
+  thresholds were changed. Runtime UI tests pass without QML errors.
 
 ## Settings panels
 
@@ -28,8 +66,8 @@ remain outside the Nix store.
 - Battery shows native UPower state and kernel capacity, health, cycles and
   charge thresholds. Power profile buttons remain in the panel after selection.
   Charge thresholds are read-only; panel font size affects these four panels.
-- Active bundle: `/nix/store/ymbp2nqxp00dfwn5p07ykg50iq3jr8bj-quickshell-desktop`.
-  Active system: `/nix/store/dsala7m6w5v427r9yddlbsnrl180aiqi-nixos-system-thinkpad-x1-carbon-g12-26.11.20261003.a7868a7`.
+- Previously verified settings-panel bundle: `/nix/store/ymbp2nqxp00dfwn5p07ykg50iq3jr8bj-quickshell-desktop`.
+  Reference system: `/nix/store/dsala7m6w5v427r9yddlbsnrl180aiqi-nixos-system-thinkpad-x1-carbon-g12-26.11.20261003.a7868a7`.
 - Validation: flake checks and complete system/user builds pass; 10 helper
   regressions cover DNS rollback, IPv6, scale validation/quoting, timeout/EOF
   rollback and confirmed persistence. The full isolated UI suite passes all
@@ -47,8 +85,8 @@ remain outside the Nix store.
 
 ## Desktop controls
 
-- Super+M opens the compact global Desktop menu: Apps, Learn, Trigger, Style,
-  Setup, About and System. Seven single-line category rows fit at 1024×600.
+- Super+M opens the compact global Desktop menu: Shortcuts, Apps, Learn, Trigger,
+  Style, Setup, About and System. Eight single-line category rows fit at 1024×600.
   Setup groups device/connection/notification settings and configuration files;
   System groups session actions, presentation mode, power profiles and battery.
   Trigger groups capture, clipboard, desktop utilities and media; Learn has editor
@@ -61,7 +99,7 @@ remain outside the Nix store.
   names and light/dark choices are searchable inside Theme.
 - Mapping the menu or rebuilding rows beneath a stationary pointer keeps keyboard
   selection. A passive hover handler selects rows only when scene coordinates
-  change; the first pointer position establishes a baseline. Apps is selected on open.
+  change; the first pointer position establishes a baseline. Shortcuts is selected on open.
 - Configuration actions launch Neovim in Kitty with separate filename arguments;
   `EDITOR` and `VISUAL` are `nvim`. Neovim's separately managed config is untouched.
 - Up/Down selects, Right opens submenus, and Left goes back without closing the
