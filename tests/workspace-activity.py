@@ -69,7 +69,7 @@ fake.chmod(0o700)
 settings = json.loads((bundle / "generated.json").read_text())
 settings["bin"]["hyprctl"] = str(fake)
 settings["paths"]["themeState"] = str(output / "missing-theme")
-settings["features"].update(lock=False, polkit=False, notifications=False)
+settings["features"].update(lock=False, polkit=False, notifications=True)
 (output / "settings.json").write_text(json.dumps(settings))
 link = output / "bundle"
 if link.is_symlink():
@@ -92,6 +92,7 @@ ShellRoot {
     property int deleted: 0
     property int expired: 0
     property string kind: "default"
+    property bool terminalCase: false
     property var secondState: Services.WindowActivity.workspaceState("2", Services.Notifications.entries)
     property var specialState: Services.WindowActivity.workspaceState("special:magic", Services.Notifications.entries)
     QtObject { id: openAction; property string identifier: "default"; property string text: "Open"; function invoke() { root.opened++; } }
@@ -130,8 +131,8 @@ ShellRoot {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         Row {
             x: 24; y: 20; spacing: 8
-            Bar.WorkspaceChip { id: first; text: "1"; highlighted: true; windowCount: 1 }
-            Bar.WorkspaceChip { id: second; text: "2"; attention: root.secondState.urgent; fullscreenWindow: root.secondState.fullscreen; windowCount: root.secondState.count }
+            Bar.WorkspaceChip { id: first; text: root.terminalCase ? "6" : "1"; highlighted: !root.terminalCase || Services.WindowActivity.activeAddress === "0xa"; windowCount: 1 }
+            Bar.WorkspaceChip { id: second; text: "2"; highlighted: root.terminalCase && Services.WindowActivity.activeAddress === "0xb"; attention: root.secondState.urgent; fullscreenWindow: root.secondState.fullscreen; windowCount: root.secondState.count }
             Bar.WorkspaceChip { id: special; text: "S"; attention: root.specialState.urgent; windowCount: root.specialState.count }
         }
         Widgets.NotificationCard {
@@ -148,6 +149,8 @@ ShellRoot {
                 model: {activeAddress: Services.WindowActivity.activeAddress, refreshing: Services.WindowActivity.refreshing,
                         clients: Services.WindowActivity.clients.map(c => ({address: c.address, activated: c.activated, fullscreen: c.fullscreen}))},
                 entry: e ? {unread: e.unread, live: !!e.notification, windowAddress: e.windowAddress, desktopEntry: e.desktopEntry} : null,
+                sourcePid: e?.senderPid || 0,
+                sourceCalls: Services.NotificationSources.calls,
                 popups: Services.Notifications.popups.length,
                 firstRadius: first.background.radius, secondRadius: second.background.radius,
                 secondBorder: second.background.border.width, firstHeight: first.height,
@@ -159,6 +162,7 @@ ShellRoot {
         function notify(value: string): void { root.kind = value; Services.Notifications.receive(notice.value); }
         function refreshCompositor(): void { Services.WindowActivity.refresh(); }
         function startCards(): void { root.initializeCards(); }
+        function startTerminalCase(): void { root.terminalCase = true; }
         function clickBody(): void { root.click(root.find(card, "notificationOpen")); }
         function clickDelete(): void { root.click(root.find(card, "Delete")); }
         function focusBody(): void { root.find(card, "notificationOpen").forceActiveFocus(Qt.TabFocusReason); }
@@ -297,10 +301,40 @@ try:
     assert state()["opened"] == 2 and state()["deleted"] == 1 and len(dispatches()) == 2
     qa("locked", "false")
     wait(lambda: not state()["entry"]["unread"])
+
+    # A real D-Bus notification must identify its Kitty process, even when
+    # another Kitty is active and the initial app-name match points there.
+    sender = subprocess.Popen(
+        ["bash", "-c", "read -r ready; exec notify-send --wait --print-id --expire-time=0 --app-name=kitty --hint=string:desktop-entry:kitty 'Codex finished on desktop 2'"],
+        env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    processes.append(sender)
+    (output / "clients.json").write_text(json.dumps([
+        {"address": "0xa", "class": "kitty", "pid": os.getpid(), "workspace": {"name": "6"}, "mapped": True, "focusHistoryID": 0},
+        {"address": "0xb", "class": "kitty", "pid": sender.pid, "workspace": {"name": "2"}, "mapped": True, "focusHistoryID": 7},
+    ]))
+    qa("startTerminalCase")
+    activate("0xa")
+    wait(lambda: len(state()["model"]["clients"]) == 2)
+    sender.stdin.write("send\n")
+    sender.stdin.flush()
+    try:
+        wait(lambda: state()["sourcePid"] == sender.pid and state()["entry"]["unread"]
+             and state()["dot"] and attention() == {"0xb"})
+    except AssertionError:
+        print("Sender process:", sender.pid, "exit:", sender.poll(), "state:", state(), file=sys.stderr)
+        print((output / "shell.log").read_text()[-6000:], file=sys.stderr)
+        raise
+    assert state()["entry"]["windowAddress"] == "0xb", "desktop 6's active Kitty must not consume desktop 2's notification"
+    run(["grim", str(output / "kitty-window-source.png")])
+    (output / "kitty-window-source.json").write_text(json.dumps(state(), indent=2))
+    activate("0xb")
+    wait(lambda: not state()["entry"]["unread"] and not state()["dot"] and not attention())
+    activate("0xa")
+    assert not state()["entry"]["unread"] and not attention(), "returning to the other terminal must not revive attention"
     errors = [line for line in (output / "shell.log").read_text().splitlines()
               if any(word in line for word in ("TypeError", "ReferenceError", "Binding loop", "Unable to assign"))]
     assert not errors, errors
-    print("Workspace activity passed: notification border tags and workspace dots, startup cleanup, popup expiry, active/archived/scratchpad senders, read-on-focus and locked-session unread state")
+    print("Workspace activity passed: sender PID resolves Kitty on desktop 2 while another Kitty is active on desktop 6; borders/dots clear on source focus; existing notification/action/lock cases pass")
 finally:
     for process in reversed(processes):
         process.terminate()

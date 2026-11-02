@@ -645,6 +645,7 @@ after any input update and fix anything that has since moved):
 - **Daemon autostart** is managed by Home Manager systemd user units. Quickshell provides notifications, polkit prompts, tray hosting, menus, OSD, and locking. Cliphist capture remains in the compositor startup hook.
 - **Discord and TickTick** start at login in the hidden scratchpad; **Super+S** shows or hides both apps.
 - **Workspace indicators** show an attention-colored dot for unread notifications or urgent windows, and a square outline when a workspace contains a fullscreen (**Super+F**) or maximized (**Super+D**) window. Unfocused sender windows also get a border in the theme's attention color; focusing the window clears its dot and restores its normal border. The highlight persists after the popup expires and follows windows moved to another workspace. The **S** button opens the scratchpad. Notification text opens the sender's default action or brings its existing window forward. Links can bring an existing application and its workspace forward.
+- **Terminal notifications** use the desktop-bus sender process to identify the window when possible. A notification from Kitty on desktop 2 highlights that terminal and desktop 2 even while another Kitty is active on desktop 6.
 - **Neovim is managed separately.** Its configuration and explicit theme remain
   owned by the user's `nvim-config` repository.
 

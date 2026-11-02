@@ -15,6 +15,10 @@ function notificationTarget(entry, clients) {
     if (!entry) return null;
     var live = liveClients(clients);
     var cached = live.find(function(client) { return client.address === entry.windowAddress; });
+    if (entry.senderPid > 0) {
+        var processWindows = live.filter(function(client) { return client.pid === entry.senderPid; });
+        if (processWindows.length === 1) return processWindows[0];
+    }
     if (cached) return cached;
     var sources = [entry.desktopEntry, entry.app || entry.appName];
     for (var i = 0; i < sources.length; i++) {
@@ -32,6 +36,16 @@ function notificationTarget(entry, clients) {
         if (matches.length) return matches[0];
     }
     return null;
+}
+
+function bindNotificationSource(entry, pid, clients, activeAddress, locked) {
+    var identified = Object.assign({}, entry, {senderPid: pid});
+    var target = notificationTarget(identified, clients);
+    if (!target || target.pid !== pid) return identified;
+    return Object.assign(identified, {
+        windowAddress: target.address,
+        unread: !entry.explicitlyRead && (locked || target.address !== activeAddress)
+    });
 }
 
 function workspaceState(name, clients, entries) {

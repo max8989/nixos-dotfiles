@@ -23,6 +23,9 @@ in
           pkgs.grim
           pkgs.wtype
           pkgs.dbus
+          pkgs.systemd
+          pkgs.libnotify
+          pkgs.bash
         ];
         QML_IMPORT_PATH = "${pkgs.quickshell}/lib/qt-6/qml:${pkgs.qt6.qtdeclarative}/lib/qt-6/qml";
       }
@@ -31,6 +34,7 @@ in
         python3 ${./workspace-activity.py} ${bundle} "$TMPDIR/activity"
         mkdir -p "$out"
         cp "$TMPDIR/activity/workspace-attention.png" "$TMPDIR/activity/attention-state.json" "$out/"
+        cp "$TMPDIR/activity/kitty-window-source.png" "$TMPDIR/activity/kitty-window-source.json" "$out/"
       '';
   dictation =
     pkgs.runCommand "dictation-check"

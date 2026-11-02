@@ -69,6 +69,28 @@ assert.equal(model.notificationTarget({app: 'zen'}, [window('0x14', 'zenity', '2
 assert.deepEqual(clients.map(client => client.address), ['0xa', '0xb', '0xc', '0xd', '0xe', '0xf'],
     'matching must not reorder compositor data');
 
+// Two Kitty processes can share an app name while living on different desktops.
+const activeTerminal = window('0x30', 'kitty', '6', 0, {pid: 600});
+const sourceTerminal = window('0x31', 'kitty', '2', 7, {pid: 200});
+const terminals = freeze([activeTerminal, sourceTerminal]);
+const misidentified = freeze({app: 'kitty', desktopEntry: 'kitty', windowAddress: '0x30', unread: false});
+assert.equal(model.notificationTarget({...misidentified, senderPid: 200}, terminals), sourceTerminal,
+    'the sender process overrides a cached match to the active terminal on desktop 6');
+assert.equal(model.notificationTarget({app: 'Codex', senderPid: 200}, terminals), sourceTerminal,
+    'terminal notifications can use the name of the application running inside Kitty');
+const bindSource = (entry, pid, active = '0x30', locked = false) =>
+    JSON.parse(JSON.stringify(model.bindNotificationSource(entry, pid, terminals, active, locked)));
+const identified = bindSource(misidentified, 200);
+assert.equal(identified.windowAddress, '0x31');
+assert.equal(identified.unread, true, 'a background sender must not inherit the active terminal read state');
+assert.equal(state('2', terminals, [identified]).urgent, true);
+assert.equal(state('6', terminals, [identified]).urgent, false);
+assert.equal(bindSource(misidentified, 200, '0x31').unread, false, 'the actual active sender stays read');
+assert.equal(bindSource({...misidentified, explicitlyRead: true}, 200).unread, false,
+    'late process lookup must not undo an explicit notification action');
+assert.equal(bindSource(misidentified, 200, '0x31', true).unread, true, 'locked notifications stay unread');
+assert.equal(bindSource(misidentified, 999).windowAddress, '0x30', 'unmatched helper processes preserve app fallback');
+
 // Workspace attention follows unread notifications and native urgency.
 const workspaceClients = freeze([
     window('0x20', 'discord', '2', 0),

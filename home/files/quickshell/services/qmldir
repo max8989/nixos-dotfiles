@@ -5,6 +5,7 @@ singleton Reminders 1.0 Reminders.qml
 singleton Battery 1.0 Battery.qml
 singleton Media 1.0 Media.qml
 singleton Notifications 1.0 Notifications.qml
+singleton NotificationSources 1.0 NotificationSources.qml
 singleton WindowActivity 1.0 WindowActivity.qml
 singleton Workspaces 1.0 Workspaces.qml
 singleton Network 1.0 Network.qml

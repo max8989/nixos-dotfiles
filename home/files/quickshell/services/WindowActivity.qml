@@ -22,6 +22,7 @@ Singleton {
                 "0x" + toplevel.address === ipc.address);
             return {
                 address: ipc.address,
+                pid: ipc.pid || 0,
                 class: ipc.class || "",
                 initialClass: ipc.initialClass || "",
                 appId: nativeWindow?.wayland?.appId || ipc.class || "",

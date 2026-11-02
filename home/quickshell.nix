@@ -81,6 +81,7 @@ let
       xdgOpen = "${pkgs.xdg-utils}/bin/xdg-open";
       systemctl = "${pkgs.systemd}/bin/systemctl";
       loginctl = "${pkgs.systemd}/bin/loginctl";
+      busctl = "${pkgs.systemd}/bin/busctl";
       notifySend = "${pkgs.libnotify}/bin/notify-send";
       nmtui = "${pkgs.networkmanager}/bin/nmtui";
       bluetooth = "${pkgs.blueman}/bin/blueman-manager";

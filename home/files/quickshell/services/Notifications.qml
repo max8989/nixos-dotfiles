@@ -80,7 +80,7 @@ Singleton {
             dismiss(id);
     }
     function read(id) {
-        entries = entries.map(e => e.id === id ? Object.assign({}, e, {unread: false, popup: false}) : e);
+        entries = entries.map(e => e.id === id ? Object.assign({}, e, {unread: false, popup: false, explicitlyRead: true}) : e);
     }
     function readActive() {
         var address = WindowActivity.activeAddress;
@@ -107,6 +107,13 @@ Singleton {
             read(id);
         } else {
             Runtime.report("This notification has no open window");
+        }
+    }
+    Connections {
+        target: NotificationSources
+        function onResolved(id, pid) {
+            root.entries = root.entries.map(e => e.id === id
+                ? Activity.bindNotificationSource(e, pid, WindowActivity.clients, WindowActivity.activeAddress, Runtime.locked) : e);
         }
     }
     Connections {
