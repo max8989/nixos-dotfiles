@@ -9,6 +9,7 @@ Chip {
     property bool fullscreenWindow: false
     property int windowCount: 0
     compact: true
+    implicitWidth: Math.min(200, Math.max(30, contentItem.implicitWidth + 18))
     foreground: attention ? Config.theme.urgent : highlighted ? Config.theme.accent
                                                         : windowCount ? Config.theme.text : Config.theme.dim
     Accessible.name: tipTitle + ", " + tip

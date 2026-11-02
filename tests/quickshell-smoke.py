@@ -77,6 +77,21 @@ ShellRoot {
     id: root
     Bar.Bar { id: bar; modelData: Quickshell.screens[0] }
     property string requestedPower: ""
+    property int switchedDesktop: 0
+    QtObject {
+        id: workspaceFixture
+        property var focusedMonitor: ({activeWorkspace: {id: 2}})
+        property var workspaces: ({values: [root.workspace(2), root.workspace(21)]})
+        property bool usingLua: true
+        function dispatch(command) { root.switchedDesktop = Number(command.match(/workspace = (\\d+)/)[1]); }
+    }
+    function workspace(id) {
+        return {id: id, name: String(id), toplevels: {values: []}, activate: () => root.switchedDesktop = id};
+    }
+    Component.onCompleted: {
+        Services.Workspaces.compositor = workspaceFixture;
+        bar.monitor = {activeWorkspace: {id: 1}};
+    }
     Panels.Menus { id: menus; onPowerRequested: action => root.requestedPower = action }
     SettingsFixtures { id: hardware }
     Panels.Overlays {}
@@ -101,6 +116,7 @@ ShellRoot {
             }
             result.push({title: item.tipTitle, x: point.x + Desktop.Config.bar.sideMargin,
                          y: point.y + Desktop.Config.bar.margin, hovered: item.hovered,
+                         text: item.text, width: item.width,
                          visualFocus: item.visualFocus, selected: item.selected,
                          borderAlpha: item.background.border.color.a, tip: tip});
         }
@@ -164,6 +180,10 @@ ShellRoot {
                                    calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
                                    dnd: Desktop.Preferences.dnd,
                                    appLaunchCounts: Desktop.Preferences.appLaunchCounts,
+                                   workspaceNames: Desktop.Preferences.workspaceNames,
+                                   desktopNameId: Desktop.Runtime.workspaceNameId || 0,
+                                   desktopNameText: root.find(menus.contentItem, "desktopNameInput")?.text || "",
+                                   switchedDesktop: root.switchedDesktop,
                                    notificationCount: Services.Notifications.entries.length,
                                    outputVolume: hardware.audio.sink.audio.volume,
                                    outputName: hardware.audio.sink.name,
@@ -200,6 +220,14 @@ ShellRoot {
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
         function openWallpaper(): void { Desktop.Runtime.toggleMenu("wallpaper", null); }
+        function currentDesktop(id: int): void { workspaceFixture.focusedMonitor = {activeWorkspace: {id: id}}; }
+        function removeDesktop(id: int): void {
+            workspaceFixture.workspaces = {values: workspaceFixture.workspaces.values.filter(workspace => workspace.id !== id)};
+        }
+        function rightClickDesktop(): void {
+            var item = root.find(bar.contentItem, "workspace-1");
+            mouseEvents.mouseClick(item, item.width / 2, item.height / 2, Qt.RightButton, Qt.NoModifier, 1);
+        }
         function pointMenu(x: int, y: int): void {
             mouseEvents.mouseMove(menus.contentItem, x, y, 1, Qt.NoButton, Qt.NoModifier);
         }
@@ -405,13 +433,91 @@ elif sys.argv[1] == 'battery-info':
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
+    assert inspect()["rows"][0]["title"] == "Shortcuts"
+    key("Right")
+    wait(lambda: inspect()["menu"] == "shortcuts")
+    assert [row["id"] for row in inspect()["rows"]] == ["name-desktop", "desktop-names"]
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-name" and inspect()["desktopNameId"] == 2)
+    run(["wtype", "-s", "150", "Event config"])
+    qa("currentDesktop", 3)
+    key("Return")
+    wait(lambda: inspect()["menu"] == "shortcuts" and inspect()["workspaceNames"].get("2") == "Event config")
+    assert "3" not in inspect()["workspaceNames"], "Changing focus renamed the wrong desktop"
+    key("Down")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-names")
+    query("Event config")
+    key("Return")
+    wait(lambda: inspect()["desktopNameText"] == "Event config")
+    run(["wtype", "-s", "150", "-M", "ctrl", "-k", "a", "-m", "ctrl", "Cancelled name"])
+    key("Escape")
+    wait(lambda: inspect()["menu"] == "desktop-names")
+    assert inspect()["workspaceNames"]["2"] == "Event config"
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-name")
+    qa("focusControl", "desktopNameClear")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-names" and "2" not in inspect()["workspaceNames"])
+    query("Desktop 21")
+    key("Return")
+    wait(lambda: inspect()["desktopNameId"] == 21)
+    run(["wtype", "-s", "150", "Project 中文 <config> & notes"])
+    capture("desktop-name-editor")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-names" and "21" in inspect()["workspaceNames"])
+    qa("removeDesktop", 21)
+    query("Project 中文")
+    assert inspect()["rows"][0]["id"] == "desktop-name-21", "Empty named desktop disappeared"
+    capture("desktop-name-manager")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "desktop-name")
+    qa("focusControl", "desktopNameSwitch")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["switchedDesktop"] == 21)
+    qa("rightClickDesktop")
+    wait(lambda: inspect()["menu"] == "desktop-name" and inspect()["desktopNameId"] == 1)
+    run(["wtype", "-s", "150", "A" * 80])
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["workspaceNames"].get("1") == "A" * 80)
+    assert button("Desktop 1 · " + "A" * 80)["width"] <= 200
+    assert button("Desktop 1 · " + "A" * 80)["text"] == "1 · " + "A" * 80
+    capture("desktop-name-long-bar")
+    qa("rightClickDesktop")
+    wait(lambda: inspect()["menu"] == "desktop-name")
+    run(["wtype", "-s", "150", "-M", "ctrl", "-k", "a", "-m", "ctrl", "-k", "BackSpace"])
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and "1" not in inspect()["workspaceNames"])
+    assert button("Desktop 1")["text"] == "1"
+    qa("rightClickDesktop")
+    wait(lambda: inspect()["menu"] == "desktop-name")
+    run(["wtype", "-s", "150", "Reference desk"])
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["workspaceNames"].get("1") == "Reference desk")
+    assert button("Desktop 1 · Reference desk")["width"] <= 200
+    assert button("Desktop 1 · Reference desk")["text"] == "1 · Reference desk"
+    capture("desktop-name-bar")
+    expected_names = {"1": "Reference desk", "21": "Project 中文 <config> & notes"}
+    wait(lambda: json.loads(saved_preferences.read_text()).get("workspaceNames") == expected_names)
+    process.terminate()
+    process.wait(timeout=5)
+    process = subprocess.Popen(["quickshell", "--path", str(fixture), "--no-color"], env=env,
+                               stdout=log_file, stderr=subprocess.STDOUT)
+    processes.append(process)
+    wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    wait(lambda: inspect()["workspaceNames"] == expected_names)
+    assert inspect()["appLaunchCounts"][app_ids["Zebra"]] == 3
+    print("Desktop shortcut actions, right-click naming, cancellation, clearing, empty desktops and restart persistence passed")
+
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
     time.sleep(0.2)
     capture("controls-home")
     state = inspect()
-    assert [r["title"] for r in state["rows"]] == ["Apps", "Learn", "Trigger", "Style", "Setup", "About", "System"]
+    assert [r["title"] for r in state["rows"]] == ["Shortcuts", "Apps", "Learn", "Trigger", "Style", "Setup", "About", "System"]
     assert all(r["submenu"] for r in state["rows"])
     assert state["listContentHeight"] <= state["listHeight"]
-    assert state["selected"] == "apps"
+    assert state["selected"] == "shortcuts"
     # The headless seat has no physical mouse. Supply its initial position
     # before testing a movement, as a real seat does when the window maps.
     qa("pointMenu", round(state["card"]["x"] + 20), round(state["card"]["y"] + 20))
@@ -426,7 +532,7 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["menu"] == "controls")
     qa("pointMenu", round(target["x"]), round(target["y"]))
     time.sleep(.3)
-    assert inspect()["selected"] == "apps", "Opening beneath a stationary cursor stole selection"
+    assert inspect()["selected"] == "shortcuts", "Opening beneath a stationary cursor stole selection"
     capture("controls-stationary-pointer")
     run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x600"])
     time.sleep(.3)
@@ -830,7 +936,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
@@ -867,7 +973,7 @@ try:
     shell.terminate()
     shell.wait(timeout=5)
     interaction_checks()
-    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "appFrequency": True, "appFrequencyPersistence": True, "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "themePickerSearch": True, "menuArrowNavigation": True, "menuBreadcrumbs": True, "controlValueShortcuts": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
+    (output / "result.json").write_text(json.dumps({"passed": True, "menus": len(menu_names), "desktopNames": True, "desktopNamesPersistence": True, "desktopRightClick": True, "appFrequency": True, "appFrequencyPersistence": True, "settingsPanelsKeyboard": True, "wifiCredentials": True, "scaleConfirmation": True, "controlsKeyboard": True, "themePickerSearch": True, "menuArrowNavigation": True, "menuBreadcrumbs": True, "controlValueShortcuts": True, "powerConfirmation": True, "multiMonitor": True, "scaledMonitor": True, "previewIsolation": True, "tooltips": True, "mouseFocus": True, "clipboardTextAndImage": True, "clipboardStaleEntry": True}, indent=2))
     print(f"{len(menu_names)} menus, keyboard search/Escape, monitor hotplug/scaling and preview isolation passed")
 except Exception:
     fixture_path = output / "interactions.qml"

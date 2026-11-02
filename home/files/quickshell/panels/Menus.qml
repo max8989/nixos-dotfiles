@@ -37,6 +37,7 @@ PanelWindow {
     readonly property var settingsPanelItem: Runtime.menu === "audio" ? audioPanel : Runtime.menu === "wifi" ? wifiPanel : Runtime.menu === "display" ? displayPanel : Runtime.menu === "battery" ? batteryPanel : null
     readonly property bool controlsNavigation: Runtime.menu === "controls" || Runtime.menu === "theme" || Runtime.menu === "wallpaper" || Runtime.menuHistory.some(entry => entry.menu === "controls")
     readonly property bool categoryPage: Runtime.menu === "controls" && !search.text.trim()
+    readonly property bool namingDesktop: Runtime.menu === "desktop-name"
     property bool pointerPositionKnown: false
     property point pointerPosition: Qt.point(0, 0)
     color: fromBar || settingsPanel ? "transparent" : Qt.alpha(surfaceStyle.scrim, surfaceStyle.scrimAlpha)
@@ -45,6 +46,10 @@ PanelWindow {
         switch (Runtime.menu) {
         case "controls":
             return search.text.trim() ? controls.all : controls.home;
+        case "shortcuts":
+            return controls.shortcuts;
+        case "desktop-names":
+            return controls.desktopNames;
         case "display":
             return controls.display;
         case "desktop":
@@ -137,6 +142,9 @@ PanelWindow {
     function headingFor(name, title) {
         return ({
             controls: "Desktop menu",
+            shortcuts: "Shortcuts",
+            "desktop-names": "Manage desktops",
+            "desktop-name": "Desktop name",
             display: "Display",
             desktop: "Desktop",
             capture: "Capture",
@@ -180,6 +188,7 @@ PanelWindow {
     ControlActions {
         id: controls
         onOpenMenu: name => root.openPage(name)
+        onRenameDesktop: id => root.renameDesktop(id)
         onPowerRequested: action => root.requestPower(action)
     }
     QsMenuOpener {
@@ -232,6 +241,14 @@ PanelWindow {
             focusTimer.restart();
         } else
             Runtime.menu = name;
+    }
+    function renameDesktop(id) {
+        if (!Logic.validWorkspaceId(id)) {
+            Runtime.report("No current desktop is available. Choose one in Manage desktops.");
+            return;
+        }
+        Runtime.workspaceNameId = id;
+        openPage("desktop-name");
     }
     function back() {
         var trail = Runtime.menuHistory;
@@ -756,6 +773,8 @@ PanelWindow {
                 cancelPower.forceActiveFocus(Qt.TabFocusReason);
             else if (root.passwordPrompt)
                 password.forceActiveFocus();
+            else if (root.namingDesktop)
+                desktopNameEditor.focusDefault();
             else if (search.visible)
                 search.forceActiveFocus();
             else if (Runtime.menu === "notifications")
@@ -797,8 +816,8 @@ PanelWindow {
     Glass {
         id: card
         surface: root.surfaceName
-        width: Math.min(root.settingsPanel ? 540 : Runtime.menu === "controls" || root.fromBar ? 480 : 720, root.width - 32)
-        height: Math.min(root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : Runtime.menu === "controls" ? 520 : root.fromBar ? 560 : 650, root.height - 80)
+        width: Math.min(root.settingsPanel ? 540 : Runtime.menu === "controls" || root.namingDesktop || root.fromBar ? 480 : 720, root.width - 32)
+        height: Math.min(root.namingDesktop ? desktopNameEditor.implicitHeight + 152 : root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : Runtime.menu === "controls" ? 520 : root.fromBar ? 560 : 650, root.height - 80)
         x: root.settingsPanel ? root.width - width - 16 : root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
         y: root.fromBar || root.settingsPanel ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
         transformOrigin: root.fromBar ? (Config.preview ? Item.Bottom : Item.Top) : Item.Center
@@ -890,7 +909,7 @@ PanelWindow {
             TextField {
                 id: search
                 objectName: "menuSearch"
-                visible: !root.settingsPanel && Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
+                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 placeholderTextColor: Config.theme.dim
@@ -999,7 +1018,7 @@ PanelWindow {
             ListView {
                 id: list
                 objectName: "menuList"
-                visible: !root.settingsPanel && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
+                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -1022,7 +1041,7 @@ PanelWindow {
                     required property var modelData
                     required property int index
                     width: list.width
-                    height: root.categoryPage ? 48 : rowDelegate.modelData?.thumbnail ? 104 : subtitle.visible ? 65 : 44
+                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
                     focusPolicy: Qt.NoFocus
                     background: Rectangle {
@@ -1103,6 +1122,13 @@ PanelWindow {
                     text: search.text ? "No matches" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
                     color: Config.theme.dim
                 }
+            }
+            DesktopNameEditor {
+                id: desktopNameEditor
+                visible: root.namingDesktop
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                onFinished: root.back()
             }
             AudioPanel {
                 id: audioPanel
@@ -1187,7 +1213,7 @@ PanelWindow {
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
                 font.pixelSize: Config.fonts.bodySmall
-                text: root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : root.listKeyHints
+                text: root.namingDesktop ? "Enter  Save    Tab  Move focus    Esc  Cancel" : root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : root.listKeyHints
             }
         }
     }

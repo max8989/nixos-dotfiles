@@ -13,6 +13,7 @@ import "../services"
 QtObject {
     id: root
     signal openMenu(string name)
+    signal renameDesktop(int id)
     signal powerRequested(string action)
     property var pendingLaunch: []
     property Timer launchDelay: Timer {
@@ -95,24 +96,22 @@ QtObject {
     readonly property var fingerprintPage: page("fingerprint", "Fingerprint", "Unlock the screen and approve administrator prompts", "touch id biometric security sudo polkit")
     readonly property var settings: [page("audio", "Sound", "Speakers, headphones and microphone", "volume audio"), page("display", "Display", "Brightness, scale, text size and night light", "screen monitor"), ...connections.slice(0, 2), page("notifications", "Notifications", "Do Not Disturb and saved notifications", "alerts history"), fingerprintPage, configurationPage, connections[3], desktop.find(item => item.id === "input")]
     readonly property var power: ["Lock", "Suspend", "Hibernate", "Logout", "Reboot", "Shutdown"].map(title => action("session-" + title.toLowerCase(), title, () => root.powerRequested(title.toLowerCase()), "Session and power", title === "Reboot" ? "restart" : title === "Shutdown" ? "power off turn off" : ""))
-    readonly property var workspaces: Array.from({
-        length: 10
-    }, (_, i) => {
-        var number = i + 1;
-        var workspace = Hyprland.workspaces.values.find(w => w.id === number);
-        return action("workspace-" + number, "Workspace " + number, () => {
-            if (Config.preview)
-                return;
-            if (workspace)
-                workspace.activate();
-            else
-                Hyprland.dispatch(Hyprland.usingLua ? "hl.dsp.focus({ workspace = " + number + " })" : "workspace " + number);
-            Runtime.closeMenu();
-        }, workspace ? workspace.toplevels.values.length + " windows" : "Empty workspace", "desktop", workspace?.focused ? "Active" : "");
-    })
+    readonly property var shortcuts: [
+        action("name-desktop", "Name current desktop", () => root.renameDesktop(Workspaces.currentId), Workspaces.currentId > 0 ? Workspaces.title(Workspaces.currentId) : "No active desktop", "rename workspace name label project"),
+        page("desktop-names", "Manage desktops", "Rename, clear names or switch desktops", "workspace names labels projects")
+    ]
+    readonly property var desktopNames: Workspaces.entries.map(entry => action(
+        "desktop-name-" + entry.id, Workspaces.title(entry.id), () => root.renameDesktop(entry.id),
+        (entry.workspace ? entry.workspace.toplevels.values.length + " windows" : "Empty desktop") + " · Enter to rename",
+        "workspace name label project", Workspaces.currentId === entry.id ? "Current" : ""))
+    readonly property var workspaces: Workspaces.entries.map(entry => action(
+        "workspace-" + entry.id, Workspaces.title(entry.id), () => Workspaces.activate(entry.id),
+        entry.workspace ? entry.workspace.toplevels.values.length + " windows" : "Empty desktop",
+        "desktop", Workspaces.currentId === entry.id ? "Active" : ""))
     readonly property var trigger: [page("capture", "Capture", "Screenshots and screen recording", "video")].concat(desktop.filter(item => ["clipboard", "files", "calendar", "todos", "workspaces"].indexOf(item.id) >= 0), media)
     readonly property var system: power.concat([presentation, powerProfile, connections[2]])
     readonly property var home: [
+        page("shortcuts", "Shortcuts", "Name and manage desktops", "workspace names labels projects", "󰌌"),
         page("apps", "Apps", "Launch an installed application", "applications launcher programs", "󰀻"),
         page("learn", "Learn", "Keyboard and editor references", "help reference", "󰘥"),
         page("trigger", "Trigger", "Capture, clipboard and desktop actions", "utilities media", "󱓟"),
@@ -122,5 +121,5 @@ QtObject {
         page("power", "System", "Power profiles and session actions", "system power session", "󰐥")
     ]
     // Search finds controls and pickers; their choices stay inside each picker.
-    readonly property var all: home.concat([page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")], audio, notificationActions, display, [powerProfile], style, connections, desktop, capture, configuration, learn, [fingerprintPage], fingerprint, [configurationPage], power).filter((item, index, items) => items.findIndex(other => other.id === item.id) === index)
+    readonly property var all: home.concat(shortcuts, [page("display", "Display settings", "Brightness, scale, text size and night light", "monitor screen")], audio, notificationActions, display, [powerProfile], style, connections, desktop, capture, configuration, learn, [fingerprintPage], fingerprint, [configurationPage], power).filter((item, index, items) => items.findIndex(other => other.id === item.id) === index)
 }

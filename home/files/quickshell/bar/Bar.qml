@@ -33,7 +33,7 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.namespace: "quickshell-bar"
     exclusionMode: Config.preview ? ExclusionMode.Ignore : ExclusionMode.Auto
-    readonly property var monitor: Hyprland.monitorFor(screen)
+    property var monitor: Hyprland.monitorFor(screen)
     // Track real fullscreen windows so unlocking cannot remap the bar over them.
     // Maximized windows keep the bar, and other monitors remain independent.
     readonly property var windowHandles: ToplevelManager.toplevels
@@ -110,20 +110,30 @@ PanelWindow {
                     return list.sort((a, b) => (a.id < 0 ? 1 : 0) - (b.id < 0 ? 1 : 0) || a.id - b.id);
                 }
                 WorkspaceChip {
+                    id: workspaceChip
                     required property var modelData
+                    objectName: "workspace-" + modelData.id
                     readonly property bool special: modelData.name.indexOf("special:") === 0
+                    readonly property string savedName: Preferences.workspaceNames[modelData.id] || ""
                     readonly property var activity: WindowActivity.workspaceState(modelData.name, Notifications.entries)
-                    text: special ? "S" : String(modelData.id)
+                    text: special ? "S" : String(modelData.id) + (highlighted && savedName ? " · " + savedName : "")
+                    Layout.maximumWidth: Math.max(60, root.width * 0.16)
                     highlighted: special ? WindowActivity.activeWorkspace === modelData.name
                                          : !!root.monitor && root.monitor.activeWorkspace?.id === modelData.id
                     attention: activity.urgent || !!modelData.workspace?.urgent
                     fullscreenWindow: activity.fullscreen
                     windowCount: activity.count
-                    tipTitle: special ? "Scratchpad " + modelData.name.slice("special:".length) : "Workspace " + modelData.id
+                    tipTitle: special ? "Scratchpad " + modelData.name.slice("special:".length) : Workspaces.title(modelData.id)
                     tip: windowCount + (windowCount === 1 ? " open window" : " open windows")
                          + (attention ? " · Needs attention" : "") + (fullscreenWindow ? " · Fullscreen or maximized window" : "")
-                         + (special ? "\nClick to show or hide · Super+S" : "\nClick to switch · scroll to cycle")
+                          + (special ? "\nClick to show or hide · Super+S" : "\nClick to switch · scroll to cycle · right-click to rename")
                     onClicked: root.workspace(modelData)
+                    onRightClicked: {
+                        if (special)
+                            return;
+                        Runtime.workspaceNameId = modelData.id;
+                        root.open("desktop-name", workspaceChip);
+                    }
                     onScrolled: direction => root.scrollWorkspace(direction)
                 }
             }

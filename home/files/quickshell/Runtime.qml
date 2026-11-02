@@ -11,6 +11,7 @@ Singleton {
     property var menuHistory: []
     property var menuScreen: null
     property real menuAnchorX: -1
+    property int workspaceNameId: 0
     property bool locked: false
     property bool presentation: false
     property string osdLabel: ""
