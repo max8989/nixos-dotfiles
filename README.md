@@ -542,6 +542,25 @@ See the [official Docker installation guide](https://docs.portainer.io/start/ins
 for Portainer's initial setup. The separate Compose media stack can be managed
 through Portainer after it is restored to the server.
 
+### Ollama chat UI
+
+Hollama replaces the OpenCode web service at `http://192.168.2.43:4096`.
+The existing authenticated proxy for `opencode.maximegagne.ca` can keep using
+the same upstream port. Ollama and its model volume remain in their existing
+Compose project at `~/repos/docker-compose-nas/ollama`.
+
+`hosts/homeserver/hollama.nix` pins Hollama 0.37.0 by image digest and manages
+it through `docker-hollama.service`. Nginx serves the UI on port 4096 and proxies
+`/ollama/api/` to Ollama's loopback-only port 11434, with response buffering
+disabled for streaming chat. The container's port 4173 also stays loopback-only.
+
+On a first visit, `hollama-defaults.js` adds the server connection and filters
+the model picker to `qwen3.5-uncensored:latest`. Select that model to start a
+chat. The script adds `think: false` to chat requests for this connection because
+this Hollama release does not expose that setting. Existing browser settings
+are preserved. Chat history is stored per browser; export it from Hollama's
+settings before clearing browser data. Review the defaults script when upgrading.
+
 ### (Optional) test in a VM first
 
 ```sh

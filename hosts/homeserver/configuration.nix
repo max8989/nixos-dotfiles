@@ -15,7 +15,7 @@
     ./disko.nix
     ./hardware-configuration.nix
     ./portainer.nix
-    ./opencode.nix
+    ./hollama.nix
     ./media-storage.nix
   ];
 
