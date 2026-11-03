@@ -41,6 +41,14 @@ local GIGABYTE_G24F = "desc:GIGA-BYTE TECHNOLOGY CO. LTD. G24F 2 22450B007095"
 hl.monitor({ output = "DP-1", mode = "1920x1080@60", position = "auto-left", scale = 1 })
 hl.monitor({ output = GIGABYTE_G24F, mode = "2560x1440@60", position = "auto-left", scale = 1 })
 
+-- iPad via Orion: send 1080p to the UGREEN capture card instead of its 4K input modes.
+hl.monitor({
+  output = "desc:Ugreen Group Ltd. UGREEN-UHD",
+  mode = "1920x1080@60",
+  position = "auto-right",
+  scale = 1,
+})
+
 -- Virtual display for Sunshine game streaming
 -- Activate with: hyprctl output create headless SUNSHINE
 hl.monitor({ output = "SUNSHINE", mode = "1280x720@30", position = "auto", scale = 1 })
