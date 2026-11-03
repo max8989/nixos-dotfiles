@@ -563,13 +563,18 @@ settings before clearing browser data. Review the defaults script when upgrading
 
 ### Open WebUI and Tavily search
 
-Open WebUI runs alongside Hollama at `http://192.168.2.43:4097`, with its own
-login and persistent `open-webui-data` Docker volume. The NixOS module
+Open WebUI is available at `https://ai.maximegagne.ca`, with LAN/VPN access at
+`http://192.168.2.43:4097`, its own login, and a persistent `open-webui-data`
+Docker volume. The NixOS module
 `hosts/homeserver/open-webui.nix` pins the official image by version and digest.
 Its host network connects to Ollama at `127.0.0.1:11434`; the backend listens
 only on `127.0.0.1:8081`, behind Nginx with WebSocket and streaming support.
-Hollama remains on port 4096. Keep Internet access behind an authenticated
-HTTPS reverse proxy; port 4097 is intended for LAN/VPN access.
+Hollama remains on port 4096. The existing HTTPS reverse proxy routes the public
+domain to port 4097; keep that backend port limited to LAN/VPN access. Set
+`WEBUI_URL` to the public HTTPS address and include both public and LAN origins
+in the semicolon-separated `CORS_ALLOW_ORIGIN` value. Missing an origin allows
+login and history loading but rejects the WebSocket connection needed for chat.
+The external proxy must forward WebSocket upgrade headers as well as HTTP.
 
 Before the first activation, create a private runtime file on the server:
 

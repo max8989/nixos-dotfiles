@@ -17,7 +17,8 @@
       environment = {
         HOST = "127.0.0.1";
         PORT = "8081";
-        CORS_ALLOW_ORIGIN = "http://192.168.2.43:4097";
+        WEBUI_URL = "https://ai.maximegagne.ca";
+        CORS_ALLOW_ORIGIN = "https://ai.maximegagne.ca;http://192.168.2.43:4097";
         FORWARDED_ALLOW_IPS = "127.0.0.1";
         OLLAMA_BASE_URL = "http://127.0.0.1:11434";
         ENABLE_OPENAI_API = "False";
