@@ -16,6 +16,7 @@
     ./hardware-configuration.nix
     ./portainer.nix
     ./hollama.nix
+    ./open-webui.nix
     ./media-storage.nix
   ];
 

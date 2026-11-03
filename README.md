@@ -561,6 +561,48 @@ this Hollama release does not expose that setting. Existing browser settings
 are preserved. Chat history is stored per browser; export it from Hollama's
 settings before clearing browser data. Review the defaults script when upgrading.
 
+### Open WebUI and Tavily search
+
+Open WebUI runs alongside Hollama at `http://192.168.2.43:4097`, with its own
+login and persistent `open-webui-data` Docker volume. The NixOS module
+`hosts/homeserver/open-webui.nix` pins the official image by version and digest.
+Its host network connects to Ollama at `127.0.0.1:11434`; the backend listens
+only on `127.0.0.1:8081`, behind Nginx with WebSocket and streaming support.
+Hollama remains on port 4096. Keep Internet access behind an authenticated
+HTTPS reverse proxy; port 4097 is intended for LAN/VPN access.
+
+Before the first activation, create a private runtime file on the server:
+
+```sh
+sudo -A install -d -m 0700 /var/lib/open-webui
+sudo -A touch /var/lib/open-webui/tavily.env
+sudo -A chmod 0600 /var/lib/open-webui/tavily.env
+sudo -A vim /var/lib/open-webui/tavily.env
+```
+
+Add `TAVILY_API_KEY=your-key` in the editor. Keep this file outside the
+repository and the Nix store. After activation, `docker-open-webui.service`
+generates `/var/lib/open-webui/bootstrap.env` (root-only, mode `0600`) with the
+initial administrator email `admin@example.com` and a random password. Read it
+locally with `sudo -A vim /var/lib/open-webui/bootstrap.env`, sign in, and change
+the email and password in the UI. Further sign-ups are disabled. Existing users
+are preserved across container recreation; bootstrap credentials only create
+an account when the database is empty.
+
+Select your Ollama model and enable **Web Search** from **Integrations** in
+the chat input.
+Search uses Tavily with basic search depth and up to three results. Model
+inference stays local; search queries are sent to Tavily. Chat and search-query
+generation default to `think: false`, matching Hollama. Server settings and the
+key come from Nix and the runtime environment on every start; changes to
+server settings in the Admin UI do not survive a restart. After rotating the
+key in `tavily.env`, run `sudo -A systemctl restart docker-open-webui`.
+
+Check `systemctl status docker-open-webui`, `journalctl -u docker-open-webui`,
+and `http://192.168.2.43:4097/health` after deployment. To roll back the addition,
+remove its import and rebuild, or switch to the previous NixOS generation;
+keep the Docker volume and runtime files to retain chats and credentials.
+
 ### (Optional) test in a VM first
 
 ```sh
