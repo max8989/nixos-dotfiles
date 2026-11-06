@@ -162,6 +162,18 @@ ShellRoot {
                     card = {x: child.x, y: child.y, width: child.width, height: child.height};
             }
             return JSON.stringify({buttons: buttons, card: card, menu: Desktop.Runtime.menu,
+                                   wallpaper: {
+                                       entries: root.find(menus.contentItem, "wallpaperPanel").filtered,
+                                       selected: root.find(menus.contentItem, "wallpaperPanel").selectedId,
+                                       current: root.find(menus.contentItem, "wallpaperPanel").currentId,
+                                       loading: root.find(menus.contentItem, "wallpaperPanel").loading,
+                                       busy: root.find(menus.contentItem, "wallpaperPanel").busy,
+                                       choosing: root.find(menus.contentItem, "wallpaperPanel").choosing,
+                                       confirmation: root.find(menus.contentItem, "wallpaperPanel").pendingDelete,
+                                       status: root.find(menus.contentItem, "wallpaperPanel").status,
+                                       visible: menus.visible,
+                                       folder: Desktop.Preferences.wallpaperFolder
+                                   },
                                    reminderCount: Services.Reminders.tasks.length,
                                    overdueCount: Services.Reminders.overdue.length,
                                    reminderError: Services.Reminders.syncError,
@@ -228,6 +240,7 @@ ShellRoot {
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
         function openWallpaper(): void { Desktop.Runtime.toggleMenu("wallpaper", null); }
+        function wallpaperFolder(path: string): void { Desktop.Preferences.wallpaperFolder = path; }
         function currentDesktop(id: int): void { workspaceFixture.focusedMonitor = {activeWorkspace: {id: id}}; }
         function removeDesktop(id: int): void {
             workspaceFixture.workspaces = {values: workspaceFixture.workspaces.values.filter(workspace => workspace.id !== id)};
@@ -293,10 +306,8 @@ print(f'qa_backlight,backlight,{value},{value}%,100')
     theme_command = output / "desktop-theme"
     theme_calls = output / "theme-calls.jsonl"
     wallpaper_calls = output / "wallpaper-calls.jsonl"
-    theme_command.write_text("#!" + sys.executable + "\nREAL_THEME = " + repr(settings["bin"]["theme"]) + "\n" + '''import json, pathlib, subprocess, sys
-if sys.argv[1:3] == ['wallpaper', 'list']:
-    subprocess.run([REAL_THEME, *sys.argv[1:]], check=True)
-elif sys.argv[1] == 'set':
+    theme_command.write_text("#!" + sys.executable + "\nSOURCE = " + repr(str(Path(__file__).resolve().parents[1] / "home/files/scripts/desktop-theme.sh")) + "\nTHEMES = " + repr(settings["paths"]["themeRoot"]) + "\n" + '''import json, os, pathlib, subprocess, sys
+if sys.argv[1] == 'set':
     assert len(sys.argv) == 3
     with pathlib.Path(__file__).with_name('theme-calls.jsonl').open('a') as calls:
         print(json.dumps(sys.argv[2]), file=calls)
@@ -304,6 +315,10 @@ else:
     assert sys.argv[1] == 'wallpaper'
     with pathlib.Path(__file__).with_name('wallpaper-calls.jsonl').open('a') as calls:
         print(json.dumps(sys.argv[2:]), file=calls)
+    env = dict(os.environ, DESKTOP_THEME_ROOT=THEMES,
+               DESKTOP_THEME_STATE=str(pathlib.Path(__file__).with_name('wallpaper-state')),
+               HYPRLAND_INSTANCE_SIGNATURE='', DBUS_SESSION_BUS_ADDRESS='')
+    sys.exit(subprocess.run(['bash', SOURCE, *sys.argv[1:]], env=env).returncode)
 ''')
     theme_command.chmod(0o700)
     settings["bin"]["theme"] = str(theme_command)
@@ -688,31 +703,93 @@ elif sys.argv[1] == 'battery-info':
     key("Right")
     wait(lambda: inspect()["menu"] == "wallpaper")
     assert inspect()["breadcrumb"] == "Desktop menu › Wallpaper · Gruvbox"
-    query(wallpaper_folder.name)
-    wait(lambda: len(inspect()["rows"]) == 1 and inspect()["rows"][0]["submenu"])
-    key("Right")
-    wait(lambda: any(row["title"] == wallpaper_image.name for row in inspect()["rows"]))
-    assert "not-an-image.txt" not in [row["title"] for row in inspect()["rows"]]
-    query("Wallpaper [one]")
-    wait(lambda: len(inspect()["rows"]) == 1)
-    key("Right")
-    assert not wallpaper_calls.exists(), "Right selected a wallpaper"
-    wait(lambda: any(row["thumbnail"] and row["thumbnail"]["ready"]
-                     and row["thumbnail"]["paintedWidth"] > 0
-                     for row in inspect()["menuRows"]))
-    capture("controls-wallpaper-picker")
+    wait(lambda: not inspect()["wallpaper"]["loading"])
+    assert len(inspect()["wallpaper"]["entries"]) == 1
+    qa("wallpaperFolder", str(wallpaper_folder))
+    capture("controls-wallpaper-empty")
+    qa("focusControl", "wallpaperImport")
     key("Return")
-    wait(lambda: inspect()["menu"] == "" and wallpaper_calls.exists())
-    assert [json.loads(line) for line in wallpaper_calls.read_text().splitlines()] == [[
-        "set", str(wallpaper_image), "gruvbox"]]
-    qa("openWallpaper")
-    wait(lambda: inspect()["menu"] == "wallpaper")
-    query("Restore theme default")
-    wait(lambda: len(inspect()["rows"]) == 1)
+    qa("focusControl", "wallpaperChooseSuperfile")
+    key("Return")
+    wait(lambda: inspect()["wallpaper"]["choosing"] and not inspect()["wallpaper"]["visible"])
+    wait(lambda: 'wallpaper-import' in run(["swaymsg", "-t", "get_tree"]).stdout)
+    time.sleep(1)
+    capture("wallpaper-superfile")
+    # The isolated HOME has superfile's first-run welcome popup. Acknowledge it,
+    # then move from the text fixture to the image before selecting.
+    run(["wtype", "-s", "200", "-k", "Return", "-s", "200", "-k", "Down", "-s", "200", "-k", "Return"])
+    wait(lambda: len(inspect()["wallpaper"]["entries"]) == 2 and not inspect()["wallpaper"]["busy"])
+    imported_id = inspect()["wallpaper"]["selected"]
+    assert imported_id != "default"
+    assert inspect()["wallpaper"]["current"] == "default", "Import applied a wallpaper"
+    qa("focusControl", "wallpaperGrid")
+    key("Left")
+    assert inspect()["wallpaper"]["selected"] == "default"
+    key("Right")
+    assert inspect()["wallpaper"]["selected"] == imported_id
+    assert inspect()["wallpaper"]["current"] == "default", "Arrow navigation applied a wallpaper"
+    capture("controls-wallpaper-picker")
+    # Filtering preserves literal punctuation, and a new import remains selected.
+    qa("focusControl", "wallpaperSearch")
+    run(["wtype", "-s", "150", "Wallpaper [one]"])
+    assert len(inspect()["wallpaper"]["entries"]) == 2  # protected default stays visible
     key("Return")
     wait(lambda: inspect()["menu"] == "")
-    assert json.loads(wallpaper_calls.read_text().splitlines()[-1]) == ["reset", "gruvbox"]
-    print("Wallpaper image filtering, folder navigation, per-theme selection and reset passed")
+    assert json.loads(wallpaper_calls.read_text().splitlines()[-1]) == ["select", imported_id, "gruvbox"]
+    qa("openWallpaper")
+    wait(lambda: inspect()["menu"] == "wallpaper")
+    wait(lambda: inspect()["wallpaper"]["current"] == imported_id)
+    # The real graphical chooser supports cancellation and restores gallery focus.
+    qa("focusControl", "wallpaperImport")
+    key("Return")
+    qa("focusControl", "wallpaperChooseFiles")
+    key("Return")
+    wait(lambda: inspect()["wallpaper"]["choosing"])
+    time.sleep(1)
+    capture("wallpaper-file-dialog")
+    key("Escape")
+    wait(lambda: not inspect()["wallpaper"]["choosing"] and inspect()["wallpaper"]["visible"])
+    assert inspect()["wallpaper"]["selected"] == imported_id
+    assert inspect()["wallpaper"]["folder"] == str(wallpaper_folder)
+    other_image = wallpaper_folder / "Other [two] #%, ;.PNG"
+    shutil.copyfile(Path(settings["paths"]["themeRoot"]) / "tokyo-night/wallpaper.png", other_image)
+    qa("focusControl", "wallpaperImport")
+    key("Return")
+    qa("focusControl", "wallpaperChooseFiles")
+    key("Return")
+    wait(lambda: inspect()["wallpaper"]["choosing"])
+    time.sleep(1)
+    key("a", "ctrl")
+    capture("wallpaper-multi-file-dialog")
+    key("Return")
+    wait(lambda: not inspect()["wallpaper"]["choosing"] and not inspect()["wallpaper"]["busy"] and len(inspect()["wallpaper"]["entries"]) == 3)
+    assert inspect()["wallpaper"]["current"] == imported_id, "Graphical import changed the wallpaper"
+    assert "1 imported" in inspect()["wallpaper"]["status"]
+    qa("focusControl", "wallpaperSearch")
+    run(["wtype", "-s", "150", "Wallpaper [one]"])
+    # Delete defaults to Cancel, includes affected themes, and keeps source files.
+    qa("focusControl", "wallpaperDelete")
+    key("Return")
+    wait(lambda: inspect()["wallpaper"]["confirmation"] is not None)
+    assert inspect()["wallpaper"]["confirmation"]["usedBy"] == ["gruvbox"]
+    key("Return")  # Default confirmation action is Cancel.
+    wait(lambda: inspect()["wallpaper"]["confirmation"] is None)
+    assert inspect()["wallpaper"]["current"] == imported_id
+    qa("focusControl", "wallpaperDelete")
+    key("Return")
+    capture("wallpaper-delete-confirmation")
+    key("Escape")
+    assert inspect()["wallpaper"]["confirmation"] is None
+    qa("focusControl", "wallpaperDelete")
+    key("Return")
+    qa("focusControl", "wallpaperConfirmDelete")
+    key("Return")
+    wait(lambda: len(inspect()["wallpaper"]["entries"]) == 1 and not inspect()["wallpaper"]["busy"])
+    assert wallpaper_image.exists()
+    assert inspect()["wallpaper"]["current"] == "default"
+    assert json.loads(wallpaper_calls.read_text().splitlines()[-1]) == ["library", "gruvbox"]
+    key("Escape")
+    print("Wallpaper gallery, real superfile import, graphical multi-import/cancellation, selection and safe deletion passed")
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
     query("keyboard shortcuts")

@@ -90,6 +90,7 @@ in
           pkgs.python3
           pkgs.nodejs
           pkgs.lua
+          pkgs.jq
         ];
       }
       ''
@@ -100,6 +101,7 @@ in
         node ${./fingerprint-model.mjs} ${../home/files/quickshell/lock/FingerprintModel.js}
         python3 ${./fingerprint-helper.py} ${../home/files/scripts/desktop-fingerprint.sh}
         python3 ${./quickshell-settings.py} ${../home/files/scripts/quickshell-settings.py}
+        python3 ${./wallpaper-import.py} ${../home/files/scripts/quickshell-wallpaper-import.sh}
         luac -p ${../home/files/hypr/hyprland.lua} ${../home/files/hypr/keybindings.lua} ${../home/files/hypr/capture_bindings.lua} ${../home/files/hypr/dictation_bindings.lua}
         luac -p ${home.xdg.configFile."hypr/shell_commands.lua".source}
         lua ${./capture-bindings.lua} ${../home/files/hypr/capture_bindings.lua}

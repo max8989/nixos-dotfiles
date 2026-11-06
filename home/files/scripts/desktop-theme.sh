@@ -14,6 +14,7 @@ usage() {
   echo 'Usage: desktop-theme list|current|set <name>|reconcile' >&2
   echo '       desktop-theme wallpaper current [theme]|set <image> [theme]|reset [theme]' >&2
   echo '       desktop-theme wallpaper list <directory>' >&2
+  echo '       desktop-theme wallpaper library [theme]|import <image>...|select <id> [theme]|delete <id>' >&2
   exit 2
 }
 
@@ -87,34 +88,129 @@ apply_wallpaper() {
   done < <(hyprctl -j monitors 2>/dev/null | jq -r '.[].name' 2>/dev/null || true)
 }
 
-change_wallpaper() {
-  local action=$1 source=$2 name=$3 format digest image temp
-  lock_state
-  name=${name:-$(current_name)}
-  valid_theme "$name" || { echo "Unknown desktop theme: $name" >&2; exit 2; }
-
-  if [[ $action == set ]]; then
-    source=$(realpath -e -- "$source")
-    [[ -f $source && -r $source ]] || { echo 'Choose a readable image file' >&2; exit 2; }
+store_wallpaper() (
+    local source format digest image temp metadata status=imported
+    IFS= read -r -d '' source < <(realpath -ze -- "$1") || return 2
+    [[ -f $source && -r $source ]] || { echo 'Choose a readable image file' >&2; return 2; }
     case ${source##*.} in
       [pP][nN][gG]) format=png ;;
       [jJ][pP][gG]|[jJ][pP][eE][gG]) format=jpeg ;;
       [wW][eE][bB][pP]) format=webp ;;
       [bB][mM][pP]) format=bmp ;;
-      *) echo 'Supported wallpapers: PNG, JPEG, WebP and BMP' >&2; exit 2 ;;
+      *) echo 'Supported wallpapers: PNG, JPEG, WebP and BMP' >&2; return 2 ;;
     esac
     # Decode before publishing, and keep our own copy if the source is moved.
     # Explicit raster decoders also keep filenames out of ImageMagick's syntax.
-    wallpaper_temp=$(mktemp "$state_dir/.wallpaper.XXXXXXXX")
-    trap '[[ -z ${wallpaper_temp:-} ]] || rm -f -- "$wallpaper_temp"' EXIT
-    magick "$format:${source}[0]" -auto-orient -strip "png:$wallpaper_temp"
-    digest=$(sha256sum -- "$wallpaper_temp")
+    temp=$(mktemp "$state_dir/.wallpaper.XXXXXXXX") || return
+    metadata="$temp.json"
+    trap 'rm -f -- "$temp" "$metadata"' EXIT
+    magick "$format:${source}[0]" -auto-orient -strip "png:$temp" || return
+    digest=$(sha256sum -- "$temp") || return
     digest=${digest%% *}
-    mkdir -p "$wallpaper_dir/images"
+    mkdir -p "$wallpaper_dir/images" || return
+    [[ ! -L $wallpaper_dir && ! -L $wallpaper_dir/images ]] || return 2
     image="$wallpaper_dir/images/$digest.png"
+    [[ ! -L $image ]] || return 2
+    if [[ -s $image ]]; then status=duplicate; fi
     # A different image gets a different path, bypassing wallpaper caches.
-    mv -f -- "$wallpaper_temp" "$image"
-    wallpaper_temp=""
+    if [[ $status == imported ]]; then
+      mv -f -- "$temp" "$image" || return
+    fi
+    if [[ ! -f $wallpaper_dir/images/$digest.json ]]; then
+      jq -n --arg name "${1##*/}" --argjson added "$(date +%s)" \
+        '{name: $name, added: $added}' > "$metadata" || return
+      mv -f -- "$metadata" "$wallpaper_dir/images/$digest.json" || return
+    fi
+    jq -n --arg id "$digest" --arg path "$image" --arg status "$status" \
+      '{id: $id, path: $path, status: $status}'
+)
+
+managed_wallpaper() {
+  [[ $1 =~ ^[a-f0-9]{64}$ && ! -L $wallpaper_dir && ! -L $wallpaper_dir/images &&
+     -f $wallpaper_dir/images/$1.png && ! -L $wallpaper_dir/images/$1.png ]]
+}
+
+wallpaper_references() {
+  local name path
+  while IFS= read -r name; do
+    path=$(wallpaper_path "$name")
+    jq -n --arg name "$name" --arg path "$path" '{name: $name, path: $path}'
+  done < <(jq -r '.order[]' "$theme_root/catalog.json") | jq -s '.'
+}
+
+wallpaper_library() {
+  local name=${1:-$(current_name)} image id metadata references
+  valid_theme "$name" || { echo "Unknown desktop theme: $name" >&2; return 2; }
+  lock_state
+  references=$(wallpaper_references)
+  shopt -s nullglob
+  {
+    for image in "$wallpaper_dir/images/"*.png; do
+      id=${image##*/}; id=${id%.png}
+      managed_wallpaper "$id" || continue
+      metadata=$(jq -c 'select(.name | type == "string") | {name, added: (.added | if type == "number" then . else 0 end)}' \
+        "$wallpaper_dir/images/$id.json" 2>/dev/null) || metadata=""
+      jq -n --arg id "$id" --arg path "$image" --argjson refs "$references" \
+        --argjson meta "${metadata:-null}" '{id: $id, path: $path,
+          name: ($meta.name // ("Saved wallpaper " + $id[0:8])), added: ($meta.added // 0),
+          builtin: false, usedBy: [$refs[] | select(.path == $path) | .name]}'
+    done
+  } | jq -s --arg current "$(wallpaper_path "$name")" \
+      --arg default "$theme_root/$name/wallpaper.png" --arg theme "$name" '
+    sort_by([-(.added), .name]) as $images |
+    {current: ([$images[] | select(.path == $current) | .id][0] // "default"),
+     entries: ([{id: "default", name: "Theme default", path: $default, builtin: true,
+       usedBy: (if $current == $default then [$theme] else [] end)}] + $images)}'
+}
+
+import_wallpapers() {
+  local source result failed=0 results=()
+  lock_state
+  for source in "$@"; do
+    if result=$(store_wallpaper "$source"); then
+      results+=("$result")
+    else
+      failed=1
+      results+=("$(jq -n --arg source "$source" \
+        '{status: "error", source: $source, error: "Choose a readable PNG, JPEG, WebP or BMP image."}')")
+    fi
+  done
+  printf '%s\n' "${results[@]}" | jq -s '.'
+  return "$failed"
+}
+
+delete_wallpaper() {
+  local id=$1 references name active
+  lock_state
+  managed_wallpaper "$id" || { echo 'Choose an imported wallpaper ID' >&2; return 2; }
+  references=$(wallpaper_references | jq --arg path "$wallpaper_dir/images/$id.png" \
+    '[.[] | select(.path == $path) | .name]')
+  active=$(current_name)
+  while IFS= read -r name; do
+    rm -f -- "$wallpaper_dir/$name"
+    if [[ $name == "$active" ]]; then
+      publish_wallpaper "$name"
+      apply_wallpaper "$name"
+    fi
+  done < <(jq -r '.[]' <<< "$references")
+  rm -f -- "$wallpaper_dir/images/$id.png" "$wallpaper_dir/images/$id.json"
+  jq -n --argjson themes "$references" '{resetThemes: $themes}'
+}
+
+change_wallpaper() {
+  local action=$1 source=$2 name=$3 image temp
+  lock_state
+  name=${name:-$(current_name)}
+  valid_theme "$name" || { echo "Unknown desktop theme: $name" >&2; exit 2; }
+
+  if [[ $action == set || $action == select ]]; then
+    if [[ $action == set ]]; then
+      image=$(store_wallpaper "$source")
+      image=$(jq -r '.path' <<< "$image")
+    else
+      managed_wallpaper "$source" || { echo 'Choose an imported wallpaper ID' >&2; return 2; }
+      image="$wallpaper_dir/images/$source.png"
+    fi
     temp="$wallpaper_dir/.selected.$$"
     ln -s -- "$image" "$temp"
     mv -Tf -- "$temp" "$wallpaper_dir/$name"
@@ -211,6 +307,22 @@ case "${1:-}" in
     ;;
   wallpaper)
     case "${2:-}" in
+      library)
+        [[ $# == 2 || $# == 3 ]] || usage
+        wallpaper_library "${3:-}"
+        ;;
+      import)
+        [[ $# -ge 3 ]] || usage
+        import_wallpapers "${@:3}"
+        ;;
+      select)
+        [[ $# == 3 || $# == 4 ]] || usage
+        change_wallpaper select "$3" "${4:-}"
+        ;;
+      delete)
+        [[ $# == 3 ]] || usage
+        delete_wallpaper "$3"
+        ;;
       list)
         [[ $# == 3 ]] || usage
         list_wallpapers "$3"

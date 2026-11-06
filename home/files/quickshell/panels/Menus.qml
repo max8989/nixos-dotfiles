@@ -18,7 +18,7 @@ import "../Logic.js" as Logic
 PanelWindow {
     id: root
     signal powerRequested(string action)
-    visible: Runtime.menu !== "" && !Runtime.locked && Config.features.menus
+    visible: Runtime.menu !== "" && !Runtime.locked && Config.features.menus && !wallpaperPanel.choosing
     screen: Runtime.menuScreen || Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) || Quickshell.screens[0]
     anchors {
         top: true
@@ -110,12 +110,10 @@ PanelWindow {
     property var pendingWifi: null
     property string confirmation: ""
     property string folderPath: Config.paths.home || "/"
-    property string wallpaperFolderPath: Config.paths.home || "/"
     Component.onCompleted: if (Preferences.initialized && Preferences.folder)
         folderPath = Preferences.folder
     property int requestSerial: 0
     property bool clipboardBusy: false
-    property bool wallpaperBusy: false
     readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(d.networks.values), [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
     readonly property string heading: headingFor(Runtime.menu, trayTitle)
@@ -267,7 +265,9 @@ PanelWindow {
         focusTimer.restart();
     }
     function dismissOrBack() {
-        if (Runtime.menu === "display" && Display.scaleBusy) {
+        if (Runtime.menu === "wallpaper" && wallpaperPanel.dismiss()) {
+            return;
+        } else if (Runtime.menu === "display" && Display.scaleBusy) {
             Display.revertScale();
         } else if (passwordPrompt) {
             password.text = "";
@@ -408,24 +408,7 @@ PanelWindow {
             });
             return;
         } else if (menu === "wallpaper") {
-            var themeName = Config.selectedTheme;
-            var defaultRow = row("Restore theme default", () => root.changeWallpaper("", themeName), "Restore the bundled wallpaper for " + Config.theme.displayName);
-            defaultRow.thumbnail = "file://" + Config.paths.themeRoot + "/" + themeName + "/wallpaper.png";
-            items.push(defaultRow);
-            items.push(row("↑ Parent directory", () => navigate(wallpaperFolderPath.replace(/\/?[^/]+\/?$/, "") || "/"), wallpaperFolderPath, "", true));
-            var wallpaperSerial = ++requestSerial;
-            rows = items;
-            // Use the helper for local paths: Qt's folder model reparses decoded
-            // paths as URLs, losing '#' and '?' in directory names.
-            Runtime.run([Config.bin.theme, "wallpaper", "list", wallpaperFolderPath], function(code, out) {
-                if (wallpaperSerial !== root.requestSerial || Runtime.menu !== "wallpaper") return;
-                if (code) {
-                    Runtime.report("This folder could not be opened. Choose another folder.");
-                    return;
-                }
-                var entries = Logic.parseJson(out, []);
-                root.rows = items.concat(entries.map(entry => root.fileRow(entry.name, entry.path, entry.directory, "file://" + encodeURIComponent(entry.path).replace(/%2F/g, "/"))));
-            });
+            rows = [];
             return;
         } else if (menu === "files") {
             items.push(row("↑ Parent directory", () => navigate(folderPath.replace(/\/?[^/]+\/?$/, "") || "/"), folderPath, "", true));
@@ -490,40 +473,19 @@ PanelWindow {
         rows = items;
     }
     function navigate(path) {
-        if (Runtime.menu === "wallpaper") {
-            wallpaperFolderPath = path;
-            return;
-        }
         folderPath = path;
         Preferences.folder = path;
     }
     function fileRow(name, path, directory, url) {
-        var themeName = Runtime.menu === "wallpaper" ? Config.selectedTheme : "";
         var item = row((directory ? "▸ " : "") + name, () => {
             if (directory)
                 navigate(path);
-            else if (themeName)
-                root.changeWallpaper(path, themeName);
             else {
                 Runtime.launch([Config.bin.xdgOpen, path]);
                 Runtime.closeMenu();
             }
-        }, directory ? "Folder" : themeName ? name + " · Save for " + Config.theme.displayName : "File", "", directory);
-        if (themeName && !directory) item.thumbnail = url.toString();
+        }, directory ? "Folder" : "File", "", directory);
         return item;
-    }
-    function changeWallpaper(path, themeName) {
-        if (Config.preview || wallpaperBusy) return;
-        wallpaperBusy = true;
-        var serial = requestSerial;
-        var args = [Config.bin.theme, "wallpaper", path ? "set" : "reset"];
-        if (path) args.push(path);
-        args.push(themeName);
-        Runtime.run(args, function(code) {
-            root.wallpaperBusy = false;
-            if (code) Runtime.report("Wallpaper could not be changed. Choose a readable PNG, JPEG, WebP or BMP image.");
-            else if (serial === root.requestSerial && Runtime.menu === "wallpaper") Runtime.closeMenu();
-        });
     }
     function connectNetwork(network) {
         if (Config.preview)
@@ -571,10 +533,6 @@ PanelWindow {
     onBluetoothDevicesChanged: if (Runtime.menu === "bluetooth")
         refresh()
     onFolderPathChanged: search.text = ""
-    onWallpaperFolderPathChanged: {
-        search.text = "";
-        if (Runtime.menu === "wallpaper") refresh();
-    }
     onVisibleChanged: if (visible) {
         pointerPositionKnown = false;
         reveal.restart();
@@ -778,6 +736,8 @@ PanelWindow {
                 password.forceActiveFocus();
             else if (root.namingDesktop)
                 desktopNameEditor.focusDefault();
+            else if (Runtime.menu === "wallpaper")
+                wallpaperPanel.focusDefault();
             else if (search.visible)
                 search.forceActiveFocus();
             else if (Runtime.menu === "notifications")
@@ -806,10 +766,10 @@ PanelWindow {
     }
     Shortcut {
         sequence: "Ctrl+L"
-        enabled: root.visible && search.visible && search.enabled
+        enabled: root.visible && ((search.visible && search.enabled) || Runtime.menu === "wallpaper")
         onActivated: {
-            search.forceActiveFocus();
-            search.selectAll();
+            if (Runtime.menu === "wallpaper") wallpaperPanel.focusDefault();
+            else { search.forceActiveFocus(); search.selectAll(); }
         }
     }
     MouseArea {
@@ -850,6 +810,8 @@ PanelWindow {
                 }
                 Text {
                     text: root.heading
+                    elide: Text.ElideRight
+                    Layout.minimumWidth: 0
                     font.family: Config.theme.uiFont
                     font.pixelSize: Config.fonts.displayLarge
                     color: Config.theme.text
@@ -912,7 +874,7 @@ PanelWindow {
             TextField {
                 id: search
                 objectName: "menuSearch"
-                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
+                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "wallpaper" && Runtime.menu !== "calendar" && Runtime.menu !== "notifications"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 placeholderTextColor: Config.theme.dim
@@ -1021,7 +983,7 @@ PanelWindow {
             ListView {
                 id: list
                 objectName: "menuList"
-                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
+                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "wallpaper" && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
                 enabled: !root.confirmation && !root.passwordPrompt
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -1202,6 +1164,14 @@ PanelWindow {
                     }
                 }
             }
+            WallpaperPanel {
+                id: wallpaperPanel
+                objectName: "wallpaperPanel"
+                active: Runtime.menu === "wallpaper"
+                visible: active
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
             CalendarPanel {
                 id: calendar
                 objectName: "menuCalendar"
@@ -1216,7 +1186,7 @@ PanelWindow {
                 color: Config.theme.dim
                 font.family: Config.theme.uiFont
                 font.pixelSize: Config.fonts.bodySmall
-                text: root.namingDesktop ? "Enter  Save    Tab  Move focus    Esc  Cancel" : root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : root.listKeyHints
+                text: Runtime.menu === "wallpaper" ? "Arrows  Select    Enter  Apply    Delete  Remove    Tab  Move focus    Esc  Back / close" : root.namingDesktop ? "Enter  Save    Tab  Move focus    Esc  Cancel" : root.confirmation || root.passwordPrompt ? "Tab  Move focus    Enter / Space  Activate    Esc  Cancel" : root.settingsPanel ? "Tab / Shift+Tab  Move    ← →  Adjust    Enter  Select    Esc  Back / close" : Runtime.menu === "calendar" ? "← →  Month    Home  Today    Tab  Move focus    Esc  Back / close" : Runtime.menu === "notifications" ? "Tab / Shift+Tab  Move focus    Enter / Space  Activate    Esc  Back / close" : root.listKeyHints
             }
         }
     }

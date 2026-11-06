@@ -188,6 +188,86 @@ elif sys.argv[1:] == ['-j', 'clients']:
         self.assertFalse(self.state.exists(), "Browsing must not change theme state")
         self.run_theme("wallpaper", "list", image, success=False)
 
+    def library(self, theme=None):
+        return json.loads(self.run_theme("wallpaper", "library", *([theme] if theme else [])))
+
+    def test_import_builds_a_shared_collection_without_changing_the_desktop(self):
+        self.run_theme("reconcile")
+        before = self.display_calls()
+        result = json.loads(self.run_theme("wallpaper", "import", self.image))
+        entry = result[0]
+        self.assertEqual(entry["status"], "imported")
+        library = self.library()
+        self.assertEqual(library["current"], "default")
+        self.assertEqual(library["entries"][1]["name"], self.image.name)
+        self.assertEqual(self.display_calls(), before)
+        duplicate = json.loads(self.run_theme("wallpaper", "import", self.image))[0]
+        self.assertEqual(duplicate["id"], entry["id"])
+        self.assertEqual(duplicate["status"], "duplicate")
+        self.assertEqual(len(self.library()["entries"]), 2)
+        self.image.unlink()
+        self.run_theme("wallpaper", "select", entry["id"], "nord")
+        self.assertEqual(self.display_calls(), before)
+        self.assertEqual(self.library("nord")["current"], entry["id"])
+        self.run_theme("set", "nord")
+        self.assert_active("nord", Path(entry["path"]))
+
+    def test_batch_import_keeps_valid_images_and_reports_invalid_files(self):
+        corrupt = self.root / "broken.jpg"
+        corrupt.write_text("not an image")
+        result = json.loads(self.run_theme("wallpaper", "import", corrupt, self.image,
+                                          self.root / "missing.png", success=False))
+        self.assertEqual([entry["status"] for entry in result], ["error", "imported", "error"])
+        self.assertEqual(len(self.library()["entries"]), 2)
+        self.assertEqual(list(self.state.glob(".wallpaper.*")), [])
+
+    def test_existing_saved_images_remain_available_without_metadata(self):
+        saved = Path(self.run_theme("wallpaper", "set", self.image))
+        for metadata in saved.parent.glob("*.json"):
+            metadata.unlink()
+        library = self.library()
+        self.assertEqual(library["current"], saved.stem)
+        entry = library["entries"][1]
+        self.assertEqual(entry["usedBy"], ["tokyo-night"])
+        self.assertTrue(entry["name"].startswith("Saved wallpaper"))
+        self.assertEqual(Path(entry["path"]), saved)
+
+    def test_delete_resets_all_affected_themes_and_preserves_the_original(self):
+        self.run_theme("reconcile")
+        saved = Path(self.run_theme("wallpaper", "set", self.image))
+        self.run_theme("wallpaper", "select", saved.stem, "nord")
+        self.assertEqual(self.library()["entries"][1]["usedBy"], ["tokyo-night", "nord"])
+        result = json.loads(self.run_theme("wallpaper", "delete", saved.stem))
+        self.assertEqual(result["resetThemes"], ["tokyo-night", "nord"])
+        self.assertFalse(saved.exists())
+        self.assertTrue(self.image.exists())
+        self.assertEqual(len(self.library()["entries"]), 1)
+        self.assert_active("tokyo-night", self.themes / "tokyo-night/wallpaper.png")
+        self.assertEqual(self.run_theme("wallpaper", "current", "nord"),
+                         str(self.themes / "nord/wallpaper.png"))
+
+    def test_collection_actions_reject_unmanaged_paths_and_symlinks(self):
+        saved = Path(self.run_theme("wallpaper", "set", self.image))
+        for invalid in ("default", "../selected", str(self.image), "a" * 64):
+            for action in ("select", "delete"):
+                with self.subTest(action=action, invalid=invalid):
+                    self.run_theme("wallpaper", action, invalid, success=False)
+        saved.unlink()
+        saved.symlink_to(self.image)
+        for action in ("select", "delete"):
+            self.run_theme("wallpaper", action, saved.stem, success=False)
+        self.assertTrue(self.image.exists())
+        self.assertEqual(len(self.library()["entries"]), 1)
+
+    def test_collection_cannot_delete_through_a_redirected_directory(self):
+        saved = Path(self.run_theme("wallpaper", "set", self.image))
+        foreign = self.root / "foreign"
+        (self.state / "wallpapers").rename(foreign)
+        (self.state / "wallpapers").symlink_to(foreign)
+        for action in ("select", "delete"):
+            self.run_theme("wallpaper", action, saved.stem, success=False)
+        self.assertTrue((foreign / "images" / saved.name).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

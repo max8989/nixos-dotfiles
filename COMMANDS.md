@@ -61,10 +61,22 @@ their new colors.
 ### Change wallpaper
 
 Open **Style → Wallpaper** with Super+M, or press **Super+Ctrl+Space**.
-Browse folders and select a PNG, JPEG, WebP or BMP image. The image becomes the
-saved wallpaper for the current theme and returns whenever you switch back to
-that theme, including after login and rebuilds. **Restore theme default** resets
-only that theme's wallpaper.
+The gallery has three actions:
+
+- **Import → Choose files…** adds one or more PNG, JPEG, WebP or BMP images.
+  **Choose in superfile…** opens superfile with image previews; Enter selects
+  one image and Esc cancels. The last import folder is remembered.
+- **Change wallpaper** applies the selected thumbnail to the current theme.
+  Importing only adds images to the shared collection. Each theme remembers
+  its own choice across theme switches, login and rebuilds.
+- **Delete** removes an imported image from the collection after confirmation.
+  The confirmation names any affected themes, which return to their defaults.
+  Original source files are kept. The protected **Theme default** card can be
+  applied to restore the current theme's bundled image.
+
+Arrow keys navigate the gallery, Enter applies, Delete asks to remove, and Tab
+moves between controls. Search filters saved filenames. Existing custom images
+remain available; images saved before filename tracking appear as “Saved wallpaper…”.
 
 From a terminal, omit the theme name to use the current theme, or specify one:
 
@@ -75,12 +87,21 @@ desktop-theme wallpaper current
 desktop-theme wallpaper current nord
 desktop-theme wallpaper reset
 desktop-theme wallpaper reset nord
+desktop-theme wallpaper import "$HOME/Downloads/photo.jpg" "$HOME/Pictures/landscape.png"
+desktop-theme wallpaper library
+desktop-theme wallpaper select <id> nord
+desktop-theme wallpaper delete <id>
 ```
 
 Choosing a wallpaper for an inactive theme leaves the current desktop as it is.
 Selected images are copied into `~/.local/state/desktop-theme/wallpapers`
 (or `$XDG_STATE_HOME/desktop-theme/wallpapers`), so moving the source is safe.
 Hyprpaper uses a separate current-wallpaper link in this state directory.
+`import` and `library` return JSON. Import reports each file as `imported`,
+`duplicate`, or `error`, keeping successful imports even if another file fails
+(a batch with errors exits nonzero). `select` and `delete` take an ID returned
+by these commands. Terminal deletion resets every theme using that image
+without an interactive prompt; the gallery supplies the confirmation.
 
 This follows Omarchy's [background selection and theme memory](https://github.com/omacom/omarchy/blob/quattro/bin/omarchy-theme-set)
 and [background picker shortcut](https://github.com/omacom/omarchy/blob/quattro/manual/39-backgrounds.md),

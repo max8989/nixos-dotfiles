@@ -19,6 +19,7 @@ Singleton {
     property var appLaunchCounts: Object.create(null)
     property var workspaceNames: Object.create(null)
     property string folder: ""
+    property string wallpaperFolder: ""
     function setWorkspaceName(id, name) {
         if (!initialized || !Logic.validWorkspaceId(id) || typeof name !== "string")
             return false;
@@ -47,6 +48,7 @@ Singleton {
     onAppLaunchCountsChanged: save()
     onWorkspaceNamesChanged: save()
     onFolderChanged: save()
+    onWallpaperFolderChanged: save()
     FileView {
         id: file
         path: Config.stateDirectory + "/state.json"
@@ -67,6 +69,7 @@ Singleton {
             root.appLaunchCounts = state.appLaunchCounts;
             root.workspaceNames = state.workspaceNames;
             root.folder = state.folder;
+            root.wallpaperFolder = state.wallpaperFolder;
             root.initialized = true;
         }
         onLoadFailed: root.initialized = true
@@ -86,7 +89,8 @@ Singleton {
             monitorScales: root.monitorScales,
             appLaunchCounts: root.appLaunchCounts,
             workspaceNames: root.workspaceNames,
-            folder: root.folder
+            folder: root.folder,
+            wallpaperFolder: root.wallpaperFolder
         }))
     }
 }

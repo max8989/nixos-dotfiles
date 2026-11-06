@@ -51,7 +51,8 @@ function restoreState(value) {
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
         workspaceNames: restoreWorkspaceNames(value.workspaceNames),
-        folder: typeof value.folder === "string" ? value.folder : "" };
+        folder: typeof value.folder === "string" ? value.folder : "",
+        wallpaperFolder: typeof value.wallpaperFolder === "string" && value.wallpaperFolder.startsWith("/") ? value.wallpaperFolder : "" };
 }
 function validWorkspaceId(id) {
     return /^[1-9]\d*$/.test(String(id)) && Number(id) <= 2147483647;

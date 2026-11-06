@@ -1,4 +1,9 @@
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 let
   tomlFormat = pkgs.formats.toml { };
 
@@ -10,11 +15,7 @@ let
   # file:// URI pushed as text/uri-list via wl-copy — so the hovered file
   # pastes as a real file into browsers and GUI apps. Details and regeneration
   # notes in the patch header.
-  superfile = (
-    inputs.superfile.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
-      patches = (old.patches or [ ]) ++ [ ./files/superfile-system-clipboard.patch ];
-    })
-  );
+  superfile = import ./superfile-package.nix { inherit pkgs inputs; };
 
   # Fire-and-forget Dolphin launcher for superfile's `e` key.
   #

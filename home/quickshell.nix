@@ -91,6 +91,7 @@ let
       fingerprint = lib.getExe fingerprintHelper;
       fprintdList = toString fingerprintList;
       theme = lib.getExe config.localTheme.switcher;
+      wallpaperImport = lib.getExe wallpaperImport;
     };
   };
   settingsHelper = pkgs.writeScriptBin "quickshell-settings" (
@@ -183,6 +184,40 @@ let
     '';
   };
   generated = pkgs.writeText "quickshell-generated.json" (builtins.toJSON settings);
+  wallpaperDialog = pkgs.stdenvNoCC.mkDerivation {
+    name = "quickshell-wallpaper-dialog";
+    dontUnpack = true;
+    nativeBuildInputs = [
+      pkgs.wrapGAppsHook3
+      pkgs.gobject-introspection
+    ];
+    buildInputs = [ pkgs.gtk3 ];
+    installPhase =
+      let
+        python = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+        script = pkgs.writeText "quickshell-wallpaper-dialog.py" (
+          builtins.replaceStrings [ "@python@" ] [ "${python}/bin/python3" ] (
+            builtins.readFile ./files/scripts/quickshell-wallpaper-dialog.py
+          )
+        );
+      in
+      ''
+        install -Dm755 ${script} "$out/bin/quickshell-wallpaper-dialog"
+      '';
+  };
+  wallpaperImport = pkgs.writeShellApplication {
+    name = "quickshell-wallpaper-import";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+      pkgs.kitty
+      wallpaperDialog
+      (import ./superfile-package.nix { inherit pkgs inputs; })
+    ];
+    text = ''
+      ${builtins.readFile ./files/scripts/quickshell-wallpaper-import.sh}
+    '';
+  };
   bundle = pkgs.runCommand "quickshell-desktop" { } ''
     mkdir -p "$out"
     cp -r ${./files/quickshell}/. "$out/"
