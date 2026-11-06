@@ -96,6 +96,7 @@ in
         screenshot = lib.getExe capture.screenshot;
         captureRegion = lib.getExe capture.region;
         editScreenshot = lib.getExe capture.edit;
+        screenRecord = lib.getExe capture.record;
         controls = menu "controls";
         apps = menu "apps";
         files = menu "files";

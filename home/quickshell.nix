@@ -60,7 +60,7 @@ let
       themeRoot = "${config.localTheme.themeRoot}";
       screenshot = lib.getExe capture.screenshot;
       editScreenshot = lib.getExe capture.edit;
-      screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
+      screenRecord = lib.getExe capture.record;
       phrases = "${./files/quickshell/assets/phrases_zh.txt}";
       vim = "${./files/quickshell/assets/vim.txt}";
       lazyvim = "${./files/quickshell/assets/lazyvim.txt}";

@@ -11,6 +11,27 @@ let
   bundle = self.packages.${system}.quickshell-config;
 in
 {
+  recording-runtime =
+    pkgs.runCommand "recording-runtime-check"
+      {
+        nativeBuildInputs = [
+          pkgs.python3
+          pkgs.bash
+          pkgs.jq
+          pkgs.coreutils
+          pkgs.util-linux
+          pkgs.sway
+          pkgs.dbus
+          pkgs.wf-recorder
+          pkgs.pulseaudio
+          pkgs.ffmpeg
+        ];
+      }
+      ''
+        python3 ${./screen-record-runtime.py} ${../home/files/scripts/screen_record.sh} "$TMPDIR/recording"
+        mkdir -p "$out"
+        cp "$TMPDIR/recording/"*.mp4 "$TMPDIR/recording/result.json" "$out/"
+      '';
   ticktick =
     pkgs.runCommand "ticktick-check"
       {
@@ -244,6 +265,7 @@ in
       }
       ''
         python3 ${./capture.py} ${../home/files/scripts}
+        python3 ${./screen-record.py} ${../home/files/scripts}
         touch "$out"
       '';
 }

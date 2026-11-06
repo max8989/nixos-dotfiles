@@ -16,6 +16,7 @@ in
     capture.region
     capture.screenshot
     capture.edit
+    capture.record
   ];
   xdg.configFile."swappy/config".text = lib.generators.toINI { } {
     Default = {

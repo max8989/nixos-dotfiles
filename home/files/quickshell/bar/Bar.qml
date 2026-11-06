@@ -16,7 +16,7 @@ PanelWindow {
     id: root
     required property var modelData
     screen: modelData
-    visible: !Preferences.barHidden && !Runtime.locked && (Config.preview || !fullscreen)
+    visible: !Runtime.locked && (Recording.active || !Preferences.barHidden && (Config.preview || !fullscreen))
     anchors {
         left: true
         right: true
@@ -207,6 +207,18 @@ PanelWindow {
             id: rightRow
             anchors.centerIn: parent
             spacing: 2
+            Chip {
+                objectName: "recordingIndicator"
+                compact: true
+                visible: Recording.active
+                text: "⏺ " + Recording.label
+                foreground: Config.theme.urgent
+                tint: Config.theme.urgent
+                tipTitle: "Screen recording"
+                tip: Recording.detail + "\nClick to stop or cancel · Alt+4"
+                Accessible.name: "Stop screen recording"
+                onClicked: Recording.stop()
+            }
             Chip {
                 compact: true
                 visible: root.width > 1600

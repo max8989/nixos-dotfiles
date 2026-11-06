@@ -162,6 +162,7 @@ ShellRoot {
                     card = {x: child.x, y: child.y, width: child.width, height: child.height};
             }
             return JSON.stringify({buttons: buttons, card: card, menu: Desktop.Runtime.menu,
+                                   recording: Services.Recording.state, barVisible: bar.visible,
                                    wallpaper: {
                                        entries: root.find(menus.contentItem, "wallpaperPanel").filtered,
                                        selected: root.find(menus.contentItem, "wallpaperPanel").selectedId,
@@ -238,6 +239,8 @@ ShellRoot {
         }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
+        function openCapture(): void { Desktop.Runtime.toggleMenu("capture", null); }
+        function hideBar(hidden: bool): void { Desktop.Preferences.barHidden = hidden; }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
         function openWallpaper(): void { Desktop.Runtime.toggleMenu("wallpaper", null); }
         function wallpaperFolder(path: string): void { Desktop.Preferences.wallpaperFolder = path; }
@@ -288,6 +291,26 @@ with pathlib.Path(__file__).with_name('ticktick-links.jsonl').open('a') as links
 ''')
     open_command.chmod(0o700)
     settings["bin"]["xdgOpen"] = str(open_command)
+    # Exercise the production Recording service's polling and stop command on
+    # this private compositor, without capturing the developer's desktop/audio.
+    recording_state = output / "recording-state.json"
+    recording_state.write_text('{"active":false}')
+    recording_calls = output / "recording-calls.jsonl"
+    recording_command = output / "screen-record-control"
+    recording_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys, time
+state = pathlib.Path(__file__).with_name('recording-state.json')
+args = sys.argv[1:]
+if args == ['--status']:
+    print(state.read_text())
+else:
+    with pathlib.Path(__file__).with_name('recording-calls.jsonl').open('a') as calls:
+        print(json.dumps(args), file=calls)
+    state.write_text(json.dumps({'active': False} if args == ['--stop'] else {
+        'active': True, 'phase': 'recording', 'mode': args[0], 'audio': args[1],
+        'startedAt': int(time.time()) - 65, 'file': '/private/recording.mp4'}))
+''')
+    recording_command.chmod(0o700)
+    settings["paths"]["screenRecord"] = str(recording_command)
     # A private backlight fixture exercises the real Display service and keyboard
     # adjustments without ever touching the physical screen brightness.
     brightness = output / "brightnessctl"
@@ -392,7 +415,53 @@ elif sys.argv[1] == 'battery-info':
         time.sleep(0.2)
         run(["grim", str(output / (name + ".png"))])
 
+    def key(name, *modifiers):
+        command = ["wtype", "-s", "80"]
+        for modifier in modifiers:
+            command += ["-M", modifier]
+        command += ["-k", name]
+        for modifier in reversed(modifiers):
+            command += ["-m", modifier]
+        run(command)
+
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    qa("openCapture")
+    wait(lambda: inspect()["menu"] == "capture")
+    assert {"record-audio", "record-region", "record-window", "record"} <= {row["id"] for row in inspect()["rows"]}
+    run(["wtype", "Recording audio"])
+    wait(lambda: len(inspect()["rows"]) == 1)
+    key("Return")
+    wait(lambda: inspect()["rows"][0]["value"] == "Desktop audio")
+    capture("recording-audio-choice")
+    key("Escape")
+    qa("openCapture")
+    run(["wtype", "Record region"])
+    wait(lambda: len(inspect()["rows"]) == 1)
+    key("Return")
+    wait(lambda: inspect()["recording"].get("active"))
+    assert json.loads(recording_calls.read_text().splitlines()[0]) == ["region", "desktop"]
+    indicator = next(button for button in inspect()["buttons"] if button["title"] == "Screen recording")
+    assert "1:" in indicator["text"]
+    qa("hideBar", "true")
+    assert inspect()["barVisible"], "Active recording indicator disappeared with the hidden bar"
+    capture("recording-indicator")
+    qa("openCapture")
+    wait(lambda: inspect()["menu"] == "capture")
+    assert [row["id"] for row in inspect()["rows"] if row["id"].startswith("record")] == ["record-stop"]
+    capture("recording-stop-action")
+    key("Escape")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x768"])
+    time.sleep(0.3)
+    capture("recording-indicator-compact")
+    indicator = next(button for button in inspect()["buttons"] if button["title"] == "Screen recording")
+    assert 0 < indicator["x"] < 1024
+    point(indicator["x"], indicator["y"])
+    click()
+    wait(lambda: not inspect()["recording"].get("active"))
+    assert json.loads(recording_calls.read_text().splitlines()[-1]) == ["--stop"]
+    assert not inspect()["barVisible"]
+    qa("hideBar", "false")
+    run(["swaymsg", "output", "HEADLESS-1", "resolution", "1920x1080"])
     wait(lambda: inspect()["reminderCount"] == 3)
     assert inspect()["overdueCount"] == 1
     assert inspect()["reminderCountLabel"] == "3"
@@ -445,15 +514,6 @@ elif sys.argv[1] == 'battery-info':
     control = button("Power & controls")
     assert not control["visualFocus"] and not control["selected"] and control["borderAlpha"] == 0, control
     capture("bar-after-click")
-
-    def key(name, *modifiers):
-        command = ["wtype", "-s", "80"]
-        for modifier in modifiers:
-            command.extend(["-M", modifier])
-        command.extend(["-k", name])
-        for modifier in reversed(modifiers):
-            command.extend(["-m", modifier])
-        run(command)
 
     def query(text):
         # Allow the new virtual keyboard's focus event to reach Qt before

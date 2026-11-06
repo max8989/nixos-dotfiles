@@ -9,3 +9,4 @@ singleton NotificationSources 1.0 NotificationSources.qml
 singleton WindowActivity 1.0 WindowActivity.qml
 singleton Workspaces 1.0 Workspaces.qml
 singleton Network 1.0 Network.qml
+singleton Recording 1.0 Recording.qml

@@ -93,7 +93,7 @@ hl.bind("ALT + 2", hl.dsp.exec_cmd(screenshot .. " windows"))
 hl.bind("ALT + 3", hl.dsp.exec_cmd(screenshot .. " fullscreen"))
 hl.bind("PRINT", hl.dsp.exec_cmd(screenshot .. " smart"))
 hl.bind(mainMod .. " + ALT + comma", hl.dsp.exec_cmd(shell.editScreenshot))
-hl.bind("ALT + 4", hl.dsp.exec_cmd("~/.config/scripts/screen_record.sh"))
+hl.bind("ALT + 4", hl.dsp.exec_cmd(shell.screenRecord))
 
 -- Power menu
 hl.bind(mainMod .. " + n", hl.dsp.exec_cmd(shell.power))

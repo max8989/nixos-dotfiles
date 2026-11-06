@@ -731,6 +731,28 @@ shown in a preview notification with an Edit action. Super+Alt+comma opens the
 latest saved capture in Swappy. The capture menu offers the same actions.
 Alt+4 retains the existing focused-monitor recording toggle.
 
+The Capture menu also records a region or a selected window. Choose **Recording
+audio** first to cycle between no audio, desktop output and the default
+microphone. Selection uses the screenshot picker, then a three-second countdown
+gives you time to prepare. Window recordings capture the selected rectangle;
+moving or resizing the window does not move that rectangle.
+
+The red recording indicator shows elapsed time and stops recording when clicked.
+It also appears during selection/countdown, when clicking it cancels. The bar
+stays visible during recording, including over fullscreen windows or when hidden
+in preferences. Alt+4 and **Stop screen recording** in Capture also stop the
+current recording. After the MP4 finishes saving, its notification offers
+**Open**, **Open folder** and **Copy path**.
+
+Recordings go to `~/Videos/ScreenRecordings`, created when needed. The packaged
+`nixos-screen-record [fullscreen|region|windows] [none|desktop|microphone]`
+helper defaults to a monitor recording without audio; another invocation stops
+the current session. `--stop` only stops, and `--status` prints JSON for the
+indicator. Set `NIXOS_SCREENRECORD_DIR` to override the output directory. Capture
+uses software H.264 encoding at 30 fps so region recording does not depend on a
+particular GPU device. Odd selection dimensions are trimmed by at most one pixel
+for MP4 compatibility; static screens continue recording and stop normally.
+
 The packaged `nixos-screenshot` helper accepts
 `[smart|region|windows|fullscreen] [slurp|copy|save]`: the default `slurp` processing
 saves, copies and notifies; `copy` only updates the image clipboard; `save` only
@@ -805,7 +827,12 @@ test exercises real PAM password authentication, rejection, notifications, and
 the compositor's fail-closed session lock. Test passwords exist only in the VM.
 `nix flake check` also exercises capture cancellation, PNG clipboard data,
 selection geometry, overlapping/hidden windows, scaled/rotated monitors,
-failure cleanup, and the lifetime of temporary selection bindings.
+failure cleanup, and the lifetime of temporary selection bindings. Recording
+checks cover selection, audio sources, cancellation, graceful finalization,
+completion actions and stale session ownership; the UI harness exercises the
+audio choice, recording indicator and Stop action. The runtime recording check
+captures and decodes real H.264/AAC files on a private display with virtual audio,
+including static screens and odd-sized selections.
 
 Inspect actions with `quickshell ipc --config desktop show`. Examples:
 

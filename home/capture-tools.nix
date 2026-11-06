@@ -68,6 +68,30 @@ let
       exec swappy -f "$file"
     '';
   };
+  recordNotify = pkgs.writeShellApplication {
+    name = "nixos-screen-record-notify";
+    runtimeInputs = [
+      pkgs.libnotify
+      pkgs.xdg-utils
+      pkgs.wl-clipboard
+    ];
+    text = builtins.readFile ./files/scripts/screen-record-notify.sh;
+  };
+  record = pkgs.writeShellApplication {
+    name = "nixos-screen-record";
+    runtimeInputs = [
+      region
+      recordNotify
+      hyprland
+      pkgs.wf-recorder
+      pkgs.pulseaudio
+      pkgs.jq
+      pkgs.coreutils
+      pkgs.util-linux
+      pkgs.libnotify
+    ];
+    text = builtins.readFile ./files/scripts/screen_record.sh;
+  };
 in
 {
   inherit
@@ -75,5 +99,6 @@ in
     screenshot
     edit
     notify
+    record
     ;
 }
