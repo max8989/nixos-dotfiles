@@ -325,11 +325,15 @@ PanelWindow {
         if (index >= 0)
             selectIndex(index);
     }
+    function recordRecentItem(item) {
+        if (item.recentKey && !item.submenu)
+            Preferences.recordRecentItem(item.recentKey, recentRows.map(row => row.recentKey));
+    }
     function adjust(direction) {
         var item = filtered[list.currentIndex];
         if (!item?.adjust || confirmation || passwordPrompt)
             return false;
-        Preferences.recordRecentItem(item.recentKey);
+        recordRecentItem(item);
         item.adjust(direction);
         if (!controlsNavigation)
             focusTimer.restart();
@@ -515,7 +519,7 @@ PanelWindow {
             return;
         var item = filtered[list.currentIndex];
         if (item) {
-            Preferences.recordRecentItem(item.recentKey);
+            recordRecentItem(item);
             item.action();
             focusTimer.restart();
         }

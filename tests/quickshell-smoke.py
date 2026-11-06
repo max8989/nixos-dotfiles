@@ -672,6 +672,10 @@ elif sys.argv[1] == 'battery-info':
     capture("desktop-name-bar")
     expected_names = {"1": "Reference desk", "21": "Project 中文 <config> & notes"}
     wait(lambda: json.loads(saved_preferences.read_text()).get("workspaceNames") == expected_names)
+    legacy_recent = ["control:screen-text", "control:trigger", "control:shortcuts"]
+    legacy_preferences = json.loads(saved_preferences.read_text())
+    legacy_preferences["recentItems"] = legacy_recent
+    saved_preferences.write_text(json.dumps(legacy_preferences))
     process.terminate()
     process.wait(timeout=5)
     process = subprocess.Popen(["quickshell", "--path", str(fixture), "--no-color"], env=env,
@@ -682,6 +686,11 @@ elif sys.argv[1] == 'battery-info':
     assert inspect()["appLaunchCounts"][app_ids["Zebra"]] == 4
     print("Desktop shortcut actions, right-click naming, cancellation, clearing, empty desktops and restart persistence passed")
 
+    wait(lambda: inspect()["recentItems"] == legacy_recent)
+    qa("openRecent")
+    wait(lambda: inspect()["menu"] == "recent")
+    assert [r["id"] for r in inspect()["rows"]] == ["screen-text"]
+    key("Escape")
     visited = [("fingerprint", "Fingerprint"), ("configuration", "Configuration files"),
                ("vim", "Vim reference"), ("lazyvim", "LazyVim reference"),
                ("desktop-names", "Manage desktops"), ("audio", "Audio devices"),
@@ -697,18 +706,36 @@ elif sys.argv[1] == 'battery-info':
         wait(lambda: inspect()["menu"] == menu)
         key("Escape")
         key("Escape")
-    expected_recent = ["control:" + menu for menu, _ in reversed(visited[-10:])]
+    assert inspect()["recentItems"] == legacy_recent, "Browsing sections changed action history"
+    actions = [("dnd", "Do Not Disturb"), ("power-profile", "Power profile"),
+               ("presentation", "Presentation mode"), ("play", "Play / pause"),
+               ("previous", "Previous track"), ("next", "Next track"),
+               ("screenshot-region", "Screenshot region"), ("screenshot-window", "Screenshot window"),
+               ("screenshot-screen", "Screenshot screen"), ("screen-text", "Copy text from screen"),
+               ("screen-qr", "Decode QR code"), ("screen-color", "Pick screen color")]
+    for index, (action, title) in enumerate(actions):
+        qa("openControls")
+        wait(lambda: inspect()["menu"] == "controls")
+        query(title)
+        assert inspect()["rows"][0]["id"] == action
+        key("Return")
+        if inspect()["menu"] == "controls":
+            key("Escape")
+        wait(lambda: inspect()["menu"] == "")
+        if index == 0:
+            assert inspect()["recentItems"] == ["control:dnd", "control:screen-text"], "Saved sections were not pruned"
+    expected_recent = ["control:" + action for action, _ in reversed(actions[-10:])]
     qa("openControls")
     key("Right")
     wait(lambda: inspect()["menu"] == "recent")
     assert inspect()["recentItems"] == expected_recent
-    assert [r["id"] for r in inspect()["rows"]] == [menu for menu, _ in reversed(visited[-10:])]
+    assert [r["id"] for r in inspect()["rows"]] == [action for action, _ in reversed(actions[-10:])]
+    assert all(not r["submenu"] for r in inspect()["rows"])
     capture("recent-full")
     key("Return")
-    wait(lambda: inspect()["menu"] == "workspaces")
-    key("Escape")
-    assert inspect()["menu"] == "recent" and inspect()["recentItems"] == expected_recent
-    key("Escape")
+    wait(lambda: inspect()["menu"] == "")
+    assert inspect()["recentItems"] == expected_recent
+    qa("openControls")
     query("Shortcuts")
     key("Return")
     wait(lambda: inspect()["menu"] == "shortcuts")
@@ -735,8 +762,9 @@ elif sys.argv[1] == 'battery-info':
     qa("openRecent")
     wait(lambda: len(inspect()["rows"]) == 10)
     assert inspect()["rows"][0]["id"] == "presentation"
+    assert all(not r["submenu"] for r in inspect()["rows"])
     key("Escape")
-    print("Recent click ordering, ten-item limit, mouse/keyboard activation, live values and restart persistence passed")
+    print("Recent action-only history, legacy section filtering, ten-item limit, mouse/keyboard activation and restart persistence passed")
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")

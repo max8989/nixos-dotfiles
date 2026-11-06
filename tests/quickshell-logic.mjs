@@ -74,6 +74,11 @@ const recentCatalog = [{recentKey:"control:5", title:"Live value", value:"On"},
 assert.deepEqual(plain(context.resolveRecentItems(["control:removed", "app:editor", "control:5"], recentCatalog)),
     [recentCatalog[1], recentCatalog[0]]);
 assert.equal(context.resolveRecentItems(["control:5"], recentCatalog)[0], recentCatalog[0]);
+const legacyCatalog = [{recentKey:"control:trigger", title:"Trigger", submenu:true},
+    {recentKey:"control:shortcuts", title:"Shortcuts", submenu:true},
+    {recentKey:"control:screen-text", title:"Copy text from screen"}];
+assert.deepEqual(plain(context.resolveRecentItems(
+    ["control:screen-text", "control:trigger", "control:shortcuts"], legacyCatalog)), [legacyCatalog[2]]);
 for (const value of [undefined, null, [], "broken", 42]) {
     assert.deepEqual(plain(context.restoreState({workspaceNames:value}).workspaceNames), {});
 }

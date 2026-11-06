@@ -34,9 +34,9 @@ Singleton {
         counts[id] = Math.min(Number.MAX_SAFE_INTEGER, (counts[id] || 0) + 1);
         appLaunchCounts = counts;
     }
-    function recordRecentItem(id) {
+    function recordRecentItem(id, history) {
         if (initialized && !Config.preview && id)
-            recentItems = Logic.rememberRecentItem(recentItems, id);
+            recentItems = Logic.rememberRecentItem(history, id);
     }
     function save() {
         if (initialized)

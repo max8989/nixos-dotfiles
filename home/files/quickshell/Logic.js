@@ -105,7 +105,7 @@ function rememberRecentItem(items, id) {
 function resolveRecentItems(ids, catalog) {
     return ids.map(function(id) {
         return catalog.find(function(item) { return item.recentKey === id; });
-    }).filter(Boolean);
+    }).filter(function(item) { return item && !item.submenu; });
 }
 function parseJson(text, fallback) { try { return JSON.parse(text); } catch (error) { return fallback; } }
 function clipboardEntries(text) {
