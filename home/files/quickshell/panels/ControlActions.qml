@@ -24,6 +24,7 @@ QtObject {
     function action(id, title, callback, subtitle, keywords, value, adjust) {
         return {
             id: id,
+            recentKey: id === "recent" ? "" : "control:" + id,
             title: title,
             action: callback,
             subtitle: subtitle || "",
@@ -114,7 +115,9 @@ QtObject {
     readonly property var power: ["Lock", "Suspend", "Hibernate", "Logout", "Reboot", "Shutdown"].map(title => action("session-" + title.toLowerCase(), title, () => root.powerRequested(title.toLowerCase()), "Session and power", title === "Reboot" ? "restart" : title === "Shutdown" ? "power off turn off" : ""))
     readonly property var shortcuts: [
         action("name-desktop", "Name current desktop", () => root.renameDesktop(Workspaces.currentId), Workspaces.currentId > 0 ? Workspaces.title(Workspaces.currentId) : "No active desktop", "rename workspace name label project"),
-        page("desktop-names", "Manage desktops", "Rename, clear names or switch desktops", "workspace names labels projects")
+        page("desktop-names", "Manage desktops", "Rename, clear names or switch desktops", "workspace names labels projects"),
+        powerProfile,
+        presentation
     ]
     readonly property var desktopNames: Workspaces.entries.map(entry => action(
         "desktop-name-" + entry.id, Workspaces.title(entry.id), () => root.renameDesktop(entry.id),
@@ -127,12 +130,13 @@ QtObject {
     readonly property var trigger: [page("capture", "Capture", "Screenshots, recording, text, QR codes and colors", "video ocr qr color")].concat(desktop.filter(item => ["clipboard", "files", "calendar", "todos", "workspaces"].indexOf(item.id) >= 0), media)
     readonly property var system: power.concat([presentation, powerProfile, connections[2]])
     readonly property var home: [
-        page("shortcuts", "Shortcuts", "Name and manage desktops", "workspace names labels projects", "󰌌"),
-        page("apps", "Apps", "Launch an installed application", "applications launcher programs", "󰀻"),
-        page("learn", "Learn", "Keyboard and editor references", "help reference", "󰘥"),
+        page("recent", "Recent", "Your last 10 selected items", "history recently used", "󰋚"),
+        page("shortcuts", "Shortcuts", "Desktop names, power profile and presentation mode", "workspace names labels projects battery keep awake", "󰌌"),
         page("trigger", "Trigger", "Capture, clipboard and desktop actions", "utilities media", "󱓟"),
         page("style", "Style", "Appearance and desktop colours", "appearance colours", "󰏘"),
         page("settings", "Setup", "Devices, connectivity and configuration", "setup settings", "󰒓"),
+        page("apps", "Apps", "Launch an installed application", "applications launcher programs", "󰀻"),
+        page("learn", "Learn", "Keyboard and editor references", "help reference", "󰘥"),
         page("status", "About", "System information and activity", "about status information", "󰋼"),
         page("power", "System", "Power profiles and session actions", "system power session", "󰐥")
     ]

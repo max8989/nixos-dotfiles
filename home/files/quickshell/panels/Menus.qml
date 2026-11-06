@@ -42,12 +42,30 @@ PanelWindow {
     property point pointerPosition: Qt.point(0, 0)
     color: fromBar || settingsPanel ? "transparent" : Qt.alpha(surfaceStyle.scrim, surfaceStyle.scrimAlpha)
     property var rows: []
+    readonly property var applicationRows: Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay), Preferences.appLaunchCounts).map(a => {
+        var item = row(a.name, () => {
+            if (!Config.preview) {
+                a.execute();
+                Preferences.recordAppLaunch(a.id);
+            }
+            Runtime.closeMenu();
+        }, a.genericName || a.comment, a.icon);
+        item.id = a.id;
+        item.recentKey = "app:" + a.id;
+        return item;
+    })
+    readonly property var recentRows: Logic.resolveRecentItems(Preferences.recentItems,
+        controls.all.concat(controls.themes, controls.desktopNames, controls.workspaces, applicationRows))
     readonly property var pageRows: {
         switch (Runtime.menu) {
         case "controls":
             return search.text.trim() ? controls.all : controls.home;
         case "shortcuts":
             return controls.shortcuts;
+        case "recent":
+            return recentRows;
+        case "apps":
+            return applicationRows;
         case "desktop-names":
             return controls.desktopNames;
         case "display":
@@ -140,6 +158,7 @@ PanelWindow {
     function headingFor(name, title) {
         return ({
             controls: "Desktop menu",
+            recent: "Recent",
             shortcuts: "Shortcuts",
             "desktop-names": "Manage desktops",
             "desktop-name": "Desktop name",
@@ -310,6 +329,7 @@ PanelWindow {
         var item = filtered[list.currentIndex];
         if (!item?.adjust || confirmation || passwordPrompt)
             return false;
+        Preferences.recordRecentItem(item.recentKey);
         item.adjust(direction);
         if (!controlsNavigation)
             focusTimer.restart();
@@ -362,19 +382,7 @@ PanelWindow {
     function refresh() {
         var menu = Runtime.menu;
         var items = [];
-        if (menu === "apps") {
-            items = Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay), Preferences.appLaunchCounts).map(a => {
-                var item = row(a.name, () => {
-                    if (!Config.preview) {
-                        a.execute();
-                        Preferences.recordAppLaunch(a.id);
-                    }
-                    Runtime.closeMenu();
-                }, a.genericName || a.comment, a.icon);
-                item.id = a.id;
-                return item;
-            });
-        } else if (menu === "clipboard") {
+        if (menu === "clipboard") {
             var serial = ++requestSerial;
             rows = [];
             Runtime.run([Config.bin.cliphist, "list"], function (code, out) {
@@ -507,6 +515,7 @@ PanelWindow {
             return;
         var item = filtered[list.currentIndex];
         if (item) {
+            Preferences.recordRecentItem(item.recentKey);
             item.action();
             focusTimer.restart();
         }
@@ -1084,7 +1093,7 @@ PanelWindow {
                 Label {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: search.text ? "No matches" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
+                    text: search.text ? "No matches" : Runtime.menu === "recent" ? "No recent items yet" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
                     color: Config.theme.dim
                 }
             }

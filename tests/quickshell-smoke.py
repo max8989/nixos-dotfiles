@@ -201,6 +201,7 @@ ShellRoot {
                                    calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
                                    dnd: Desktop.Preferences.dnd,
                                    appLaunchCounts: Desktop.Preferences.appLaunchCounts,
+                                   recentItems: Desktop.Preferences.recentItems,
                                    workspaceNames: Desktop.Preferences.workspaceNames,
                                    desktopNameId: Desktop.Runtime.workspaceNameId || 0,
                                    desktopNameText: root.find(menus.contentItem, "desktopNameInput")?.text || "",
@@ -239,6 +240,7 @@ ShellRoot {
         }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
+        function openRecent(): void { Desktop.Runtime.toggleMenu("recent", null); }
         function openCapture(): void { Desktop.Runtime.toggleMenu("capture", null); }
         function hideBar(hidden: bool): void { Desktop.Preferences.barHidden = hidden; }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
@@ -254,6 +256,9 @@ ShellRoot {
         }
         function pointMenu(x: int, y: int): void {
             mouseEvents.mouseMove(menus.contentItem, x, y, 1, Qt.NoButton, Qt.NoModifier);
+        }
+        function clickMenu(x: int, y: int): void {
+            mouseEvents.mouseClick(menus.contentItem, x, y, Qt.LeftButton, Qt.NoModifier, 1);
         }
         function addNotification(): void {
             Services.Notifications.entries = [{id: 1234, title: "Keyboard notification", body: "Test history focus and dismissal", app: "QA", time: Date.now(), popup: false}];
@@ -435,6 +440,16 @@ elif sys.argv[1] == 'battery-info':
         run(command)
 
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    qa("openControls")
+    wait(lambda: inspect()["menu"] == "controls")
+    assert inspect()["rows"][0]["title"] == "Recent"
+    key("Right")
+    wait(lambda: inspect()["menu"] == "recent")
+    assert inspect()["rows"] == [] and inspect()["recentItems"] == []
+    capture("recent-empty")
+    key("Escape")
+    key("Escape")
+
     for title, expected in [("Copy text from screen", ["region", "ocr"]),
                             ("Decode QR code", ["region", "qr"]),
                             ("Pick screen color", [])]:
@@ -582,13 +597,19 @@ elif sys.argv[1] == 'battery-info':
     key("Return")
     wait(lambda: inspect()["menu"] == "" and inspect()["appLaunchCounts"][app_ids["Zebra"]] == 3)
     print("Application launch frequency, alphabetical ties, Enter selection and restart persistence passed")
+    qa("openRecent")
+    wait(lambda: len(inspect()["rows"]) >= 2)
+    assert [r["id"] for r in inspect()["rows"][:2]] == [app_ids["Zebra"], app_ids["Alpha"]]
+    key("Return")
+    wait(lambda: inspect()["menu"] == "" and inspect()["appLaunchCounts"][app_ids["Zebra"]] == 4)
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
-    assert inspect()["rows"][0]["title"] == "Shortcuts"
+    key("Down")
+    assert inspect()["selected"] == "shortcuts"
     key("Right")
     wait(lambda: inspect()["menu"] == "shortcuts")
-    assert [row["id"] for row in inspect()["rows"]] == ["name-desktop", "desktop-names"]
+    assert [row["id"] for row in inspect()["rows"]] == ["name-desktop", "desktop-names", "power-profile", "presentation"]
     key("Return")
     wait(lambda: inspect()["menu"] == "desktop-name" and inspect()["desktopNameId"] == 2)
     run(["wtype", "-s", "150", "Event config"])
@@ -658,18 +679,74 @@ elif sys.argv[1] == 'battery-info':
     processes.append(process)
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
     wait(lambda: inspect()["workspaceNames"] == expected_names)
-    assert inspect()["appLaunchCounts"][app_ids["Zebra"]] == 3
+    assert inspect()["appLaunchCounts"][app_ids["Zebra"]] == 4
     print("Desktop shortcut actions, right-click naming, cancellation, clearing, empty desktops and restart persistence passed")
+
+    visited = [("fingerprint", "Fingerprint"), ("configuration", "Configuration files"),
+               ("vim", "Vim reference"), ("lazyvim", "LazyVim reference"),
+               ("desktop-names", "Manage desktops"), ("audio", "Audio devices"),
+               ("battery", "Battery and power profile"), ("wifi", "Wi-Fi and network"),
+               ("bluetooth", "Bluetooth"), ("calendar", "Calendar"),
+               ("notifications", "Notification history"), ("workspaces", "Workspaces")]
+    for menu, title in visited:
+        qa("openControls")
+        wait(lambda: inspect()["menu"] == "controls")
+        query(title)
+        assert inspect()["rows"][0]["id"] == menu
+        key("Return")
+        wait(lambda: inspect()["menu"] == menu)
+        key("Escape")
+        key("Escape")
+    expected_recent = ["control:" + menu for menu, _ in reversed(visited[-10:])]
+    qa("openControls")
+    key("Right")
+    wait(lambda: inspect()["menu"] == "recent")
+    assert inspect()["recentItems"] == expected_recent
+    assert [r["id"] for r in inspect()["rows"]] == [menu for menu, _ in reversed(visited[-10:])]
+    capture("recent-full")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "workspaces")
+    key("Escape")
+    assert inspect()["menu"] == "recent" and inspect()["recentItems"] == expected_recent
+    key("Escape")
+    query("Shortcuts")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "shortcuts")
+    presentation = next(r for r in inspect()["rows"] if r["id"] == "presentation")
+    target = next(r for r in inspect()["menuRows"] if r["id"] == "presentation")
+    qa("clickMenu", round(target["x"]), round(target["y"]))
+    wait(lambda: inspect()["recentItems"][0] == "control:presentation")
+    qa("openRecent")
+    wait(lambda: inspect()["rows"][0]["id"] == "presentation")
+    assert inspect()["rows"][0]["value"] != presentation["value"]
+    key("Return")
+    wait(lambda: inspect()["rows"][0]["value"] == presentation["value"])
+    expected_recent = inspect()["recentItems"]
+    assert len(expected_recent) == 10 and expected_recent.count("control:presentation") == 1
+    capture("recent-live-control")
+    wait(lambda: json.loads(saved_preferences.read_text()).get("recentItems") == expected_recent)
+    process.terminate()
+    process.wait(timeout=5)
+    process = subprocess.Popen(["quickshell", "--path", str(fixture), "--no-color"], env=env,
+                               stdout=log_file, stderr=subprocess.STDOUT)
+    processes.append(process)
+    wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    wait(lambda: inspect()["recentItems"] == expected_recent)
+    qa("openRecent")
+    wait(lambda: len(inspect()["rows"]) == 10)
+    assert inspect()["rows"][0]["id"] == "presentation"
+    key("Escape")
+    print("Recent click ordering, ten-item limit, mouse/keyboard activation, live values and restart persistence passed")
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
     time.sleep(0.2)
     capture("controls-home")
     state = inspect()
-    assert [r["title"] for r in state["rows"]] == ["Shortcuts", "Apps", "Learn", "Trigger", "Style", "Setup", "About", "System"]
+    assert [r["title"] for r in state["rows"]] == ["Recent", "Shortcuts", "Trigger", "Style", "Setup", "Apps", "Learn", "About", "System"]
     assert all(r["submenu"] for r in state["rows"])
     assert state["listContentHeight"] <= state["listHeight"]
-    assert state["selected"] == "shortcuts"
+    assert state["selected"] == "recent"
     # The headless seat has no physical mouse. Supply its initial position
     # before testing a movement, as a real seat does when the window maps.
     qa("pointMenu", round(state["card"]["x"] + 20), round(state["card"]["y"] + 20))
@@ -677,14 +754,14 @@ elif sys.argv[1] == 'battery-info':
     qa("pointMenu", round(target["x"]), round(target["y"]))
     wait(lambda: inspect()["selected"] == "settings")
     key("Down")
-    wait(lambda: inspect()["selected"] == "status")
-    assert [r["id"] for r in inspect()["menuRows"] if r["highlighted"]] == ["status"]
+    wait(lambda: inspect()["selected"] == "apps")
+    assert [r["id"] for r in inspect()["menuRows"] if r["highlighted"]] == ["apps"]
     key("Escape")
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
     qa("pointMenu", round(target["x"]), round(target["y"]))
     time.sleep(.3)
-    assert inspect()["selected"] == "shortcuts", "Opening beneath a stationary cursor stole selection"
+    assert inspect()["selected"] == "recent", "Opening beneath a stationary cursor stole selection"
     capture("controls-stationary-pointer")
     run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x600"])
     time.sleep(.3)
@@ -1150,7 +1227,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "recent", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
@@ -1163,6 +1240,7 @@ try:
     preview_state = output / "state/state.json"
     if preview_state.exists():
         assert not json.loads(preview_state.read_text()).get("appLaunchCounts"), "Preview launches changed application usage"
+        assert not json.loads(preview_state.read_text()).get("recentItems"), "Preview clicks changed recent items"
     ipc("call", "menus", "toggle", "apps")
     run(["wtype", "-s", "150", "-d", "20", "zz-no-app-matches-zz"])
     run(["wtype", "-s", "150", "-k", "Return"])

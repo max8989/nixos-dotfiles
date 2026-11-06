@@ -50,6 +50,7 @@ function restoreState(value) {
         panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 12))),
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
+        recentItems: restoreRecentItems(value.recentItems),
         workspaceNames: restoreWorkspaceNames(value.workspaceNames),
         folder: typeof value.folder === "string" ? value.folder : "",
         wallpaperFolder: typeof value.wallpaperFolder === "string" && value.wallpaperFolder.startsWith("/") ? value.wallpaperFolder : "" };
@@ -91,6 +92,20 @@ function rankApplications(items, counts) {
         return (counts[b.id] || 0) - (counts[a.id] || 0)
             || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
+}
+function restoreRecentItems(value) {
+    if (!Array.isArray(value)) return [];
+    return value.filter(function(id, index) {
+        return typeof id === "string" && id.length > 0 && value.indexOf(id) === index;
+    }).slice(0, 10);
+}
+function rememberRecentItem(items, id) {
+    return restoreRecentItems([id].concat(items.filter(function(item) { return item !== id; })));
+}
+function resolveRecentItems(ids, catalog) {
+    return ids.map(function(id) {
+        return catalog.find(function(item) { return item.recentKey === id; });
+    }).filter(Boolean);
 }
 function parseJson(text, fallback) { try { return JSON.parse(text); } catch (error) { return fallback; } }
 function clipboardEntries(text) {

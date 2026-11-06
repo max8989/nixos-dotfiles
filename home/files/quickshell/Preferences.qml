@@ -17,6 +17,7 @@ Singleton {
     property int panelTextSize: Config.fonts.body
     property var monitorScales: ({})
     property var appLaunchCounts: Object.create(null)
+    property var recentItems: []
     property var workspaceNames: Object.create(null)
     property string folder: ""
     property string wallpaperFolder: ""
@@ -33,6 +34,10 @@ Singleton {
         counts[id] = Math.min(Number.MAX_SAFE_INTEGER, (counts[id] || 0) + 1);
         appLaunchCounts = counts;
     }
+    function recordRecentItem(id) {
+        if (initialized && !Config.preview && id)
+            recentItems = Logic.rememberRecentItem(recentItems, id);
+    }
     function save() {
         if (initialized)
             saveTimer.restart();
@@ -46,6 +51,7 @@ Singleton {
     onPanelTextSizeChanged: save()
     onMonitorScalesChanged: save()
     onAppLaunchCountsChanged: save()
+    onRecentItemsChanged: save()
     onWorkspaceNamesChanged: save()
     onFolderChanged: save()
     onWallpaperFolderChanged: save()
@@ -67,6 +73,7 @@ Singleton {
             root.panelTextSize = state.panelTextSize;
             root.monitorScales = state.monitorScales;
             root.appLaunchCounts = state.appLaunchCounts;
+            root.recentItems = state.recentItems;
             root.workspaceNames = state.workspaceNames;
             root.folder = state.folder;
             root.wallpaperFolder = state.wallpaperFolder;
@@ -88,6 +95,7 @@ Singleton {
             panelTextSize: root.panelTextSize,
             monitorScales: root.monitorScales,
             appLaunchCounts: root.appLaunchCounts,
+            recentItems: root.recentItems,
             workspaceNames: root.workspaceNames,
             folder: root.folder,
             wallpaperFolder: root.wallpaperFolder

@@ -863,7 +863,11 @@ journalctl --user -u quickshell -e
 ```
 
 **Super+M** opens the global Desktop menu. Its first page fits without scrolling:
-**Apps, Learn, Trigger, Style, Setup, About, System**. Setup groups device,
+**Recent, Shortcuts, Trigger, Style, Setup, Apps, Learn, About, System**.
+Recent shows the last 10 selected menu items and launched applications, newest
+first. Selecting an item again moves it to the top. History survives shell
+restarts; opening Recent itself does not enter the history. Shortcuts includes
+desktop naming, power profile and presentation mode. Setup groups device,
 connection, notification and configuration settings. System groups presentation
 mode, power profiles, battery and session actions. Learn contains editor references;
 Trigger groups capture, clipboard, files, workspaces, calendar, reminders and media.
