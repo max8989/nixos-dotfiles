@@ -17,7 +17,7 @@ let
     test -e /run/quickshell-test/fingerprint-match
   '';
   settings = pkgs.runCommand "quickshell-test-settings.json" { nativeBuildInputs = [ pkgs.jq ]; } ''
-    jq '.user = "alice" | .paths.home = "/home/alice" | .paths.todo = "/home/alice/TODO.md" | .bin.fprintdList = "${fingerprintList}"' ${bundle}/generated.json > "$out"
+    jq '.user = "alice" | .paths.home = "/home/alice" | .bin.fprintdList = "${fingerprintList}"' ${bundle}/generated.json > "$out"
   '';
   shell = pkgs.writeShellScript "test-quickshell" ''
     echo "$$" > "$XDG_RUNTIME_DIR/quickshell.pid"

@@ -4,16 +4,17 @@ import vm from "node:vm";
 const context = vm.createContext({});
 vm.runInContext(fs.readFileSync(process.argv[2], "utf8").replace(/^\.pragma library\s*/, ""), context);
 const plain = value => JSON.parse(JSON.stringify(value));
-assert.deepEqual(plain(context.todos("- [ ] one\n* [ ] [[a|Two]]\n- [x] done\n- [ ]   \n  - [ ] [[note]]\ntext")), ["one","Two","note"]);
-const dated = plain(context.tasks("- [ ] Deploy 📅 2026-10-07 14:05 now\n- [ ] [[a|Notes]] 📅 2026-10-08\n- [ ] plain\n- [ ] 📅 2026-10-09"));
-assert.deepEqual(dated.map(t => [t.text, t.label]), [["Deploy now","Oct 7 14:05"],["Notes","Oct 8"],["plain",""]]);
-assert.equal(dated[0].due, new Date(2026,9,7,14,5).getTime());
-assert.equal(dated[1].due, new Date(2026,9,8,23,59,59,999).getTime());
-assert.equal(dated[2].due, null);
+const dated = [
+    {id:"1",projectId:"work",text:"Deploy now",due:new Date(2026,9,7,14,5).getTime()},
+    {id:"2",projectId:"work",text:"Notes",due:new Date(2026,9,8,23,59,59,999).getTime()},
+    {id:"3",projectId:"inbox",text:"plain",due:null},
+];
 assert.deepEqual(plain(context.overdue(dated, new Date(2026,9,8,12,0).getTime())).map(t => t.text), ["Deploy now"]);
 assert.deepEqual(plain(context.overdue(dated, new Date(2026,9,9).getTime())).map(t => t.text), ["Deploy now","Notes"]);
 assert.equal(context.dayKey(new Date(2026,0,5,23,0)), "2026-01-05");
-assert.equal(context.taskKey(dated[2]), "plain|null");
+assert.equal(context.taskKey(dated[2]), "inbox/3|null");
+assert.equal(context.taskKey({...dated[0],text:"Renamed task"}),context.taskKey(dated[0]));
+assert.notEqual(context.taskKey({...dated[0],id:"other"}),context.taskKey(dated[0]));
 const before = context.cpuSample("cpu 10 0 20 70 0 0 0 0 50 0\ncpu0 1 2 3");
 const after = context.cpuSample("cpu 20 0 30 150 0 0 0 0 50 0");
 assert.ok(Math.abs(context.cpuUsage(before,after)-20)<0.0001);

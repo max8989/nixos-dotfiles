@@ -27,9 +27,13 @@ config_link = output / "config/quickshell/desktop"
 if config_link.is_symlink():
     config_link.unlink()
 config_link.symlink_to(bundle, target_is_directory=True)
-(output / "home" / "TODO.md").write_text("- [ ] Review shell\n- [ ] [[note|中文測試]]\n- [ ] Overdue task 📅 2020-01-01 09:00\n- [x] Completed\n")
+(output / "ticktick.json").write_text(json.dumps({"ok": True, "syncedAt": "2026-11-05T12:00:00Z", "tasks": [
+    {"id": "1", "projectId": "work", "project": "Work", "text": "Review shell", "due": None, "label": ""},
+    {"id": "2", "projectId": "inbox", "project": "Inbox", "text": "中文測試", "due": None, "label": ""},
+    {"id": "3", "projectId": "personal", "project": "Personal", "text": "Overdue task", "due": 1577887200000, "label": "Jan 1 09:00"},
+]}))
 settings = json.loads((bundle / "generated.json").read_text())
-settings["paths"].update(home=str(output / "home"), todo=str(output / "home" / "TODO.md"))
+settings["paths"].update(home=str(output / "home"), ticktickFixture=str(output / "ticktick.json"))
 (output / "settings.json").write_text(json.dumps(settings))
 (output / "sway.conf").write_text("output HEADLESS-1 resolution 1920x1080\noutput HEADLESS-1 bg #20283a solid_color\nseat seat0 fallback true\n")
 env = os.environ.copy()
@@ -158,6 +162,10 @@ ShellRoot {
                     card = {x: child.x, y: child.y, width: child.width, height: child.height};
             }
             return JSON.stringify({buttons: buttons, card: card, menu: Desktop.Runtime.menu,
+                                   reminderCount: Services.Reminders.tasks.length,
+                                   overdueCount: Services.Reminders.overdue.length,
+                                   reminderError: Services.Reminders.syncError,
+                                   reminderCountLabel: Services.Reminders.countLabel,
                                    message: Desktop.Runtime.message,
                                     query: root.find(menus.contentItem, "menuSearch").text,
                                     searchCursor: root.find(menus.contentItem, "menuSearch").cursorPosition,
@@ -244,12 +252,29 @@ ShellRoot {
                                    y - Desktop.Config.bar.margin, Qt.LeftButton, Qt.NoModifier, 1);
         }
         function report(): void { Desktop.Runtime.report("Clipboard entry is unavailable. Try another saved entry."); }
+        function refreshReminders(): void { Services.Reminders.refresh(); }
     }
 }
 '''.replace("BUNDLE", "bundle"))
     settings["features"].update(lock=False, polkit=False, notifications=False)
     # The real bar/clipboard paths run; hardware daemons and weather do not.
     settings["bin"]["curl"] = shutil.which("false")
+    ticktick_command = output / "ticktick-sync"
+    ticktick_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
+text = pathlib.Path(__file__).with_name('ticktick.json').read_text()
+print(text)
+sys.exit(0 if json.loads(text)['ok'] else 1)
+''')
+    ticktick_command.chmod(0o700)
+    settings["bin"]["ticktick"] = str(ticktick_command)
+    ticktick_links = output / "ticktick-links.jsonl"
+    open_command = output / "open-link"
+    open_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
+with pathlib.Path(__file__).with_name('ticktick-links.jsonl').open('a') as links:
+    print(json.dumps(sys.argv[1:]), file=links)
+''')
+    open_command.chmod(0o700)
+    settings["bin"]["xdgOpen"] = str(open_command)
     # A private backlight fixture exercises the real Display service and keyboard
     # adjustments without ever touching the physical screen brightness.
     brightness = output / "brightnessctl"
@@ -353,6 +378,35 @@ elif sys.argv[1] == 'battery-info':
         run(["grim", str(output / (name + ".png"))])
 
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    wait(lambda: inspect()["reminderCount"] == 3)
+    assert inspect()["overdueCount"] == 1
+    assert inspect()["reminderCountLabel"] == "3"
+    ticktick_snapshot = (output / "ticktick.json").read_text()
+    (output / "ticktick.json").write_text(json.dumps({"ok": False, "error": "TickTick is unavailable. Retry later."}))
+    qa("refreshReminders")
+    wait(lambda: bool(inspect()["reminderError"]))
+    assert inspect()["reminderCount"] == 3, "Failed sync discarded saved tasks"
+    assert inspect()["reminderCountLabel"] == "3 !"
+    capture("ticktick-offline")
+    (output / "ticktick.json").write_text(json.dumps({"ok": True, "syncedAt": "2026-11-05T12:01:00Z", "tasks": []}))
+    qa("refreshReminders")
+    wait(lambda: inspect()["reminderCountLabel"] == "0")
+    assert inspect()["overdueCount"] == 0
+    (output / "ticktick.json").write_text(ticktick_snapshot)
+    qa("refreshReminders")
+    wait(lambda: inspect()["reminderCountLabel"] == "3")
+    assert inspect()["reminderCountLabel"] == "3"
+    control = button("TickTick")
+    point(control["x"], control["y"])
+    click()
+    wait(lambda: inspect()["menu"] == "todos")
+    assert any(row["title"] == "Open TickTick" for row in inspect()["rows"])
+    assert not any("Obsidian" in row["title"] or "TODO note" in row["title"] for row in inspect()["rows"])
+    capture("ticktick-reminders")
+    run(["wtype", "-s", "150", "-d", "20", "Review shell", "-k", "Return"])
+    wait(lambda: inspect()["menu"] == "")
+    wait(lambda: ticktick_links.exists())
+    assert json.loads(ticktick_links.read_text().splitlines()[0]) == ["https://ticktick.com/webapp/#q/all/tasks/1"]
     for title, name in [("Memory", "tooltip-memory"), ("Power & controls", "tooltip-screen-edge")]:
         control = button(title)
         point(control["x"], control["y"])

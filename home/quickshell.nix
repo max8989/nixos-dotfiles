@@ -61,10 +61,6 @@ let
       screenshot = lib.getExe capture.screenshot;
       editScreenshot = lib.getExe capture.edit;
       screenRecord = "${config.xdg.configHome}/scripts/screen_record.sh";
-      todo = "${config.home.homeDirectory}/Documents/obsidian/00 Home/00 Todos.md";
-      vault = "obsidian";
-      todoNote = "00 Home/00 Todos";
-      homeNote = "00 Home/Home";
       phrases = "${./files/quickshell/assets/phrases_zh.txt}";
       vim = "${./files/quickshell/assets/vim.txt}";
       lazyvim = "${./files/quickshell/assets/lazyvim.txt}";
@@ -91,6 +87,7 @@ let
       grim = lib.getExe pkgs.grim;
       remove = "${pkgs.coreutils}/bin/rm";
       settings = lib.getExe settingsHelper;
+      ticktick = lib.getExe ticktickHelper;
       fingerprint = lib.getExe fingerprintHelper;
       fprintdList = toString fingerprintList;
       theme = lib.getExe config.localTheme.switcher;
@@ -107,6 +104,17 @@ let
         (lib.getExe pkgs.quickshell)
       ]
       (builtins.readFile ./files/scripts/quickshell-settings.py)
+  );
+  ticktickHelper = pkgs.writeScriptBin "quickshell-ticktick" (
+    builtins.replaceStrings [ "@python@" ] [ "${pkgs.python3}/bin/python3" ] (
+      builtins.readFile ./files/scripts/quickshell-ticktick.py
+    )
+  );
+  ticktickImport = pkgs.writeScriptBin "quickshell-ticktick-import" (
+    builtins.replaceStrings
+      [ "@node@" "@python@" "@ssh@" ]
+      [ "${pkgs.nodejs}/bin/node" "${pkgs.python3}/bin/python3" "${pkgs.openssh}/bin/ssh" ]
+      (builtins.readFile ./files/scripts/quickshell-ticktick-import.mjs)
   );
   fingerprintHelper = pkgs.writeShellApplication {
     name = "desktop-fingerprint";
@@ -245,5 +253,7 @@ in
   home.packages = [
     development
     fingerprintHelper
+    ticktickHelper
+    ticktickImport
   ];
 }

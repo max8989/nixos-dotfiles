@@ -745,6 +745,35 @@ views and live service state. Preferences live in
 `$XDG_STATE_HOME/quickshell-desktop/`. The retired g7 host and GTK shell configs
 have been removed; the homeserver keeps its headless profile.
 
+The task count, overdue count, reminders menu and lock-screen tasks use TickTick.
+The shell reads every open task list, including Inbox and undated tasks, once a
+minute and after resume/unlock. Click a task to open it in TickTick; edit and
+complete tasks there. All-day deadlines expire at the end of the task's day in
+its timezone. The previous Obsidian TODO-note sync is removed.
+
+Connect TickTick in Personal Agent's **Profile**, then import that authorization
+on the desktop. Both a local checkout and an SSH source are supported:
+
+```sh
+quickshell-ticktick-import /path/to/personal-agent
+quickshell-ticktick-import user@server:/path/to/personal-agent
+```
+
+The importer reads only the saved TickTick integration for `OWNER_EMAIL` from
+that checkout's `pocketbase/pb_data/data.db`, using the matching `.env` encryption
+key. It leaves the app and its database unchanged. The desktop keeps its own
+credential in `$XDG_CONFIG_HOME/quickshell/ticktick.json` (default
+`~/.config/quickshell/ticktick.json`), with mode `0600`; never add this file or a
+token to Nix settings. Subsequent polling contacts TickTick directly and does
+not require the web app or SSH. After reconnecting an expired authorization in
+Personal Agent, import it again and choose **Refresh** in the reminders menu.
+
+An exclamation mark beside the count indicates a sync error; the menu and
+tooltip explain it. The last successful task snapshot remains in the private
+shell state directory while offline. Overdue notifications resume after a
+successful sync. Previews use an explicit fixture instead of credentials or
+network access.
+
 ```sh
 nix develop .#quickshell
 nix build .#quickshell-config --no-link

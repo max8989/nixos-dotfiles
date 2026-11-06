@@ -11,6 +11,18 @@ let
   bundle = self.packages.${system}.quickshell-config;
 in
 {
+  ticktick =
+    pkgs.runCommand "ticktick-check"
+      {
+        nativeBuildInputs = [
+          pkgs.python3
+          pkgs.nodejs
+        ];
+      }
+      ''
+        python3 ${./ticktick.py} ${../home/files/scripts/quickshell-ticktick.py} ${../home/files/scripts/quickshell-ticktick-import.mjs}
+        touch "$out"
+      '';
   workspace-activity =
     pkgs.runCommand "workspace-activity-check"
       {

@@ -10,6 +10,14 @@ Singleton {
     id: root
     property var tasks: []
     readonly property var items: tasks.map(t => t.label ? t.text + "  · " + t.label : t.text)
+    property bool syncing: false
+    property bool fresh: false
+    property string syncError: ""
+    property string syncedAt: ""
+    readonly property string countLabel: syncedAt ? String(items.length) + (syncError ? " !" : "") : syncError ? "!" : "…"
+    readonly property string status: syncError ? syncError + (syncedAt ? " Showing saved tasks." : "")
+        : syncing ? "Syncing TickTick…" : syncedAt ? items.length + " open tasks · updated " + Qt.formatDateTime(new Date(syncedAt), "HH:mm")
+        : "TickTick has not synced yet"
     property real now: Date.now()
     readonly property var overdue: Logic.overdue(tasks, now)
     property var notified: []
@@ -18,7 +26,38 @@ Singleton {
     property string phrases: ""
     property string weather: ""
     function refresh() {
-        todoFile.reload();
+        if (Config.preview) {
+            snapshotFile.reload();
+            return;
+        }
+        if (syncing)
+            return;
+        fresh = false;
+        syncing = true;
+        Runtime.run([Config.bin.ticktick], function (code, out) {
+            root.syncing = false;
+            var result = Logic.parseJson(out, null);
+            if (code) {
+                root.syncError = result?.error || "TickTick sync failed. Retry later.";
+                return;
+            }
+            if (!root.acceptSnapshot(result))
+                return;
+            root.fresh = true;
+            snapshotFile.setText(out);
+            root.check();
+        });
+    }
+    function acceptSnapshot(result) {
+        if (!result || !result.ok || !Array.isArray(result.tasks) || typeof result.syncedAt !== "string" || isNaN(Date.parse(result.syncedAt))) {
+            fresh = false;
+            syncError = result?.error || "TickTick sync failed. Retry later.";
+            return false;
+        }
+        tasks = result.tasks;
+        syncedAt = result.syncedAt;
+        syncError = "";
+        return true;
     }
     function isOverdue(task) {
         return task.due !== null && task.due <= now;
@@ -30,7 +69,7 @@ Singleton {
     // first unlocked moment of each day. Runs on load, unlock and every minute.
     function check() {
         now = Date.now();
-        if (Config.preview || !stateLoaded || Runtime.locked)
+        if (Config.preview || !fresh || !stateLoaded || Runtime.locked)
             return;
         var keys = overdue.map(Logic.taskKey);
         var seen = notified.filter(k => keys.indexOf(k) >= 0);
@@ -56,9 +95,11 @@ Singleton {
             stateFile.setText(JSON.stringify({ notified: notified, lastDaily: lastDaily }));
         }
     }
-    function openNote(note) {
-        Runtime.launch([Config.bin.xdgOpen, "obsidian://open?vault=" + encodeURIComponent(Config.paths.vault)
-                        + "&file=" + encodeURIComponent(note)]);
+    function openTask(task) {
+        var url = "https://ticktick.com/webapp/";
+        if (task)
+            url += "#q/all/tasks/" + encodeURIComponent(task.id);
+        Runtime.launch([Config.bin.xdgOpen, url]);
     }
     function fetchWeather() {
         if (Config.preview)
@@ -72,16 +113,17 @@ Singleton {
                     });
     }
     FileView {
-        id: todoFile
-        path: Config.paths.todo || ""
-        watchChanges: true
+        id: snapshotFile
+        path: Config.preview ? (Config.paths.ticktickFixture || "") : Config.stateDirectory + "/ticktick-tasks.json"
+        watchChanges: Config.preview
+        atomicWrites: true
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            root.tasks = Logic.tasks(text());
-            root.check();
+            if (Config.preview || !root.syncedAt)
+                root.acceptSnapshot(Logic.parseJson(text(), null));
         }
-        onLoadFailed: root.tasks = []
+        onSaveFailed: root.syncError = "TickTick synced, but its saved tasks could not be updated."
     }
     FileView {
         id: stateFile
@@ -106,8 +148,10 @@ Singleton {
     Connections {
         target: Runtime
         function onLockedChanged() {
-            root.check();
+            if (!Runtime.locked)
+                root.refresh();
         }
+        function onResumed() { root.refresh(); }
     }
     FileView {
         path: Config.paths.phrases || ""
@@ -123,6 +167,7 @@ Singleton {
         interval: 60000
         running: true
         repeat: true
+        triggeredOnStart: true
         onTriggered: {
             root.refresh();
             root.check();

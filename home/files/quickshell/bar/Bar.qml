@@ -175,9 +175,9 @@ PanelWindow {
             }
             Chip {
                 compact: true
-                text: "󰄲 " + Reminders.items.length
-                tipTitle: "Reminders"
-                tip: Reminders.items.slice(0, 8).join("\n") || "No open todos"
+                text: "󰄲 " + Reminders.countLabel
+                tipTitle: "TickTick"
+                tip: [Reminders.status].concat(Reminders.items.slice(0, 8)).join("\n")
                 selected: root.menuSelected("todos")
                 onClicked: root.open("todos", this)
             }

@@ -164,7 +164,7 @@ PanelWindow {
             files: "Files",
             vim: "Vim reference",
             lazyvim: "LazyVim reference",
-            todos: "Reminders",
+            todos: "TickTick",
             audio: "Audio",
             battery: "Battery",
             wifi: "Wi-Fi",
@@ -441,12 +441,11 @@ PanelWindow {
             items = reference.text().split("\n").filter(Boolean).map(line => row(line, () => {}, "Reference"));
         } else if (menu === "todos") {
             items = Reminders.tasks.map((task, i) => row((Reminders.isOverdue(task) ? "⚠ " : "") + Reminders.items[i], () => {
-                    Reminders.openNote(Config.paths.todoNote);
+                    Reminders.openTask(task);
                     Runtime.closeMenu();
-                }));
-            items.push(row("Open TODO note", () => Reminders.openNote(Config.paths.todoNote)));
-            items.push(row("Open vault Home", () => Reminders.openNote(Config.paths.homeNote)));
-            items.push(row("Refresh", () => Reminders.refresh()));
+                }, task.project));
+            items.push(row("Open TickTick", () => Reminders.openTask(), Reminders.status));
+            items.push(row("Refresh", () => Reminders.refresh(), Reminders.syncing ? "Syncing TickTick…" : "Check for task changes"));
         } else if (menu === "audio") {
             items = Audio.sinks.map(n => row((n === Audio.sink ? "✓ " : "") + n.description, () => Audio.select(n), "Output"));
             items = items.concat(Audio.sources.map(n => row((n === Audio.source ? "✓ " : "") + n.description, () => Audio.select(n), "Input")));
@@ -626,6 +625,10 @@ PanelWindow {
                 root.refresh();
         }
         function onOverdueChanged() {
+            if (Runtime.menu === "todos")
+                root.refresh();
+        }
+        function onStatusChanged() {
             if (Runtime.menu === "todos")
                 root.refresh();
         }
