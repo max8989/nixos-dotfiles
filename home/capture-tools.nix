@@ -45,8 +45,28 @@ let
       pkgs.coreutils
       pkgs.util-linux
       pkgs.libnotify
+      (pkgs.tesseract.override {
+        enableLanguages = [
+          "eng"
+          "fra"
+          "chi_tra"
+        ];
+      })
+      pkgs.zbar
     ];
     text = builtins.readFile ./files/scripts/screenshot.sh;
+  };
+  colorPick = pkgs.writeShellApplication {
+    name = "nixos-color-pick";
+    runtimeInputs = [
+      region
+      pkgs.hyprpicker
+      pkgs.wl-clipboard
+      pkgs.coreutils
+      pkgs.util-linux
+      pkgs.libnotify
+    ];
+    text = builtins.readFile ./files/scripts/color-pick.sh;
   };
   edit = pkgs.writeShellApplication {
     name = "nixos-screenshot-edit";
@@ -97,6 +117,7 @@ in
   inherit
     region
     screenshot
+    colorPick
     edit
     notify
     record

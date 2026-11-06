@@ -30,6 +30,13 @@ if name == "hyprctl":
     elif args[0] == "eval": pass
     else: sys.exit(1)
 elif name == "hyprpicker":
+    if "--format" in args:
+        mode = os.environ.get("COLOR_PICKER", "pick")
+        if mode == "cancel": sys.exit(2)
+        if mode == "fail": sys.exit(1)
+        if mode != "block":
+            print(os.environ.get("PICKED_COLOR", "#89B4FA"))
+            sys.exit(0)
     (root / "freeze").write_text(str(os.getpid()))
     def stop(*_):
         (root / "freeze-stopped").touch()
@@ -48,6 +55,11 @@ elif name == "grim":
     data = (root / "image").read_bytes()
     if args[-1] == "-": sys.stdout.buffer.write(data)
     else: Path(args[-1]).write_bytes(data)
+elif name in ("tesseract", "zbarimg"):
+    if (root / "runtime" / f"nixos-capture-{os.getuid()}" / "freeze.pid").exists():
+        sys.exit("Screen must be unfrozen before processing")
+    print(os.environ.get("EXTRACTED_TEXT", "Bonjour 世界\nScreen text"))
+    sys.exit(int(os.environ.get("DECODER_STATUS", "0")))
 elif name == "wl-copy":
     data = sys.stdin.buffer.read()
     if os.environ.get("CLIPBOARD_FAIL") == "1": sys.exit(1)
@@ -74,7 +86,7 @@ class CaptureTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.bin = self.root / "bin"
         self.bin.mkdir()
-        for name in ["hyprctl", "hyprpicker", "slurp", "grim", "wl-copy", "notify-send", "nixos-capture-notify"]:
+        for name in ["hyprctl", "hyprpicker", "slurp", "grim", "wl-copy", "notify-send", "nixos-capture-notify", "tesseract", "zbarimg"]:
             p = self.bin / name
             p.write_text(f"#!{sys.executable}\n" + STUB)
             p.chmod(0o755)
@@ -121,6 +133,11 @@ class CaptureTests(unittest.TestCase):
 
     def run_region(self, *args, check=True, **changes):
         return subprocess.run([str(self.bin / "nixos-capture-region"), *args],
+                              env=self.env | changes, capture_output=True, text=True,
+                              check=check, timeout=10)
+
+    def run_color(self, *args, check=True, **changes):
+        return subprocess.run([shutil.which("bash"), str(SCRIPTS / "color-pick.sh"), *args],
                               env=self.env | changes, capture_output=True, text=True,
                               check=check, timeout=10)
 
@@ -199,6 +216,95 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual((self.root / "clipboard").read_bytes(), b"keep me")
         self.assert_clean()
 
+    def test_ocr_copies_multilingual_text_without_saving_screenshot(self):
+        result = self.run_capture("region", "ocr")
+        self.assertEqual(result.stdout, "")
+        self.assertEqual((self.root / "clipboard").read_text(), "Bonjour 世界\nScreen text")
+        self.assertEqual(self.calls("wl-copy"), [["--type", "text/plain;charset=utf-8"]])
+        self.assertIn("eng+fra+chi_tra", self.calls("tesseract")[0])
+        self.assertFalse(Path(self.env["NIXOS_SCREENSHOT_DIR"]).exists())
+        self.assertFalse((self.root / "state/nixos-capture/latest").exists())
+        self.assert_clean()
+        runtime = Path(self.env["XDG_RUNTIME_DIR"]) / f"nixos-capture-{os.getuid()}"
+        self.assertEqual(list(runtime.glob("extract.*")), [])
+
+    def test_qr_copies_sensitive_data_without_exposing_payload(self):
+        payload = "otpauth://totp/Test?secret=EXAMPLE&issuer=Test"
+        result = self.run_capture("region", "qr", EXTRACTED_TEXT=payload)
+        self.assertEqual((self.root / "clipboard").read_text(), payload)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn(payload, result.stderr)
+        self.assertNotIn(payload, json.dumps(self.calls("notify-send")))
+        self.assertEqual(self.calls("wl-copy"), [["--sensitive", "--type", "text/plain;charset=utf-8"]])
+        self.assertIn("qrcode.enable", self.calls("zbarimg")[0])
+        self.assertIn("disable", self.calls("zbarimg")[0])
+        self.assertFalse(Path(self.env["NIXOS_SCREENSHOT_DIR"]).exists())
+        self.assert_clean()
+
+    def test_empty_text_and_decoder_errors_preserve_clipboard(self):
+        for processing in ["ocr", "qr"]:
+            for changes in [{"EXTRACTED_TEXT": " \n\t"}, {"DECODER_STATUS": "1"}]:
+                with self.subTest(processing=processing, changes=changes):
+                    result = self.run_capture("region", processing, check=False, **changes)
+                    self.assertEqual(result.stdout, "")
+                    self.assertEqual((self.root / "clipboard").read_bytes(), b"original clipboard")
+                    self.assertTrue(self.calls("notify-send"))
+                    self.assert_clean()
+
+    def test_extraction_cancel_does_not_run_decoders(self):
+        for processing in ["ocr", "qr"]:
+            self.run_capture("region", processing, PICKER="cancel")
+        self.assertEqual((self.root / "clipboard").read_bytes(), b"original clipboard")
+        self.assertFalse(self.calls("tesseract"))
+        self.assertFalse(self.calls("zbarimg"))
+        self.assert_clean()
+
+    def test_extraction_releases_clipboard_owner_lock(self):
+        self.run_capture("region", "ocr", CLIPBOARD_DAEMON="1")
+        self.run_capture("region", "qr", CLIPBOARD_DAEMON="1")
+        self.assertEqual(len(self.calls("grim")), 2)
+        self.assert_clean()
+
+    def test_color_copies_hex_without_capturing_or_saving(self):
+        self.run_color()
+        self.assertEqual((self.root / "clipboard").read_bytes(), b"#89B4FA")
+        self.assertEqual(self.calls("wl-copy"), [["--type", "text/plain;charset=utf-8"]])
+        self.assertFalse(self.calls("grim"))
+        self.assertFalse(self.calls("slurp"))
+        self.assertFalse(Path(self.env["NIXOS_SCREENSHOT_DIR"]).exists())
+
+    def test_color_help_and_invalid_arguments_do_not_open_picker(self):
+        self.assertIn("Usage:", self.run_color("--help").stdout)
+        self.assertEqual(self.run_color("--invalid", check=False).returncode, 2)
+        self.assertFalse(self.calls("hyprpicker"))
+        self.assertFalse(self.calls("wl-copy"))
+
+    def test_color_cancel_failure_and_invalid_output_preserve_clipboard(self):
+        for changes in [{"COLOR_PICKER": "cancel"}, {"COLOR_PICKER": "fail"},
+                        {"PICKED_COLOR": "invalid"}, {"PICKED_COLOR": ""}]:
+            with self.subTest(changes=changes):
+                self.run_color(check=False, **changes)
+                self.assertEqual((self.root / "clipboard").read_bytes(), b"original clipboard")
+                self.assertFalse(self.calls("wl-copy"))
+
+    def test_screenshot_shortcut_cancels_active_color_picker(self):
+        process = subprocess.Popen([shutil.which("bash"), str(SCRIPTS / "color-pick.sh")],
+                                   env=self.env | {"COLOR_PICKER": "block"}, text=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            runtime = Path(self.env["XDG_RUNTIME_DIR"]) / f"nixos-capture-{os.getuid()}"
+            self.wait_for(lambda: (runtime / "freeze.pid").exists())
+            self.assertEqual(self.run_capture("region").stdout, "")
+            process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 0)
+            self.assertEqual((self.root / "clipboard").read_bytes(), b"original clipboard")
+            self.assertFalse((runtime / "freeze.pid").exists())
+            self.assertFalse(self.calls("notify-send"))
+        finally:
+            if process.poll() is None:
+                self.run_region("--cancel")
+                process.communicate(timeout=5)
+
     def test_focused_monitor_negative_position_and_scale(self):
         self.run_capture("fullscreen")
         self.assertEqual(self.calls("grim")[0][1], "-1920,0 1920x1080")
@@ -263,4 +369,5 @@ class CaptureTests(unittest.TestCase):
                 process.communicate(timeout=5)
 
 
-unittest.main(verbosity=2)
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

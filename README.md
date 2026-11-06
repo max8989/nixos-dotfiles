@@ -43,7 +43,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Firefox | `home/firefox.nix` + `home/files/firefox/userChrome.css` | Compact density, top toolbar and vertical tabs revealed from the top/left edge |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
 | CLI packages | `home/cli.nix` + `home/server.nix` | Shared utilities, Git/Docker tools and core runtimes; extra headless administration tools |
-| Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, Swappy editing, recording and RSS tools |
+| Independent scripts | `home/scripts.nix` + `home/capture-tools.nix` | Frozen-screen capture, OCR, QR decoding, color picking, Swappy editing, recording and RSS tools |
 | Theme / TUIs | `home/theme.nix` + `home/omarchy.nix` | Runtime theme switcher, btop and VS Code; Superfile/fzf/prompt share the selected palette |
 | Cursor / GTK / icons / Qt | `home/theming.nix` | `home.pointerCursor` · `gtk` · `qt` |
 
@@ -731,6 +731,19 @@ shown in a preview notification with an Edit action. Super+Alt+comma opens the
 latest saved capture in Swappy. The capture menu offers the same actions.
 Alt+4 retains the existing focused-monitor recording toggle.
 
+Open desktop controls with Super+M, then **Trigger → Capture**, for these tools:
+
+- **Copy text from screen** selects a frozen region and copies recognized text.
+  OCR runs locally with English, French and Traditional Chinese language data.
+- **Decode QR code** selects a frozen region and copies QR contents. It only
+  detects QR codes, marks the clipboard data sensitive, and keeps the decoded
+  value out of command output and notifications. Links are copied for you to paste.
+- **Pick screen color** opens an eyedropper and copies a `#RRGGBB` hex color.
+
+OCR and QR captures are temporary and leave the latest saved screenshot available
+for editing. Empty results, errors and cancellation preserve the clipboard.
+Escape or another capture action cancels selection, including the eyedropper.
+
 The Capture menu also records a region or a selected window. Choose **Recording
 audio** first to cycle between no audio, desktop output and the default
 microphone. Selection uses the screenshot picker, then a three-second countdown
@@ -754,11 +767,13 @@ particular GPU device. Odd selection dimensions are trimmed by at most one pixel
 for MP4 compatibility; static screens continue recording and stop normally.
 
 The packaged `nixos-screenshot` helper accepts
-`[smart|region|windows|fullscreen] [slurp|copy|save]`: the default `slurp` processing
+`[smart|region|windows|fullscreen] [slurp|copy|save|ocr|qr]`: the default `slurp` processing
 saves, copies and notifies; `copy` only updates the image clipboard; `save` only
 writes a file. Successful saved captures print their path. Set
 `NIXOS_SCREENSHOT_DIR` to override the output directory. Cancellation preserves
 the clipboard; failed captures remove partial files and restore cursor state.
+Use `nixos-screenshot region ocr`, `nixos-screenshot region qr`, or
+`nixos-color-pick` for the same extraction and color tools from a terminal.
 
 ## Quickshell development and validation
 
@@ -826,11 +841,14 @@ files. Screenshots and results are written to the supplied directory. The VM
 test exercises real PAM password authentication, rejection, notifications, and
 the compositor's fail-closed session lock. Test passwords exist only in the VM.
 `nix flake check` also exercises capture cancellation, PNG clipboard data,
+OCR and QR extraction with real decoders, empty-result handling, sensitive QR
+clipboard copies, color picking,
 selection geometry, overlapping/hidden windows, scaled/rotated monitors,
 failure cleanup, and the lifetime of temporary selection bindings. Recording
 checks cover selection, audio sources, cancellation, graceful finalization,
-completion actions and stale session ownership; the UI harness exercises the
-audio choice, recording indicator and Stop action. The runtime recording check
+completion actions and stale session ownership; the UI harness exercises capture
+menu dispatch, recording audio choice, the
+recording indicator and Stop action. The runtime recording check
 captures and decodes real H.264/AAC files on a private display with virtual audio,
 including static screens and odd-sized selections.
 

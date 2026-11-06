@@ -311,6 +311,16 @@ else:
 ''')
     recording_command.chmod(0o700)
     settings["paths"]["screenRecord"] = str(recording_command)
+    # Exercise menu dispatch without starting capture tools on the host display.
+    capture_calls = output / "capture-calls.jsonl"
+    capture_command = output / "capture-control"
+    capture_command.write_text("#!" + sys.executable + "\n" + '''import json, pathlib, sys
+with pathlib.Path(__file__).with_name('capture-calls.jsonl').open('a') as calls:
+    print(json.dumps(sys.argv[1:]), file=calls)
+''')
+    capture_command.chmod(0o700)
+    settings["paths"]["screenshot"] = str(capture_command)
+    settings["paths"]["colorPick"] = str(capture_command)
     # A private backlight fixture exercises the real Display service and keyboard
     # adjustments without ever touching the physical screen brightness.
     brightness = output / "brightnessctl"
@@ -425,6 +435,19 @@ elif sys.argv[1] == 'battery-info':
         run(command)
 
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
+    for title, expected in [("Copy text from screen", ["region", "ocr"]),
+                            ("Decode QR code", ["region", "qr"]),
+                            ("Pick screen color", [])]:
+        qa("openCapture")
+        wait(lambda: inspect()["menu"] == "capture")
+        assert {"screen-text", "screen-qr", "screen-color"} <= {row["id"] for row in inspect()["rows"]}
+        capture("capture-tools")
+        run(["wtype", title])
+        wait(lambda: len(inspect()["rows"]) == 1)
+        key("Return")
+        wait(lambda: inspect()["menu"] == "")
+        wait(lambda: capture_calls.exists() and json.loads(capture_calls.read_text().splitlines()[-1]) == expected)
+    print("Capture menu OCR, QR and color dispatch passed")
     qa("openCapture")
     wait(lambda: inspect()["menu"] == "capture")
     assert {"record-audio", "record-region", "record-window", "record"} <= {row["id"] for row in inspect()["rows"]}

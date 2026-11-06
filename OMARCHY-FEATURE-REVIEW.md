@@ -2,10 +2,10 @@
 
 Review date: 2026-11-05. Upstream reference: Omarchy v4.5.0.
 
-The most useful first additions are screen-to-text OCR, a dedicated agent
-console, and richer screen recording. This setup already implements much of
-Omarchy's everyday desktop experience, so the priorities below focus on gaps
-that would improve daily use.
+Screen-to-text OCR, QR decoding, color picking and richer screen recording are
+now configured. A dedicated agent console is a useful next addition. This setup
+already implements much of Omarchy's everyday desktop experience, so the
+priorities below focus on gaps that would improve daily use.
 
 The inventory reflects the repository's working tree on the review date,
 including the in-progress wallpaper changes. It describes configured features;
@@ -19,7 +19,7 @@ deployment and physical hardware acceptance are separate concerns.
 | Appearance | Eight runtime themes: Tokyo Night, Catppuccin Latte, Flexoki Light, White, Osaka Jade, Catppuccin Mocha, Gruvbox and Nord. Coordinated application colors, wallpaper import/gallery and persistent wallpaper choices per theme. | [Theme catalog](home/theme-data.nix), [theme generation](home/theme.nix), [wallpaper gallery](home/files/quickshell/panels/WallpaperPanel.qml) |
 | Window management | Dwindle tiling, tabbed groups, floating windows, fullscreen/maximize, recent-window Alt-Tab, named desktops and attention indicators. Discord and TickTick share the Super+S scratchpad. | [Bindings](home/files/hypr/keybindings.lua), [window switcher](home/files/quickshell/panels/WindowSwitcher.qml), [workspace service](home/files/quickshell/services/Workspaces.qml) |
 | Keyboard and languages | Local French/English dictation with Quebec vocabulary and a waveform HUD; Caps-based navigation; US, Canadian and Chinese Pinyin input with Traditional Taiwanese output. | [Dictation](home/dictation.nix), [input methods](home/fcitx5.nix), [keyboard remapping](home/files/kanata/config.kbd) |
-| Capture | Frozen-screen region/window/monitor screenshots, PNG clipboard output, preview notifications, Swappy editing, region/window/monitor recording with desktop or microphone audio, a recording indicator and completion actions. | [Capture helpers](home/capture-tools.nix), [recorder](home/files/scripts/screen_record.sh) |
+| Capture | Frozen-screen region/window/monitor screenshots, PNG clipboard output, preview notifications, Swappy editing, local English/French/Traditional Chinese OCR, QR-only decoding, hex color picking, region/window/monitor recording with desktop or microphone audio, a recording indicator and completion actions. | [Capture helpers](home/capture-tools.nix), [extraction](home/files/scripts/screenshot.sh), [color picker](home/files/scripts/color-pick.sh), [recorder](home/files/scripts/screen_record.sh) |
 | Laptop controls | Audio device selection and microphone testing, Wi-Fi and DNS, display scaling with automatic rollback, brightness, night light, presentation mode, power profiles and fingerprint authentication. | [Settings panels](home/files/quickshell/panels), [fingerprint configuration](hosts/fingerprint.nix) |
 | Productivity and sharing | TickTick reminders in the bar and lock screen, LocalSend, removable-drive automounting, and VPN sharing over Wi-Fi or Thunderbolt. | [Reminders](home/files/quickshell/services/Reminders.qml), [desktop services](home/desktop.nix), [VPN sharing](hosts/vpn-hotspot.nix) |
 | Server infrastructure | Separate headless profile supporting the media stack, NVIDIA containers, Portainer, Hollama and Open WebUI. | [Server configuration](hosts/homeserver/configuration.nix), [server user profile](home/server.nix) |
@@ -53,7 +53,7 @@ implementation commitments.
 
 | Priority | Feature | Local gap and expected benefit | Estimated effort | Upstream reference |
 | --- | --- | --- | --- | --- |
-| 1 | Screen-to-text OCR, QR decoding and color picking | Extend the existing frozen-region workflow to copy text from images, decode on-screen QR codes and pick colors. Useful for error messages, Chinese text and design work. These actions are absent from the current capture menu. | Small to medium | [Capture documentation](https://github.com/omacom/omarchy/blob/v4.5.0/manual/12-screenshots-recording.md) |
+| 1 | Screen-to-text OCR, QR decoding and color picking — implemented | Capture menu actions copy English/French/Traditional Chinese text, decode QR codes to a sensitive clipboard selection, and pick hex colors. Extraction uses temporary captures, preserves the clipboard on empty results or failure, and shares cancellation with screenshots. | Complete in configuration; deployment and physical hardware acceptance remain separate | [Capture documentation](https://github.com/omacom/omarchy/blob/v4.5.0/manual/12-screenshots-recording.md) |
 | 2 | Dedicated Quake agent console | Provide a persistent dropdown terminal for Claude/Codex while leaving the Discord/TickTick scratchpad available. Both coding agents are already installed. | Small to medium | [Quake console](https://github.com/omacom/omarchy/blob/v4.5.0/manual/04-navigation.md#quake-console) |
 | 3 | Richer screen recording — implemented | Region/window/monitor selection, no audio/desktop/microphone controls, an elapsed-time stop indicator and Open/Open folder/Copy path completion actions are configured. Alt+4 retains its monitor toggle. | Complete in configuration; deployment and physical hardware acceptance remain separate | [Screen recording](https://github.com/omacom/omarchy/blob/v4.5.0/manual/12-screenshots-recording.md#screen-recording) |
 | 4 | Agent usage panel | Show Claude/Codex usage allowances and reset times in the shell. Agent installation already exists; the desktop dashboard is the missing piece. | Medium | [Agent panel and collectors](https://github.com/omacom/omarchy/blob/v4.5.0/shell/plugins/agents/README.md) |
@@ -64,7 +64,7 @@ implementation commitments.
 
 ## Suggested first implementation batch
 
-- [ ] Add OCR, QR decoding and color picking to the capture menu.
+- [x] Add OCR, QR decoding and color picking to the capture menu.
 - [ ] Add a dedicated agent dropdown console.
 - [x] Add audio/region controls, a visible stop indicator and actionable completion notifications for recording.
 

@@ -261,10 +261,24 @@ in
           pkgs.jq
           pkgs.coreutils
           pkgs.util-linux
+          (pkgs.tesseract.override {
+            enableLanguages = [
+              "eng"
+              "fra"
+              "chi_tra"
+            ];
+          })
+          pkgs.zbar
+          pkgs.imagemagick
+          pkgs.qrencode
         ];
       }
       ''
         python3 ${./capture.py} ${../home/files/scripts}
+        # Keep the fixture import alongside its real-decoder integration check.
+        cp ${./capture.py} "$TMPDIR/capture.py"
+        cp ${./capture-extraction-runtime.py} "$TMPDIR/capture-extraction-runtime.py"
+        python3 "$TMPDIR/capture-extraction-runtime.py" ${../home/files/scripts} ${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf
         python3 ${./screen-record.py} ${../home/files/scripts}
         touch "$out"
       '';

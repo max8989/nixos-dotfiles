@@ -15,6 +15,7 @@ in
   home.packages = [
     capture.region
     capture.screenshot
+    capture.colorPick
     capture.edit
     capture.record
   ];

@@ -91,7 +91,15 @@ QtObject {
         action("record-window", "Record window", () => launch([Config.paths.screenRecord, "windows", Recording.audioMode]), "Pick a window; its selected area stays fixed", "capture video screencast"),
         action("record", "Record monitor", () => launch([Config.paths.screenRecord, "fullscreen", Recording.audioMode]), "Record the focused monitor · Alt+4 toggles without audio", "capture video screencast display")
     ]
-    readonly property var capture: [action("screenshot-region", "Screenshot region", () => launch([Config.paths.screenshot, "region"]), "Select an area to capture", "capture snip screen"), action("screenshot-window", "Screenshot window", () => launch([Config.paths.screenshot, "windows"]), "Pick a window; Tab or arrows change the selection", "capture screen"), action("screenshot-screen", "Screenshot screen", () => launch([Config.paths.screenshot, "fullscreen"]), "Capture the current monitor", "capture display"), action("screenshot-edit", "Edit latest screenshot", () => launch([Config.paths.editScreenshot]), "Open the latest capture in Swappy", "capture edit annotate")].concat(recording)
+    readonly property var capture: [
+        action("screenshot-region", "Screenshot region", () => launch([Config.paths.screenshot, "region"]), "Select an area to capture", "capture snip screen"),
+        action("screenshot-window", "Screenshot window", () => launch([Config.paths.screenshot, "windows"]), "Pick a window; Tab or arrows change the selection", "capture screen"),
+        action("screenshot-screen", "Screenshot screen", () => launch([Config.paths.screenshot, "fullscreen"]), "Capture the current monitor", "capture display"),
+        action("screenshot-edit", "Edit latest screenshot", () => launch([Config.paths.editScreenshot]), "Open the latest capture in Swappy", "capture edit annotate"),
+        action("screen-text", "Copy text from screen", () => launch([Config.paths.screenshot, "region", "ocr"]), "Select English, French or Traditional Chinese text", "capture ocr extract image clipboard"),
+        action("screen-qr", "Decode QR code", () => launch([Config.paths.screenshot, "region", "qr"]), "Select a QR code to copy its contents", "capture scan qr decode clipboard"),
+        action("screen-color", "Pick screen color", () => launch([Config.paths.colorPick]), "Click a pixel to copy its hex color", "capture colour eyedropper hex clipboard")
+    ].concat(recording)
     readonly property var themes: (Config.data.themeOrder || []).map(name => {
         var theme = Config.data.themes[name];
         return action("theme-" + name, theme.displayName, () => setTheme(name), theme.mode === "light" ? "Light theme and wallpaper" : "Dark theme and wallpaper", name + " " + theme.mode + " omarchy", Config.selectedTheme === name ? "Selected" : "");
@@ -116,7 +124,7 @@ QtObject {
         "workspace-" + entry.id, Workspaces.title(entry.id), () => Workspaces.activate(entry.id),
         entry.workspace ? entry.workspace.toplevels.values.length + " windows" : "Empty desktop",
         "desktop", Workspaces.currentId === entry.id ? "Active" : ""))
-    readonly property var trigger: [page("capture", "Capture", "Screenshots and screen recording", "video")].concat(desktop.filter(item => ["clipboard", "files", "calendar", "todos", "workspaces"].indexOf(item.id) >= 0), media)
+    readonly property var trigger: [page("capture", "Capture", "Screenshots, recording, text, QR codes and colors", "video ocr qr color")].concat(desktop.filter(item => ["clipboard", "files", "calendar", "todos", "workspaces"].indexOf(item.id) >= 0), media)
     readonly property var system: power.concat([presentation, powerProfile, connections[2]])
     readonly property var home: [
         page("shortcuts", "Shortcuts", "Name and manage desktops", "workspace names labels projects", "󰌌"),

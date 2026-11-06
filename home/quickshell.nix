@@ -60,6 +60,7 @@ let
       themeRoot = "${config.localTheme.themeRoot}";
       screenshot = lib.getExe capture.screenshot;
       editScreenshot = lib.getExe capture.edit;
+      colorPick = lib.getExe capture.colorPick;
       screenRecord = lib.getExe capture.record;
       phrases = "${./files/quickshell/assets/phrases_zh.txt}";
       vim = "${./files/quickshell/assets/vim.txt}";
