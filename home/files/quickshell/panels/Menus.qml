@@ -435,7 +435,7 @@ PanelWindow {
         } else if (menu === "aliases" || menu === "lazyvim") {
             // Cheat-sheet format: "## Section" starts a group, "# ..." is a
             // file comment, "command   # description" is one entry shown as
-            // description (left) and command (right).
+            // description (left) and command (right). Enter copies the command.
             let group = "";
             reference.text().split("\n").forEach(line => {
                 const heading = /^##\s+(.+)$/.exec(line);
@@ -447,7 +447,11 @@ PanelWindow {
                 } else if (line.trim() && !/^#\s/.test(line)) {
                     const parts = line.split(/\s+#\s+/);
                     const command = parts[0].trim();
-                    const entry = row(parts.length > 1 ? parts.slice(1).join(" # ").trim() : command, () => {});
+                    const entry = row(parts.length > 1 ? parts.slice(1).join(" # ").trim() : command, () => {
+                        Runtime.launch([Config.bin.wlCopy, "--", command]);
+                        Runtime.closeMenu();
+                        Runtime.report("Copied " + command);
+                    });
                     if (parts.length > 1)
                         entry.value = command;
                     entry.keywords = command + " " + group;

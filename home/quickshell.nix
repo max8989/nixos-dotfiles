@@ -76,6 +76,7 @@ let
       clipboard = lib.getExe clipboard;
       clipboardThumbs = lib.getExe clipboardThumbs;
       xdgOpen = "${pkgs.xdg-utils}/bin/xdg-open";
+      wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
       systemctl = "${pkgs.systemd}/bin/systemctl";
       loginctl = "${pkgs.systemd}/bin/loginctl";
       busctl = "${pkgs.systemd}/bin/busctl";
