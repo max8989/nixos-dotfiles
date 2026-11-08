@@ -179,7 +179,7 @@ PanelWindow {
             apps: "Applications",
             clipboard: "Clipboard",
             files: "Files",
-            vim: "Vim reference",
+            aliases: "Shell aliases",
             lazyvim: "LazyVim reference",
             todos: "TickTick",
             audio: "Audio",
@@ -432,8 +432,28 @@ PanelWindow {
                 var name = folders.get(i, "fileName"), directory = folders.get(i, "fileIsDir"), path = folders.get(i, "filePath");
                 items.push(fileRow(name, path, directory, folders.get(i, "fileUrl")));
             }
-        } else if (menu === "vim" || menu === "lazyvim") {
-            items = reference.text().split("\n").filter(Boolean).map(line => row(line, () => {}, "Reference"));
+        } else if (menu === "aliases" || menu === "lazyvim") {
+            // Cheat-sheet format: "## Section" starts a group, "# ..." is a
+            // file comment, "command   # description" is one entry shown as
+            // description (left) and command (right).
+            let group = "";
+            reference.text().split("\n").forEach(line => {
+                const heading = /^##\s+(.+)$/.exec(line);
+                if (heading) {
+                    group = heading[1].trim();
+                    const header = row(group, () => {});
+                    header.section = true;
+                    items.push(header);
+                } else if (line.trim() && !/^#\s/.test(line)) {
+                    const parts = line.split(/\s+#\s+/);
+                    const command = parts[0].trim();
+                    const entry = row(parts.length > 1 ? parts.slice(1).join(" # ").trim() : command, () => {});
+                    if (parts.length > 1)
+                        entry.value = command;
+                    entry.keywords = command + " " + group;
+                    items.push(entry);
+                }
+            });
         } else if (menu === "todos") {
             items = Reminders.tasks.map((task, i) => row((Reminders.isOverdue(task) ? "⚠ " : "") + Reminders.items[i], () => {
                     Reminders.openTask(task);
@@ -724,7 +744,7 @@ PanelWindow {
     }
     ReferenceFile {
         id: reference
-        sourcePath: Runtime.menu === "vim" ? Config.paths.vim : Runtime.menu === "lazyvim" ? Config.paths.lazyvim : ""
+        sourcePath: Runtime.menu === "aliases" ? Config.paths.aliases : Runtime.menu === "lazyvim" ? Config.paths.lazyvim : ""
         onReady: root.refresh()
     }
     Timer {
@@ -1019,7 +1039,7 @@ PanelWindow {
                     required property var modelData
                     required property int index
                     width: list.width
-                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : subtitle.visible ? 65 : 44
+                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : rowDelegate.modelData?.section ? 38 : subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
                     focusPolicy: Qt.NoFocus
                     background: Rectangle {
@@ -1062,9 +1082,12 @@ PanelWindow {
                             Text {
                                 visible: !modelData.thumbnail
                                 text: modelData.title
-                                color: Config.theme.text
+                                color: modelData.section ? Config.theme.accent : Config.theme.text
                                 font.family: Config.theme.uiFont
-                                font.pixelSize: Config.fonts.heading
+                                font.pixelSize: modelData.section ? Config.fonts.bodySmall : Config.fonts.heading
+                                font.bold: !!modelData.section
+                                font.capitalization: modelData.section ? Font.AllUppercase : Font.MixedCase
+                                font.letterSpacing: modelData.section ? 1 : 0
                                 textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -1087,6 +1110,7 @@ PanelWindow {
                             font.family: Config.theme.uiFont
                             font.pixelSize: Config.fonts.body
                             textFormat: Text.PlainText
+                            horizontalAlignment: Text.AlignRight
                         }
                     }
                     onClicked: {

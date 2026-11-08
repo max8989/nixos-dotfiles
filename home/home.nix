@@ -131,7 +131,7 @@ in
     tor-browser
     zoom-us
     ticktick
-
+    herdr-desktop
     # --- games ---
     osu-lazer-bin # Official native Linux client, alongside osu!stable.
     # The guide's Windows osu!stable, with a patched low-latency runtime.

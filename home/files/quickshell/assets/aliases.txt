@@ -1,0 +1,54 @@
+# Shell Alias Cheat Sheet (zsh + bash)
+# Open with Super + /
+
+## Find files and folders (fd)
+ff <name>                 # find files and folders by name, recursive
+fd1 <name>                # same, current directory only
+fdd <name>                # folders only
+fd -t f <name>            # files only
+fd -e <ext>               # by extension, ex: fd -e nix
+fz                        # fd piped into fzf, pick a file interactively
+
+## Find text inside files (ripgrep)
+ft <text>                 # search text in files, recursive
+ft1 <text>                # same, current directory only
+ft -l <text>              # only list the file names
+ft -i <text>              # ignore case
+ft -g '*.nix' <text>      # only search files matching a glob
+fif [text]                # live search: type, preview, Enter opens nvim at the line
+
+## fzf keys
+Ctrl + T                  # pick a file and paste its path
+Ctrl + R                  # search command history
+Alt + C                   # pick a folder and cd into it
+**<Tab>                   # fuzzy completion, ex: nvim **<Tab>
+
+## Listing
+ls                        # eza with icons, folders first
+ll                        # long list
+la                        # long list with hidden files
+lt                        # tree view
+cat <file>                # bat, no pager
+
+## Navigation
+..                        # cd ..
+...                       # cd ../..
+z <part of path>          # jump to a frequent folder (zoxide)
+zi                        # pick a frequent folder with fzf
+
+## Editing and notes
+n                         # nvim in the current folder
+note                      # open the Obsidian notes in nvim
+an                        # audio-notes
+
+## Clipboard helpers
+pwdc                      # copy the current path
+cdc                       # copy "cd <here> && claude"
+cdo                       # copy "cd <here> && opencode"
+cdd                       # copy "cd <here>"
+
+## Misc
+c                         # clear
+q                         # exit
+df / du / free            # human readable sizes
+neofetch                  # fastfetch

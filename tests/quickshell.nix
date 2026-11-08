@@ -147,7 +147,7 @@ in
     assert desktop.security.pam.services.polkit-1.fprintAuth;
     assert !self.nixosConfigurations.homeserver.config.services.fprintd.enable;
     assert home.programs.kitty.font.name == "JetBrainsMono Nerd Font";
-    assert home.programs.kitty.font.size == 9;
+    assert home.programs.kitty.font.size == 10;
     assert home.programs.btop.settings.color_theme == "active";
     assert
       (builtins.head home.services.hyprpaper.settings.wallpaper).path

@@ -39,7 +39,7 @@ sheet — rebuild, update, rollback, garbage collection, service debugging.
 | Dictation | `home/dictation.nix` + Kanata + Hyprland | Hold Caps + V; local Voxtype/Whisper transcription into the focused input |
 | Shell (bar, launcher, menus, notifications, OSD, authentication, lock) | `home/quickshell.nix` + `home/files/quickshell/` | Generated JSON + modular QML; systemd user service |
 | Idle / wallpaper / night light | `home/desktop.nix` | `services.hypridle` · `services.hyprpaper` · `services.hyprsunset` |
-| Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 9pt, opacity 0.94 |
+| Terminal | `home/kitty.nix` | Automatic dark/light colors, JetBrainsMono Nerd Font 10pt, opacity 0.94 |
 | Firefox | `home/firefox.nix` + `home/files/firefox/userChrome.css` | Compact density, top toolbar and vertical tabs revealed from the top/left edge |
 | Shell / prompt | `home/shell.nix` | zsh (+fzf, zoxide, eza/bat aliases) + `programs.starship` |
 | CLI packages | `home/cli.nix` + `home/server.nix` | Shared utilities, Git/Docker tools and core runtimes; extra headless administration tools |

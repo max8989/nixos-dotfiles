@@ -78,7 +78,7 @@ hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.group.prev())
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.window.move({ out_of_group = true }))
 
 -- Searchable reference panels
-hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(shell.vim))
+hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(shell.aliases))
 hl.bind(mainMod .. " + period", hl.dsp.exec_cmd(shell.lazyvim))
 
 -- Move focus with mainMod + arrow keys / vim keys

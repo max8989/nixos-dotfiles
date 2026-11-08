@@ -18,6 +18,14 @@ let
     cat = "bat --paging=never";
 
     grep = "grep --color=auto";
+
+    # Finding things (see the Super+/ cheat sheet)
+    ff = "fd"; # files and folders by name, recursive
+    fd1 = "fd -d 1"; # same, current directory only
+    fdd = "fd -t d"; # folders only
+    ft = "rg"; # text inside files, recursive
+    ft1 = "rg --max-depth 1"; # same, current directory only
+    fz = "fd | fzf"; # pick a file interactively
     df = "df -h";
     du = "du -h -c";
     free = "free -h";
@@ -78,6 +86,18 @@ in
       zstyle ':completion:*' menu select
       zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
 
+      # fif — live text search in files: type to re-run ripgrep, Enter opens
+      # the match in nvim at that line. A function because it needs arguments.
+      fif() {
+        local rg='rg --column --line-number --no-heading --color=always --smart-case'
+        fzf --ansi --disabled --query "$1" --delimiter : \
+          --bind "start:reload:$rg {q} || true" \
+          --bind "change:reload:sleep 0.1; $rg {q} || true" \
+          --preview 'bat --color=always {1} --highlight-line {2}' \
+          --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+          --bind 'enter:become(nvim {1} +{2})'
+      }
+
       # Machine-local overrides / secrets. Untracked and optional, so the
       # guard keeps a fresh machine working before the file exists.
       [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
@@ -89,6 +109,9 @@ in
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
+    # Ctrl-T and fzf's default list come from fd (fast, skips .git).
+    defaultCommand = "fd --type f --hidden --follow --exclude .git";
+    fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
     colors =
       if desktop then
         { }

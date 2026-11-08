@@ -692,7 +692,7 @@ elif sys.argv[1] == 'battery-info':
     assert [r["id"] for r in inspect()["rows"]] == ["screen-text"]
     key("Escape")
     visited = [("fingerprint", "Fingerprint"), ("configuration", "Configuration files"),
-               ("vim", "Vim reference"), ("lazyvim", "LazyVim reference"),
+               ("aliases", "Shell aliases"), ("lazyvim", "LazyVim reference"),
                ("desktop-names", "Manage desktops"), ("audio", "Audio devices"),
                ("battery", "Battery and power profile"), ("wifi", "Wi-Fi and network"),
                ("bluetooth", "Bluetooth"), ("calendar", "Calendar"),
@@ -1255,7 +1255,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "recent", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "vim", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "recent", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "aliases", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)

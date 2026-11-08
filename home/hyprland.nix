@@ -101,7 +101,7 @@ in
         apps = menu "apps";
         files = menu "files";
         clipboard = menu "clipboard";
-        vim = menu "vim";
+        aliases = menu "aliases";
         lazyvim = menu "lazyvim";
         power = menu "power";
         audio = menu "audio";

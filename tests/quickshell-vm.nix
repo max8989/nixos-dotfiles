@@ -109,7 +109,7 @@ pkgs.testers.runNixOSTest {
         return user("quickshell ipc --path ${bundle} " + command)
     try:
         machine.wait_until_succeeds(ipc("show") + " | grep 'target session'", timeout=60)
-        machine.succeed("python3 -c 'import json,pathlib; paths=json.load(open(\"${settings}\"))[\"paths\"]; assert all(pathlib.Path(paths[key]).is_file() for key in [\"phrases\",\"vim\",\"lazyvim\"])'")
+        machine.succeed("python3 -c 'import json,pathlib; paths=json.load(open(\"${settings}\"))[\"paths\"]; assert all(pathlib.Path(paths[key]).is_file() for key in [\"phrases\",\"aliases\",\"lazyvim\"])'")
         machine.succeed(user("notify-send -a QA -t 200 'Notification test' 'Plain text <tag>'"))
         machine.wait_until_succeeds(ipc("call notifications count") + " | grep -qx 1")
         machine.wait_until_succeeds(ipc("call notifications popupCount") + " | grep -qx 0")

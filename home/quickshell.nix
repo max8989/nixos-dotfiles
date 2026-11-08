@@ -63,7 +63,7 @@ let
       colorPick = lib.getExe capture.colorPick;
       screenRecord = lib.getExe capture.record;
       phrases = "${./files/quickshell/assets/phrases_zh.txt}";
-      vim = "${./files/quickshell/assets/vim.txt}";
+      aliases = "${./files/quickshell/assets/aliases.txt}";
       lazyvim = "${./files/quickshell/assets/lazyvim.txt}";
     };
     bin = {
