@@ -41,6 +41,15 @@ n                         # nvim in the current folder
 note                      # open the Obsidian notes in nvim
 an                        # audio-notes
 
+## Document conversion (Docling)
+docling document.pdf --to md                              # convert to Markdown
+docling document.pdf --to text                            # convert to plain text
+docling document.pdf --to html                            # convert to HTML
+docling document.pdf --to json                            # convert to structured JSON
+docling document.pdf --to md --to json                    # export Markdown and JSON together
+docling document.pdf --to md --output ./converted         # save Markdown in a chosen folder
+docling ./documents --to md --output ./converted          # convert a folder of documents to Markdown
+
 ## Clipboard helpers
 pwdc                      # copy the current path
 cdc                       # copy "cd <here> && claude"

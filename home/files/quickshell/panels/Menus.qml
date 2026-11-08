@@ -434,8 +434,9 @@ PanelWindow {
             }
         } else if (menu === "aliases" || menu === "lazyvim") {
             // Cheat-sheet format: "## Section" starts a group, "# ..." is a
-            // file comment, "command   # description" is one entry shown as
-            // description (left) and command (right). Enter copies the command.
+            // file comment, "command   # description" is one entry.
+            // Shell aliases show the command first. Enter copies the command.
+            const commandFirst = menu === "aliases";
             let group = "";
             reference.text().split("\n").forEach(line => {
                 const heading = /^##\s+(.+)$/.exec(line);
@@ -447,14 +448,15 @@ PanelWindow {
                 } else if (line.trim() && !/^#\s/.test(line)) {
                     const parts = line.split(/\s+#\s+/);
                     const command = parts[0].trim();
-                    const entry = row(parts.length > 1 ? parts.slice(1).join(" # ").trim() : command, () => {
+                    const description = parts.slice(1).join(" # ").trim();
+                    const entry = row(commandFirst ? command : description || command, () => {
                         Runtime.launch([Config.bin.wlCopy, "--", command]);
                         Runtime.closeMenu();
                         Runtime.report("Copied " + command);
                     });
-                    if (parts.length > 1)
-                        entry.value = command;
-                    entry.keywords = command + " " + group;
+                    if (description)
+                        entry.value = commandFirst ? description : command;
+                    entry.keywords = command + " " + description + " " + group;
                     items.push(entry);
                 }
             });
@@ -1042,8 +1044,9 @@ PanelWindow {
                     id: rowDelegate
                     required property var modelData
                     required property int index
+                    readonly property bool commandEntry: Runtime.menu === "aliases" && !modelData.section
                     width: list.width
-                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : rowDelegate.modelData?.section ? 38 : subtitle.visible ? 65 : 44
+                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : rowDelegate.modelData?.section ? 38 : commandEntry ? Math.max(44, implicitContentHeight + topPadding + bottomPadding) : subtitle.visible ? 65 : 44
                     highlighted: ListView.isCurrentItem
                     focusPolicy: Qt.NoFocus
                     background: Rectangle {
@@ -1093,7 +1096,8 @@ PanelWindow {
                                 font.capitalization: modelData.section ? Font.AllUppercase : Font.MixedCase
                                 font.letterSpacing: modelData.section ? 1 : 0
                                 textFormat: Text.PlainText
-                                elide: Text.ElideRight
+                                wrapMode: rowDelegate.commandEntry ? Text.Wrap : Text.NoWrap
+                                elide: rowDelegate.commandEntry ? Text.ElideNone : Text.ElideRight
                                 Layout.fillWidth: true
                             }
                             Text {
@@ -1110,11 +1114,13 @@ PanelWindow {
                         }
                         Text {
                             text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
-                            color: Config.theme.accent
+                            color: rowDelegate.commandEntry ? Config.theme.dim : Config.theme.accent
                             font.family: Config.theme.uiFont
                             font.pixelSize: Config.fonts.body
                             textFormat: Text.PlainText
+                            wrapMode: rowDelegate.commandEntry ? Text.Wrap : Text.NoWrap
                             horizontalAlignment: Text.AlignRight
+                            Layout.maximumWidth: rowDelegate.commandEntry ? list.width * 0.38 : Number.POSITIVE_INFINITY
                         }
                     }
                     onClicked: {
