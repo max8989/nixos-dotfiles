@@ -1,9 +1,20 @@
 { pkgs, lib }:
 let
+  app2unit = pkgs.app2unit.overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      # Keep caller argv literal through systemd and app2unit's POSIX IFS
+      # splitting. A final separator preserves a trailing empty argument.
+      substituteInPlace "$out/bin/app2unit" \
+        --replace-fail 'set -- systemd-run --user "$@"' 'set -- systemd-run --user --expand-environment=no "$@"' \
+        --replace-fail 'set -- $a2u__command' 'set -- $a2u__command$A2U__USEP' \
+        --replace-fail 'set -- $A2U__EXEC_RSEP_USEP' 'set -- $A2U__EXEC_RSEP_USEP$A2U__USEP' \
+        --replace-fail 'set -- $a2u__cmd' 'set -- $a2u__cmd$A2U__USEP'
+    '';
+  });
   launch = pkgs.writeShellApplication {
     name = "desktop-launch";
     runtimeInputs = [
-      pkgs.app2unit
+      app2unit
       pkgs.systemd
       pkgs.coreutils
       pkgs.xdg-utils
@@ -19,6 +30,10 @@ let
 in
 pkgs.symlinkJoin {
   name = "desktop-launch";
-  paths = [ launch open ];
+  paths = [
+    launch
+    open
+  ];
   meta.mainProgram = "desktop-launch";
+  passthru = { inherit app2unit; };
 }

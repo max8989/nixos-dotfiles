@@ -2,6 +2,15 @@
 # Keep app2unit responsible for desktop-entry expansion and MIME handling.
 set -euo pipefail
 
+# app2unit uses these bytes to serialize command/argument boundaries. Passing
+# them through can turn a filename or clipboard string into another command.
+for arg in "$@"; do
+  if [[ $arg == *$'\x1e'* || $arg == *$'\x1f'* ]]; then
+    echo 'desktop-launch: record/unit separator bytes are not supported in arguments' >&2
+    exit 2
+  fi
+done
+
 usage() {
   echo 'Usage: desktop-launch [--important|--normal] [--open] -- <desktop-entry|command|URL|file> [arguments...]' >&2
 }

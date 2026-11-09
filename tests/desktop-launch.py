@@ -42,4 +42,18 @@ with tempfile.TemporaryDirectory() as tmp:
     launch("--", "test-command", code=23, LAUNCH_EXIT="23")
     for args in [(), ("--bogus",), ("--",), ("--open", "--")]:
         assert launch(*args, code=2) is None
+    for payload in ["file\x1fT\x1e/bin/sh\x1f-c\x1ftouch /tmp/unwanted", "text\x1e", "text\x1f"]:
+        assert launch("--", "printf", "%s", payload, code=2) is None
+        assert launch("--open", "--", payload, code=2) is None
+
+    if len(sys.argv) > 2:
+        # Exercise the real app2unit serializer, stopping at the systemd-run
+        # boundary so tests never create live user scopes or run supplied text.
+        stub.rename(root / "systemd-run")
+        payload = ["two words", "$HOME", "$(touch /tmp/unwanted)", "", "a'b", "", ""]
+        subprocess.run([sys.argv[2], "-t", "scope", "-s", "app.slice", "--",
+                        "printf", "%s", *payload], env=env, check=True)
+        args = json.loads(capture.read_text())
+        assert "--expand-environment=no" in args
+        assert args[-len(payload):] == payload, args
 print("Desktop launch priority, arguments, open mode and failures passed")
