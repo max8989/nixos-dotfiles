@@ -35,6 +35,50 @@ Go back to the previous generation.
 sudo nixos-rebuild switch --rollback
 ```
 
+### Memory pressure and important work
+
+Desktop menus and terminal keybindings assign priorities automatically. For
+commands started from a shell, create an independent scope explicitly:
+
+```sh
+desktop-launch --important -- python train.py
+desktop-launch --normal -- npm run build
+desktop-launch -- firefox.desktop
+desktop-open "$HOME/Documents/notes.pdf"
+desktop-open 'https://example.com'
+```
+
+The command keeps its arguments, environment, terminal I/O and working
+directory (desktop entries may specify their own directory). A normal job
+can be sacrificed before important work. Important jobs remain eligible as
+a last resort. Commands launched directly in a terminal share its scope.
+ASCII record/unit separator bytes (0x1e and 0x1f) in arguments are rejected:
+app2unit reserves these as command boundaries. Spaces, quotes, dollar signs,
+and empty arguments are preserved literally.
+
+Inspect the active policy and actual process groups:
+
+```sh
+swapon --show
+zramctl
+oomctl dump
+systemctl --user show app.slice -p ManagedOOMMemoryPressure -p ManagedOOMSwap
+systemctl --user list-units --type=scope
+systemctl --user show '<scope-name>' -p ControlGroup -p ManagedOOMPreference
+cat /proc/<pid>/cgroup
+journalctl -u systemd-oomd --since today
+journalctl -k --since today -g 'oom-kill|Out of memory|Killed process'
+```
+
+Stage resource-policy changes for the next reboot, after saving work:
+
+```sh
+sudo -A nixos-rebuild boot --flake .#thinkpad-x1-carbon-g12
+```
+
+Choose the previous NixOS generation at boot to roll back, or restore the
+previous boot default with `sudo -A nixos-rebuild boot --rollback`.
+
 ### Switch desktop theme
 
 Open **Style → Theme** with Super+M, or open the theme menu directly with

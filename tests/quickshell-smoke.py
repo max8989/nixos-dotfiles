@@ -33,6 +33,17 @@ config_link.symlink_to(bundle, target_is_directory=True)
     {"id": "3", "projectId": "personal", "project": "Personal", "text": "Overdue task", "due": 1577887200000, "label": "Jan 1 09:00"},
 ]}))
 settings = json.loads((bundle / "generated.json").read_text())
+# This compositor has a private bus with no systemd user manager. Record the
+# application-launch boundary here; the VM test exercises the real scopes.
+app_launches = output / "app-launches.jsonl"
+app_launcher = output / "desktop-launch"
+app_launcher.write_text(f"#!{sys.executable}\nimport json,os,sys\nfrom pathlib import Path\n"
+                        f"with open({str(app_launches)!r}, 'a') as out: out.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                        # Allow only this test's executables (e.g. the terminal
+                        # recorder), never installed desktop applications.
+                        f"if Path(sys.argv[2]).is_relative_to({str(output)!r}): os.execv(sys.argv[2], sys.argv[2:])\n")
+app_launcher.chmod(0o755)
+settings["bin"]["desktopLaunch"] = str(app_launcher)
 settings["paths"].update(home=str(output / "home"), ticktickFixture=str(output / "ticktick.json"))
 (output / "settings.json").write_text(json.dumps(settings))
 (output / "sway.conf").write_text("output HEADLESS-1 resolution 1920x1080\noutput HEADLESS-1 bg #20283a solid_color\nseat seat0 fallback true\n")
@@ -582,6 +593,10 @@ elif sys.argv[1] == 'battery-info':
         key("Escape")
     saved_preferences = preference_dir / "state.json"
     expected_counts = {app_ids["Alpha"]: 1, app_ids["Zebra"]: 2}
+    expected_launches = [["--", app_ids[name] if app_ids[name].endswith(".desktop") else app_ids[name] + ".desktop"]
+                         for name in ["Zebra", "Alpha", "Zebra"]]
+    wait(lambda: app_launches.exists() and
+         [json.loads(line) for line in app_launches.read_text().splitlines()][-3:] == expected_launches)
     wait(lambda: saved_preferences.exists() and json.loads(saved_preferences.read_text()).get("appLaunchCounts") == expected_counts)
     # Restart the real QML components to verify saved usage is restored.
     process.terminate()

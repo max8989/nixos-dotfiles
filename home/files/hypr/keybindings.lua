@@ -18,7 +18,7 @@ hl.bind(mainMod .. " + CTRL + Space", hl.dsp.exec_cmd(shell.wallpaper), { descri
 hl.bind(mainMod .. " + CTRL + P", hl.dsp.exec_cmd(shell.battery), { description = "battery and power profile" })
 
 -- Programs
-local terminal    = "kitty"
+local terminal    = shell.terminal
 local fileManager = "superfile" -- TUI file manager; nixpkgs names the binary
                                 -- `superfile`, Arch's AUR package called it `spf`
 local menu        = shell.apps

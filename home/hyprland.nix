@@ -8,6 +8,7 @@
 let
   hyprlandPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
+  desktopLaunch = import ./desktop-launch.nix { inherit pkgs lib; };
 
   # Ctrl+Space: us -> ca -> pinyin -> us. fcitx5 holds the state (all three
   # are fcitx5 IMs, so each switch shows its popup); Hyprland's layout is kept
@@ -93,6 +94,11 @@ in
           name
         ];
       commands = {
+        terminal = lib.escapeShellArgs [
+          (lib.getExe desktopLaunch)
+          "--"
+          (lib.getExe pkgs.kitty)
+        ];
         screenshot = lib.getExe capture.screenshot;
         captureRegion = lib.getExe capture.region;
         editScreenshot = lib.getExe capture.edit;

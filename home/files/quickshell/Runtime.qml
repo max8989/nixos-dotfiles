@@ -72,6 +72,9 @@ Singleton {
         if (Config.valid && args[0])
             Quickshell.execDetached(args);
     }
+    function launchApp(args) {
+        launch([Config.bin.desktopLaunch, "--"].concat(args));
+    }
     function run(args, callback) {
         if (!Config.valid || !args[0]) {
             if (callback)

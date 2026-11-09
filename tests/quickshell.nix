@@ -11,6 +11,23 @@ let
   bundle = self.packages.${system}.quickshell-config;
 in
 {
+  desktop-launch =
+    pkgs.runCommand "desktop-launch-check"
+      {
+        nativeBuildInputs = [
+          pkgs.python3
+          pkgs.bash
+        ];
+      }
+      ''
+        python3 ${./desktop-launch.py} ${../home/files/scripts/desktop-launch.sh} ${
+          (import ../home/desktop-launch.nix {
+            inherit pkgs;
+            inherit (pkgs) lib;
+          }).app2unit
+        }/bin/app2unit
+          touch "$out"
+      '';
   recording-runtime =
     pkgs.runCommand "recording-runtime-check"
       {

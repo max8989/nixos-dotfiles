@@ -56,4 +56,15 @@ with tempfile.TemporaryDirectory() as tmp:
         args = json.loads(capture.read_text())
         assert "--expand-environment=no" in args
         assert args[-len(payload):] == payload, args
+        entries = root / "data/applications"
+        entries.mkdir(parents=True)
+        (entries / "literal-check.desktop").write_text(
+            "[Desktop Entry]\nType=Application\nName=Literal check\nExec=printf prefix %U\n")
+        # An absent %U is omitted; it must not acquire a spurious empty arg.
+        for urls in [[], ["https://example.test/a b", "https://example.test/$HOME"]]:
+            subprocess.run([sys.argv[2], "-t", "scope", "--", "literal-check.desktop", *urls],
+                           env=env | {"XDG_DATA_HOME": str(root / "data")}, check=True)
+            args = json.loads(capture.read_text())
+            command = args[args.index("--") + 1:]
+            assert command[1:] == ["prefix", *urls], command
 print("Desktop launch priority, arguments, open mode and failures passed")

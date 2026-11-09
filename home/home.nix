@@ -31,6 +31,7 @@ in
     ./hyprland.nix
     ./dictation.nix
     ./quickshell.nix
+    ./resource-policy.nix
     ./kitty.nix
     ./cli.nix
     ./shell.nix

@@ -9,6 +9,7 @@
   imports = [
     ../common.nix
     ../desktop.nix
+    ../desktop-resources.nix
     ./disko.nix
     ./hardware-configuration.nix
   ];

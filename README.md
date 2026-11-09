@@ -375,6 +375,43 @@ sudo nixos-rebuild switch --flake .#thinkpad-x1-carbon-g12
 `boot` instead of `switch` to apply only on next reboot, or `test` to activate
 without making it the boot default.
 
+### Memory pressure and important work
+
+The ThinkPad uses an adapted [Omarchy memory-pressure policy](https://github.com/omacom/omarchy/blob/quattro/default/systemd/user/app.slice.d/10-oomd.conf).
+`hosts/desktop-resources.nix` replaces earlyoom with systemd-oomd monitoring
+only `app.slice`: 50% memory pressure sustained for 20 seconds. Swap-based
+killing stays disabled because it does not honor user-owned application
+preferences. The laptop uses zstd zram with capacity equal to RAM, followed
+by the existing 8 GiB disk swapfile, and limits Nix to one build at a time
+with four requested build cores. The headless server keeps its shared policy.
+
+Quickshell app launches and application keybindings use `desktop-launch` to
+create separate systemd scopes. Quickshell, idle/wallpaper/night-light services,
+and the keyboard remapper run in `session.slice`, outside the monitored app
+slice, alongside the D-Bus and audio sockets; the existing Hyprland login scope
+is also outside it. Firefox, Chrome,
+Zen, Zed, Kate, Kitty, and Neovim receive `ManagedOOMPreference=avoid`.
+Kitty's individual shell scopes receive the same preference through a drop-in.
+Documents and URLs opened through `desktop-open` are also prioritized.
+
+Important work is selected only after other viable candidates are exhausted;
+this is not immunity from the kernel OOM killer. Shell children share their
+terminal scope unless explicitly separated with `desktop-launch --normal -- …`.
+An already-running application's additional windows keep that application's
+existing scope. Use the [resource commands](COMMANDS.md#memory-pressure-and-important-work)
+to launch jobs, inspect groups and review kills.
+
+Apply changes to this policy with `sudo -A nixos-rebuild boot --flake
+.#thinkpad-x1-carbon-g12`, then reboot after saving work. This avoids restarting
+the shell or resizing active zram mid-session. After reboot, check `swapon
+--show`, `oomctl dump`, and the app/shell scope preferences. To undo it, select
+the previous NixOS generation at boot; to change the next boot default back,
+use `sudo -A nixos-rebuild boot --rollback`.
+
+`nix build .#desktop-resources-vm-test` verifies real application and Kitty
+scopes, argument/environment preservation, and OOM victim ordering in an
+isolated VM. Never run memory-exhaustion tests on the working desktop.
+
 ### Fingerprint authentication
 
 The desktop copies Omarchy's fingerprint workflow for **lock-screen unlock,

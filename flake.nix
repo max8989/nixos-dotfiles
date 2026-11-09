@@ -131,6 +131,10 @@
           pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;
           bundle = self.packages.${system}.quickshell-config;
         };
+        desktop-resources-vm-test = import ./tests/desktop-resources-vm.nix {
+          pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;
+          home = self.nixosConfigurations.thinkpad-x1-carbon-g12.config.home-manager.users.${username};
+        };
       };
       checks.${system} = import ./tests/quickshell.nix {
         pkgs = self.nixosConfigurations.thinkpad-x1-carbon-g12.pkgs;

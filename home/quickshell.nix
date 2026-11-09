@@ -32,6 +32,7 @@ let
     }
     // import ./omarchy-shell-style.nix { inherit palette; };
   capture = import ./capture-tools.nix { inherit pkgs lib inputs; };
+  desktopLaunch = import ./desktop-launch.nix { inherit pkgs lib; };
   hyprland = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   settings = {
     theme = themeSettings palettes.tokyo-night;
@@ -67,6 +68,7 @@ let
       lazyvim = "${./files/quickshell/assets/lazyvim.txt}";
     };
     bin = {
+      desktopLaunch = lib.getExe desktopLaunch;
       quickshell = lib.getExe pkgs.quickshell;
       hyprctl = "${hyprland}/bin/hyprctl";
       brightnessctl = lib.getExe pkgs.brightnessctl;
@@ -75,7 +77,7 @@ let
       cliphist = lib.getExe pkgs.cliphist;
       clipboard = lib.getExe clipboard;
       clipboardThumbs = lib.getExe clipboardThumbs;
-      xdgOpen = "${pkgs.xdg-utils}/bin/xdg-open";
+      xdgOpen = "${desktopLaunch}/bin/desktop-open";
       wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
       systemctl = "${pkgs.systemd}/bin/systemctl";
       loginctl = "${pkgs.systemd}/bin/loginctl";

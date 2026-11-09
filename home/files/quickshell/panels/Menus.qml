@@ -45,7 +45,7 @@ PanelWindow {
     readonly property var applicationRows: Logic.rankApplications(DesktopEntries.applications.values.filter(a => !a.noDisplay), Preferences.appLaunchCounts).map(a => {
         var item = row(a.name, () => {
             if (!Config.preview) {
-                a.execute();
+                Runtime.launchApp([a.id.endsWith(".desktop") ? a.id : a.id + ".desktop"]);
                 Preferences.recordAppLaunch(a.id);
             }
             Runtime.closeMenu();
@@ -477,7 +477,7 @@ PanelWindow {
             }));
             items = items.concat(wifiNetworks.slice().sort((a, b) => (b.signalStrength || 0) - (a.signalStrength || 0)).map(n => row((n.connected ? "✓ " : "") + n.name, () => connectNetwork(n), (n.connected ? "Connected · click to disconnect" : n.known ? "Saved" : "Available") + (n.signalStrength === undefined ? "" : " · " + Math.round(n.signalStrength * 100) + "%"))));
             items.push(row("Hidden networks / advanced settings", () => {
-                Runtime.launch([Config.bin.kitty, "-e", Config.bin.nmtui]);
+                Runtime.launchApp([Config.bin.kitty, "-e", Config.bin.nmtui]);
                 Runtime.closeMenu();
             }));
         } else if (menu === "bluetooth") {
@@ -490,7 +490,7 @@ PanelWindow {
                         d.connected = !d.connected;
                 }, d.paired ? "Paired" : "Pair in Bluetooth settings")));
             items.push(row("Pair / manage devices", () => {
-                Runtime.launch([Config.bin.bluetooth]);
+                Runtime.launchApp([Config.bin.bluetooth]);
                 Runtime.closeMenu();
             }));
         } else if (menu === "powerProfiles") {
@@ -499,8 +499,8 @@ PanelWindow {
                 items.push(row("Performance", () => setProfile(PowerProfile.Performance)));
         } else if (menu === "status") {
             items = [
-                row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature) + " °C"),
-                row("Memory " + Metrics.ram.percent + "%", () => Runtime.launch([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB"),
+                row("CPU " + Math.round(Metrics.cpu) + "%", () => Runtime.launchApp([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), Metrics.temperature === null ? "Temperature unavailable" : Math.round(Metrics.temperature) + " °C"),
+                row("Memory " + Metrics.ram.percent + "%", () => Runtime.launchApp([Config.bin.kitty, "--class", "btop-popup", "-e", Config.bin.btop]), (Metrics.ram.used / 1048576).toFixed(1) + " / " + (Metrics.ram.total / 1048576).toFixed(1) + " GiB"),
                 row("Battery " + (Battery.present ? Battery.percent + "%" : "AC"), () => {}, Battery.band),
                 row("Network", () => openPage("wifi"), Metrics.networkRate, "", true),
                 row("Bluetooth", () => openPage("bluetooth"), "", "", true),

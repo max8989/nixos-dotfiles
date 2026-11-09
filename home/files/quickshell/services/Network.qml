@@ -59,7 +59,7 @@ Singleton {
     }
     function advanced() {
         if (!Config.preview) {
-            Runtime.launch([Config.bin.kitty, "-e", Config.bin.nmtui]);
+            Runtime.launchApp([Config.bin.kitty, "-e", Config.bin.nmtui]);
             Runtime.closeMenu();
         }
     }
