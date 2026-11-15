@@ -179,7 +179,7 @@ PanelWindow {
             apps: "Applications",
             clipboard: "Clipboard",
             files: "Files",
-            aliases: "Shell aliases",
+            aliases: "NixOS Cheatsheet",
             lazyvim: "LazyVim reference",
             todos: "TickTick",
             audio: "Audio",
@@ -435,7 +435,7 @@ PanelWindow {
         } else if (menu === "aliases" || menu === "lazyvim") {
             // Cheat-sheet format: "## Section" starts a group, "# ..." is a
             // file comment, "command   # description" is one entry.
-            // Shell aliases show the command first. Enter copies the command.
+            // The NixOS cheatsheet shows the shortcut first. Enter copies it.
             const commandFirst = menu === "aliases";
             let group = "";
             reference.text().split("\n").forEach(line => {

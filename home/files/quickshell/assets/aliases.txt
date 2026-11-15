@@ -1,5 +1,28 @@
-# Shell Alias Cheat Sheet (zsh + bash)
+# NixOS Cheatsheet
 # Open with Super + /
+
+## Windows, panes and editor splits
+Super + H/J/K/L           # navigate Hyprland windows
+Alt + H/J/K/L             # navigate Herdr panes
+Ctrl + H/J/K/L            # navigate Neovim splits (and tmux panes inside tmux)
+
+## Herdr Desktop
+Ctrl + 1..9               # select Herdr tab
+Ctrl + Shift + 1..9       # select Herdr space; avoids Hyprland's Alt-number screenshot keys
+Ctrl + Shift + T          # create Herdr tab
+Ctrl + Shift + N          # create Herdr space
+Ctrl + Shift + O          # split Herdr pane right
+Ctrl + Shift + E          # split Herdr pane down
+Ctrl + Shift + Z          # zoom Herdr pane
+Ctrl + Shift + R          # rename Herdr tab; F2 passes through to terminal apps
+Alt + Shift + H/J/K/L     # move Herdr pane left/down/up/right
+
+## LazyVim in Herdr
+[e / ]e                   # move line or linewise visual selection up/down
+Ctrl + X, Ctrl + O        # trigger completion in Insert mode; Ctrl-Space switches input language
+F2 / Space c r / Space r n # rename symbol with an attached language server
+Shift + H/L               # previous/next Neovim buffer
+Space b b                 # switch to the other Neovim buffer
 
 ## Find files and folders (fd)
 ff <name>                 # find files and folders by name, recursive

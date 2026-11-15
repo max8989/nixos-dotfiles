@@ -707,7 +707,7 @@ elif sys.argv[1] == 'battery-info':
     assert [r["id"] for r in inspect()["rows"]] == ["screen-text"]
     key("Escape")
     visited = [("fingerprint", "Fingerprint"), ("configuration", "Configuration files"),
-               ("aliases", "Shell aliases"), ("lazyvim", "LazyVim reference"),
+               ("aliases", "NixOS Cheatsheet"), ("lazyvim", "LazyVim reference"),
                ("desktop-names", "Manage desktops"), ("audio", "Audio devices"),
                ("battery", "Battery and power profile"), ("wifi", "Wi-Fi and network"),
                ("bluetooth", "Bluetooth"), ("calendar", "Calendar"),

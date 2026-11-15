@@ -33,6 +33,7 @@ in
     ./quickshell.nix
     ./resource-policy.nix
     ./kitty.nix
+    ./herdr.nix
     ./cli.nix
     ./shell.nix
     ./desktop.nix
