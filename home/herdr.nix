@@ -67,6 +67,7 @@
       "ctrl-shift-k" = "mod.open:picker";
       "ctrl-shift-p" = "app.palette";
       "ctrl-," = "app.settings";
+      "ctrl-shift-enter" = "pane.split:right";
       "ctrl-shift-o" = "pane.split:right";
       "ctrl-shift-e" = "pane.split:down";
       "ctrl-shift-w" = "tab.close";

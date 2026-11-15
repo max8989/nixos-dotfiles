@@ -11,6 +11,7 @@ Ctrl + 1..9               # select Herdr tab
 Ctrl + Shift + 1..9       # select Herdr space; avoids Hyprland's Alt-number screenshot keys
 Ctrl + Shift + T          # create Herdr tab
 Ctrl + Shift + N          # create Herdr space
+Ctrl + Shift + Enter      # open a new terminal pane to the right (same as Ctrl + Shift + O)
 Ctrl + Shift + O          # split Herdr pane right
 Ctrl + Shift + E          # split Herdr pane down
 Ctrl + Shift + Z          # zoom Herdr pane
