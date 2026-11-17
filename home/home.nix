@@ -144,6 +144,7 @@ in
     zoom-us
     ticktick
     herdr-desktop
+    herdr
     docling
     # --- games ---
     osu-lazer-bin # Official native Linux client, alongside osu!stable.
