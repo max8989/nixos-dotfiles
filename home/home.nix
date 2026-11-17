@@ -52,6 +52,16 @@ in
   # Let Home Manager manage itself.
   programs.home-manager.enable = true;
 
+  # Streaming / screen recording. Screen capture goes through the Hyprland
+  # portal (PipeWire); encoding uses the Intel iHD VAAPI driver from the host.
+  programs.obs-studio = {
+    enable = true;
+    plugins = with pkgs.obs-studio-plugins; [
+      obs-pipewire-audio-capture # per-app / desktop audio sources
+      obs-vaapi # hardware H.264/HEVC encoding on the Intel GPU
+    ];
+  };
+
   ##########################################################################
   ## Runtime packages — every binary the configs/keybindings/scripts invoke.
   ## On NixOS scripts can't assume a global PATH, so anything referenced must
