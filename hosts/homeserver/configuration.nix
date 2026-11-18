@@ -8,7 +8,12 @@
 # PIA WireGuard container, SABnzbd, Homepage, …) stays in Docker Compose.
 # media-storage.nix mounts the Samsung 1 TB library disk. The restored project
 # on the Corsair system disk runs with its original Compose restart policies.
-{ lib, username, ... }:
+{
+  lib,
+  pkgs,
+  username,
+  ...
+}:
 {
   imports = [
     ../common.nix
@@ -69,6 +74,14 @@
   # (or `docker run --device nvidia.com/gpu=all`). The legacy
   # `runtime: nvidia` / NVIDIA_VISIBLE_DEVICES route is not wired up here.
   hardware.nvidia-container-toolkit.enable = true;
+  # Project N.O.M.A.D. requests its Ollama GPU as DeviceRequest
+  # `Driver: "nvidia"`. Docker (moby daemon/devices_nvidia_linux.go) serves
+  # that driver through CDI (`nvidia.com/gpu`) when `nvidia-cdi-hook` is on
+  # dockerd's PATH. NOMAD only offers the GPU when a runtime named `nvidia` is
+  # registered; nothing selects it — containers keep runc.
+  systemd.services.docker.path = [ pkgs.nvidia-container-toolkit.tools ];
+  virtualisation.docker.daemon.settings.runtimes.nvidia.path =
+    "${pkgs.nvidia-container-toolkit.tools}/bin/nvidia-container-runtime.cdi";
 
   ##########################################################################
   ## Server behaviour
@@ -94,7 +107,7 @@
   # Project N.O.M.A.D. (../project-nomad.nix): reachable from the LAN here,
   # unlike the laptop's localhost-only default. Dozzle stays on 127.0.0.1.
   systemd.services.project-nomad.environment = {
-    NOMAD_URL = "http://192.168.2.42:8080";
+    NOMAD_URL = "http://192.168.2.43:8080";
     NOMAD_BIND = "0.0.0.0";
   };
 }
