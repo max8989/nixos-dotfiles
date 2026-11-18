@@ -10,6 +10,7 @@
     ../common.nix
     ../desktop.nix
     ../desktop-resources.nix
+    ../project-nomad.nix
     ./disko.nix
     ./hardware-configuration.nix
   ];

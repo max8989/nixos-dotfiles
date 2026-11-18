@@ -18,6 +18,7 @@
     ./hollama.nix
     ./open-webui.nix
     ./media-storage.nix
+    ../project-nomad.nix
   ];
 
   # The installed system boots with BIOS GRUB from the Corsair SSD. The
@@ -89,4 +90,11 @@
     1900 # DLNA / SSDP discovery
     7359 # Jellyfin "who's on this LAN" client discovery
   ];
+
+  # Project N.O.M.A.D. (../project-nomad.nix): reachable from the LAN here,
+  # unlike the laptop's localhost-only default. Dozzle stays on 127.0.0.1.
+  systemd.services.project-nomad.environment = {
+    NOMAD_URL = "http://192.168.2.42:8080";
+    NOMAD_BIND = "0.0.0.0";
+  };
 }
