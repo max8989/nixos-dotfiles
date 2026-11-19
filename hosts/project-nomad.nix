@@ -13,7 +13,8 @@
 #
 # Plug the drive in → the mount and the stack come up. Before unplugging:
 #   sudo systemctl stop 'opt-project\x2dnomad.mount'
-# which stops the stack (`compose down`) first, then unmounts.
+# which stops NOMAD's apps and the stack (`compose down`) first, then
+# unmounts.
 {
   config,
   lib,
@@ -28,6 +29,22 @@ let
   mountUnit = "opt-project\\x2dnomad.mount";
   docker = "${config.virtualisation.docker.package}/bin/docker";
   compose = "${docker} compose -p project-nomad -f ${mountPoint}/compose.yml";
+  # Apps installed from NOMAD's UI (Kiwix, Kolibri, …) are separate containers
+  # labelled with this compose project. They exist only on the host where they
+  # were installed and also bind-mount the drive, so they must stop before
+  # the unmount; on another host, reinstall them from the UI.
+  apps = "${docker} ps -aq --filter label=com.docker.compose.project=project-nomad-managed";
+  start = pkgs.writeShellScript "project-nomad-start" ''
+    set -eu
+    ${compose} up -d --remove-orphans
+    ids=$(${apps})
+    if [ -n "$ids" ]; then ${docker} start $ids; fi
+  '';
+  stop = pkgs.writeShellScript "project-nomad-stop" ''
+    ids=$(${apps})
+    if [ -n "$ids" ]; then ${docker} stop $ids; fi
+    ${compose} down
+  '';
 in
 {
   fileSystems.${mountPoint} = {
@@ -89,8 +106,8 @@ in
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${compose} up -d --remove-orphans";
-      ExecStop = "${compose} down";
+      ExecStart = start;
+      ExecStop = stop;
       TimeoutStartSec = "15min"; # first start pulls the images
     };
   };

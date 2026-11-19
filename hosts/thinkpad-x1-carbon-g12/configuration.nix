@@ -77,4 +77,9 @@
       }
     ];
   };
+
+  # Docker-published ports bypass the firewall. On a laptop that roams
+  # networks, bind ports without an explicit IP (NOMAD's apps, dev stacks)
+  # to localhost only.
+  virtualisation.docker.daemon.settings.ip = "127.0.0.1";
 }
