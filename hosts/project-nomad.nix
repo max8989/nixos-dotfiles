@@ -36,7 +36,9 @@ let
   apps = "${docker} ps -aq --filter label=com.docker.compose.project=project-nomad-managed";
   start = pkgs.writeShellScript "project-nomad-start" ''
     set -eu
-    ${compose} up -d --remove-orphans
+    # Upstream pins pull_policy: always, which fails offline; updates are an
+    # explicit step (UI updater or update_nomad.sh).
+    ${compose} up -d --remove-orphans --pull missing
     ids=$(${apps})
     if [ -n "$ids" ]; then ${docker} start $ids; fi
   '';
