@@ -80,6 +80,16 @@ cdc                       # copy "cd <here> && claude"
 cdo                       # copy "cd <here> && opencode"
 cdd                       # copy "cd <here>"
 
+## Project NOMAD (portable drive)
+xdg-open http://localhost:8080                       # open NOMAD on the laptop (server: http://192.168.2.43:8080)
+systemctl status project-nomad                       # is NOMAD running?
+sudo systemctl stop project-nomad                    # stop NOMAD and its apps, drive stays mounted
+sudo systemctl start project-nomad                   # start NOMAD and its apps again
+sudo systemctl stop 'opt-project\x2dnomad.mount'     # BEFORE UNPLUGGING: stop NOMAD, then unmount the drive
+findmnt /opt/project-nomad                           # prints nothing = safe to unplug
+sudo docker compose -p project-nomad -f /opt/project-nomad/compose.yml pull && sudo systemctl restart project-nomad # update NOMAD (needs internet); apps update from its UI
+journalctl -u project-nomad -e                       # NOMAD start/stop logs
+
 ## Misc
 c                         # clear
 q                         # exit

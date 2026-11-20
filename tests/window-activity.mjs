@@ -158,6 +158,19 @@ assert.deepEqual(changes(closedClients, unread), [{address: '0x24', attention: t
 assert.deepEqual(changes(workspaceClients, [{app: 'TickTick', unread: true}], '0x24'),
     [{address: '0x23', attention: true}], 'hidden scratchpad senders get attention borders');
 assert.deepEqual(changes(null, null), []);
+const groupTag = 'quickshell-group-notification';
+const groupedClients = freeze(workspaceClients.map(client => ['0x20', '0x21'].includes(client.address)
+    ? {...client, grouped: ['0x20', '0x21']} : client));
+assert.deepEqual(changes(groupedClients, unread, '0x21'), [
+    {address: '0x20', attention: true}, {address: '0x20', attention: true, group: true},
+    {address: '0x21', attention: true, group: true}, {address: '0x24', attention: true},
+], 'a background tab marks its whole group, including the focused visible tab');
+const groupTagged = freeze(groupedClients.map(client => ['0x20', '0x21'].includes(client.address)
+    ? {...client, tags: client.address === '0x20' ? [attentionTag, groupTag] : [groupTag]} : client));
+assert.deepEqual(changes(groupTagged, unread, '0x20'), [
+    {address: '0x20', attention: false}, {address: '0x20', attention: false, group: true},
+    {address: '0x21', attention: false, group: true}, {address: '0x24', attention: true},
+], 'switching to the sender tab clears the group border');
 assert.deepEqual(taggedClients[0].tags, ['personal-tag', attentionTag],
     'attention reconciliation must not change unrelated window tags');
 

@@ -66,13 +66,26 @@ function attentionChanges(clients, entries, activeAddress) {
     var unread = (entries || []).filter(function(entry) { return entry.unread; }).map(function(entry) {
         return notificationTarget(entry, live)?.address;
     });
-    return live.filter(function(client) {
-        var attention = client.address !== activeAddress && (!!client.urgent || unread.indexOf(client.address) >= 0);
-        var tagged = (client.tags || []).indexOf("quickshell-notification") >= 0;
-        return attention !== tagged;
-    }).map(function(client) {
-        return {address: client.address, attention: (client.tags || []).indexOf("quickshell-notification") < 0};
+    var attention = live.filter(function(client) {
+        return client.address !== activeAddress && (!!client.urgent || unread.indexOf(client.address) >= 0);
+    }).map(function(client) { return client.address; });
+    // Only a group's current tab draws a border, and the sender is usually a
+    // background tab. Mark every member so the visible one shows it, focused
+    // or not; switching to the sender clears it.
+    var grouped = [];
+    live.forEach(function(client) {
+        if (attention.indexOf(client.address) >= 0 && (client.grouped || []).length > 1)
+            grouped = grouped.concat(client.grouped);
     });
+    var changes = [];
+    live.forEach(function(client) {
+        var tags = client.tags || [];
+        if ((attention.indexOf(client.address) >= 0) !== (tags.indexOf("quickshell-notification") >= 0))
+            changes.push({address: client.address, attention: tags.indexOf("quickshell-notification") < 0});
+        if ((grouped.indexOf(client.address) >= 0) !== (tags.indexOf("quickshell-group-notification") >= 0))
+            changes.push({address: client.address, attention: tags.indexOf("quickshell-group-notification") < 0, group: true});
+    });
+    return changes;
 }
 
 function defaultAction(actions) {

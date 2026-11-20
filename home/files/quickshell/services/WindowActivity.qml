@@ -32,6 +32,7 @@ Singleton {
                 focusHistoryID: ipc.focusHistoryID,
                 urgent: !!ipc.urgent || !!nativeWindow?.urgent,
                 tags: ipc.tags || [],
+                grouped: ipc.grouped || [],
                 // Super+D maximized and Super+F fullscreen both get a square.
                 fullscreen: (ipc.fullscreen & 3) !== 0,
                 activated: ipc.address === root.compositor.activeAddress
@@ -87,7 +88,8 @@ Singleton {
         if (!changes.length)
             return;
         const commands = changes.map(change => 'dispatch hl.dsp.window.tag({window = "address:' + change.address
-            + '", tag = "' + (change.attention ? "+" : "-") + 'quickshell-notification"})');
+            + '", tag = "' + (change.attention ? "+" : "-")
+            + (change.group ? "quickshell-group-notification" : "quickshell-notification") + '"})');
         updatingAttention = true;
         Runtime.run([Config.bin.hyprctl, "--batch", commands.join("; ")], function(code) {
             root.updatingAttention = false;

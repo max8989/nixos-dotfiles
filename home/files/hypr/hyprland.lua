@@ -314,6 +314,14 @@ hl.window_rule({
     border_color = rgba(theme.urgent),
 })
 
+-- A tab group's visible window carries this tag when a background tab has
+-- unread notifications or urgency, even while the group is focused.
+hl.window_rule({
+    name = "notification-attention-group-border",
+    match = { tag = "quickshell-group-notification" },
+    border_color = rgba(theme.urgent),
+})
+
 -- Start Discord and TickTick in the hidden scratchpad without switching to it.
 -- Super+S toggles this workspace (see keybindings.lua).
 hl.window_rule({
