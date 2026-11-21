@@ -90,8 +90,16 @@ findmnt /opt/project-nomad                           # prints nothing = safe to 
 sudo docker compose -p project-nomad -f /opt/project-nomad/compose.yml pull && sudo systemctl restart project-nomad # update NOMAD (needs internet); apps update from its UI
 journalctl -u project-nomad -e                       # NOMAD start/stop logs
 
+## NixOS updates (homeserver prebuilds nightly)
+nixos-update                                    # pull the homeserver's last good flake.lock and switch; heavy packages download
+bump-latest                                     # nix flake update right now and switch; new packages compile locally
+nixos-switch                                    # switch to the checked-out config; uses the cache when it has the build
+ssh maxime@192.168.2.43 systemctl status prebuild-desktop     # last nightly prebuild: running, done or failed?
+ssh maxime@192.168.2.43 journalctl -u prebuild-desktop -n 30  # last nightly prebuild log
+ssh -t maxime@192.168.2.43 sudo systemctl start --no-block prebuild-desktop # run the prebuild now, in the background
+
 ## Misc
-c                         # clear
+c                       # clear
 q                         # exit
 df / du / free            # human readable sizes
 neofetch                  # fastfetch
