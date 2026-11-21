@@ -23,6 +23,7 @@
     ./hollama.nix
     ./open-webui.nix
     ./media-storage.nix
+    ./attic.nix
     ../project-nomad.nix
   ];
 

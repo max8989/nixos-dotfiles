@@ -35,6 +35,7 @@ in
     ./kitty.nix
     ./herdr.nix
     ./cli.nix
+    ./attic.nix
     ./shell.nix
     ./desktop.nix
     ./fcitx5.nix

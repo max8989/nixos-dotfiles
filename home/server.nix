@@ -10,6 +10,7 @@
   imports = [
     ./cli.nix
     ./shell.nix
+    ./attic.nix
   ];
 
   home.username = username;
