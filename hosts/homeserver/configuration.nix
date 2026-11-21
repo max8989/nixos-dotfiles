@@ -24,6 +24,7 @@
     ./open-webui.nix
     ./media-storage.nix
     ./attic.nix
+    ./prebuild-desktop.nix
     ../project-nomad.nix
   ];
 

@@ -102,6 +102,9 @@
               fullName
               hostname
               ;
+            # Graphical hosts, prebuilt nightly by the homeserver
+            # (hosts/homeserver/prebuild-desktop.nix).
+            desktopHosts = builtins.attrNames (nixpkgs.lib.filterAttrs (_: h: h.desktop) hosts);
           };
           modules = [
             disko.nixosModules.disko
