@@ -51,19 +51,17 @@ PanelWindow {
             Runtime.closeMenu();
         }, a.genericName || a.comment, a.icon);
         item.id = a.id;
-        item.recentKey = "app:" + a.id;
+        item.favoriteKey = "app:" + a.id;
         return item;
     })
-    readonly property var recentRows: Logic.resolveRecentItems(Preferences.recentItems,
+    readonly property var favoriteRows: Logic.resolveFavoriteItems(Preferences.favoriteItems,
         controls.all.concat(controls.themes, controls.desktopNames, controls.workspaces, applicationRows))
     readonly property var pageRows: {
         switch (Runtime.menu) {
         case "controls":
             return search.text.trim() ? controls.all : controls.home;
-        case "shortcuts":
-            return controls.shortcuts;
-        case "recent":
-            return recentRows;
+        case "favorites":
+            return favoriteRows;
         case "apps":
             return applicationRows;
         case "desktop-names":
@@ -152,14 +150,15 @@ PanelWindow {
             if (selectedRow?.adjust)
                 hints.push("← →  Adjust");
         }
-        hints.push("Esc  Back / close");
+        if (selectedRow?.favoriteKey)
+            hints.push("Ctrl+D  " + (Preferences.favoriteItems.indexOf(selectedRow.favoriteKey) >= 0 ? "Unfavorite" : "Favorite"));
+        hints.push("Esc  Close");
         return hints.join("    ");
     }
     function headingFor(name, title) {
         return ({
             controls: "Desktop menu",
-            recent: "Recent",
-            shortcuts: "Shortcuts",
+            favorites: "Favorites",
             "desktop-names": "Manage desktops",
             "desktop-name": "Desktop name",
             display: "Display",
@@ -325,15 +324,34 @@ PanelWindow {
         if (index >= 0)
             selectIndex(index);
     }
-    function recordRecentItem(item) {
-        if (item.recentKey && !item.submenu)
-            Preferences.recordRecentItem(item.recentKey, recentRows.map(row => row.recentKey));
+    function toggleFavorite() {
+        var item = filtered[list.currentIndex];
+        if (!item?.favoriteKey || confirmation || passwordPrompt)
+            return;
+        if (Config.preview) {
+            Runtime.report("Favorites are disabled in preview");
+            return;
+        }
+        var added = Preferences.toggleFavoriteItem(item.favoriteKey);
+        Runtime.report((added ? "Added to" : "Removed from") + " favorites · " + item.title);
+        if (Runtime.menu === "favorites")
+            selectIndex(Math.min(list.currentIndex, filtered.length - 1));
+    }
+    // Esc closes the whole menu; only inline prompts are cancelled in place.
+    function dismissOrClose() {
+        if (Runtime.menu === "wallpaper" && wallpaperPanel.dismiss())
+            return;
+        if (Runtime.menu === "display" && Display.scaleBusy)
+            Display.revertScale();
+        else if (passwordPrompt || confirmation)
+            dismissOrBack();
+        else
+            Runtime.closeMenu();
     }
     function adjust(direction) {
         var item = filtered[list.currentIndex];
         if (!item?.adjust || confirmation || passwordPrompt)
             return false;
-        recordRecentItem(item);
         item.adjust(direction);
         if (!controlsNavigation)
             focusTimer.restart();
@@ -545,7 +563,6 @@ PanelWindow {
             return;
         var item = filtered[list.currentIndex];
         if (item) {
-            recordRecentItem(item);
             item.action();
             focusTimer.restart();
         }
@@ -796,7 +813,12 @@ PanelWindow {
     Shortcut {
         sequence: "Escape"
         enabled: root.visible
-        onActivated: root.dismissOrBack()
+        onActivated: root.dismissOrClose()
+    }
+    Shortcut {
+        sequence: "Ctrl+D"
+        enabled: root.visible && !!root.selectedRow?.favoriteKey
+        onActivated: root.toggleFavorite()
     }
     Shortcut {
         sequence: "Alt+Left"
@@ -1113,6 +1135,13 @@ PanelWindow {
                             }
                         }
                         Text {
+                            visible: !!rowDelegate.modelData.favoriteKey && Preferences.favoriteItems.indexOf(rowDelegate.modelData.favoriteKey) >= 0
+                            text: "★"
+                            color: Config.theme.accent
+                            font.family: Config.theme.uiFont
+                            font.pixelSize: Config.fonts.body
+                        }
+                        Text {
                             text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
                             color: rowDelegate.commandEntry ? Config.theme.dim : Config.theme.accent
                             font.family: Config.theme.uiFont
@@ -1131,7 +1160,7 @@ PanelWindow {
                 Label {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: search.text ? "No matches" : Runtime.menu === "recent" ? "No recent items yet" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
+                    text: search.text ? "No matches" : Runtime.menu === "favorites" ? "No favorites yet · press Ctrl+D on any item to add it" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
                     color: Config.theme.dim
                 }
             }

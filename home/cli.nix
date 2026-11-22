@@ -48,6 +48,33 @@
       lua-language-server
       stylua
       shfmt
+      # Match the development extras in ~/repos/lazyvim-config.
+      vtsls
+      tsx
+      vscode-langservers-extracted
+      tailwindcss-language-server
+      yaml-language-server
+      bash-language-server
+      shellcheck
+      pyright
+      ruff
+      python3Packages.debugpy
+      omnisharp-roslyn
+      csharpier
+      netcoredbg
+      nil
+      nixfmt
+      statix
+      dockerfile-language-server
+      docker-compose-language-service
+      hadolint
+      taplo
+      sqlfluff
+      vscode-js-debug
+      marksman
+      markdownlint-cli2
+      markdown-toc
+      prettier
       fzf
       tmux
       wl-clipboard

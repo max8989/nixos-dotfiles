@@ -212,7 +212,7 @@ ShellRoot {
                                    calendarMonth: root.find(menus.contentItem, "menuCalendar").shown.getMonth(),
                                    dnd: Desktop.Preferences.dnd,
                                    appLaunchCounts: Desktop.Preferences.appLaunchCounts,
-                                   recentItems: Desktop.Preferences.recentItems,
+                                   favoriteItems: Desktop.Preferences.favoriteItems,
                                    workspaceNames: Desktop.Preferences.workspaceNames,
                                    desktopNameId: Desktop.Runtime.workspaceNameId || 0,
                                    desktopNameText: root.find(menus.contentItem, "desktopNameInput")?.text || "",
@@ -251,7 +251,8 @@ ShellRoot {
         }
         function openControls(): void { Desktop.Runtime.toggleMenu("controls", null); }
         function openApps(): void { Desktop.Runtime.toggleMenu("apps", null); }
-        function openRecent(): void { Desktop.Runtime.toggleMenu("recent", null); }
+        function openFavorites(): void { Desktop.Runtime.toggleMenu("favorites", null); }
+        function openMenu(name: string): void { Desktop.Runtime.toggleMenu(name, null); }
         function openCapture(): void { Desktop.Runtime.toggleMenu("capture", null); }
         function hideBar(hidden: bool): void { Desktop.Preferences.barHidden = hidden; }
         function openTheme(): void { Desktop.Runtime.toggleMenu("theme", null); }
@@ -453,13 +454,14 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
-    assert inspect()["rows"][0]["title"] == "Recent"
+    assert inspect()["rows"][0]["title"] == "Favorites"
     key("Right")
-    wait(lambda: inspect()["menu"] == "recent")
-    assert inspect()["rows"] == [] and inspect()["recentItems"] == []
-    capture("recent-empty")
+    wait(lambda: inspect()["menu"] == "favorites")
+    assert inspect()["rows"] == [] and inspect()["favoriteItems"] == []
+    capture("favorites-empty")
+    # Escape closes the whole menu, even from a nested page.
     key("Escape")
-    key("Escape")
+    wait(lambda: inspect()["menu"] == "")
 
     for title, expected in [("Copy text from screen", ["region", "ocr"]),
                             ("Decode QR code", ["region", "qr"]),
@@ -612,27 +614,33 @@ elif sys.argv[1] == 'battery-info':
     key("Return")
     wait(lambda: inspect()["menu"] == "" and inspect()["appLaunchCounts"][app_ids["Zebra"]] == 3)
     print("Application launch frequency, alphabetical ties, Enter selection and restart persistence passed")
-    qa("openRecent")
-    wait(lambda: len(inspect()["rows"]) >= 2)
-    assert [r["id"] for r in inspect()["rows"][:2]] == [app_ids["Zebra"], app_ids["Alpha"]]
+    # Launching never adds favorites; Ctrl+D on a row does, in the order added.
+    assert inspect()["favoriteItems"] == []
+    qa("openApps")
+    wait(lambda: inspect()["rows"][0]["id"] == app_ids["Zebra"])
+    key("d", "ctrl")
+    wait(lambda: inspect()["favoriteItems"] == ["app:" + app_ids["Zebra"]])
+    assert inspect()["menu"] == "apps"
+    key("Escape")
+    wait(lambda: inspect()["menu"] == "")
+    qa("openFavorites")
+    wait(lambda: [r["id"] for r in inspect()["rows"]] == [app_ids["Zebra"]])
     key("Return")
     wait(lambda: inspect()["menu"] == "" and inspect()["appLaunchCounts"][app_ids["Zebra"]] == 4)
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
-    key("Down")
-    assert inspect()["selected"] == "shortcuts"
-    key("Right")
-    wait(lambda: inspect()["menu"] == "shortcuts")
-    assert [row["id"] for row in inspect()["rows"]] == ["name-desktop", "desktop-names", "power-profile", "presentation"]
+    query("Name current desktop")
+    assert inspect()["rows"][0]["id"] == "name-desktop"
     key("Return")
     wait(lambda: inspect()["menu"] == "desktop-name" and inspect()["desktopNameId"] == 2)
     run(["wtype", "-s", "150", "Event config"])
     qa("currentDesktop", 3)
     key("Return")
-    wait(lambda: inspect()["menu"] == "shortcuts" and inspect()["workspaceNames"].get("2") == "Event config")
+    wait(lambda: inspect()["menu"] == "controls" and inspect()["workspaceNames"].get("2") == "Event config")
     assert "3" not in inspect()["workspaceNames"], "Changing focus renamed the wrong desktop"
-    key("Down")
+    query("Manage desktops")
+    assert inspect()["rows"][0]["id"] == "desktop-names"
     key("Return")
     wait(lambda: inspect()["menu"] == "desktop-names")
     query("Event config")
@@ -640,8 +648,11 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["desktopNameText"] == "Event config")
     run(["wtype", "-s", "150", "-M", "ctrl", "-k", "a", "-m", "ctrl", "Cancelled name"])
     key("Escape")
-    wait(lambda: inspect()["menu"] == "desktop-names")
+    wait(lambda: inspect()["menu"] == "")
     assert inspect()["workspaceNames"]["2"] == "Event config"
+    qa("openMenu", "desktop-names")
+    wait(lambda: inspect()["menu"] == "desktop-names")
+    query("Event config")
     key("Return")
     wait(lambda: inspect()["menu"] == "desktop-name")
     qa("focusControl", "desktopNameClear")
@@ -687,9 +698,10 @@ elif sys.argv[1] == 'battery-info':
     capture("desktop-name-bar")
     expected_names = {"1": "Reference desk", "21": "Project 中文 <config> & notes"}
     wait(lambda: json.loads(saved_preferences.read_text()).get("workspaceNames") == expected_names)
-    legacy_recent = ["control:screen-text", "control:trigger", "control:shortcuts"]
+    stale_favorites = ["control:removed", "control:screen-text", "control:trigger"]
     legacy_preferences = json.loads(saved_preferences.read_text())
-    legacy_preferences["recentItems"] = legacy_recent
+    legacy_preferences["favoriteItems"] = stale_favorites
+    legacy_preferences["recentItems"] = ["control:dnd"]
     saved_preferences.write_text(json.dumps(legacy_preferences))
     process.terminate()
     process.wait(timeout=5)
@@ -699,13 +711,18 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
     wait(lambda: inspect()["workspaceNames"] == expected_names)
     assert inspect()["appLaunchCounts"][app_ids["Zebra"]] == 4
-    print("Desktop shortcut actions, right-click naming, cancellation, clearing, empty desktops and restart persistence passed")
+    print("Desktop naming actions, right-click naming, cancellation, clearing, empty desktops and restart persistence passed")
 
-    wait(lambda: inspect()["recentItems"] == legacy_recent)
-    qa("openRecent")
-    wait(lambda: inspect()["menu"] == "recent")
-    assert [r["id"] for r in inspect()["rows"]] == ["screen-text"]
+    wait(lambda: inspect()["favoriteItems"] == stale_favorites)
+    qa("openFavorites")
+    wait(lambda: inspect()["menu"] == "favorites")
+    # Removed items are hidden; favorited pages stay openable.
+    assert [r["id"] for r in inspect()["rows"]] == ["screen-text", "trigger"]
+    key("Down")
+    key("Return")
+    wait(lambda: inspect()["menu"] == "trigger")
     key("Escape")
+    wait(lambda: inspect()["menu"] == "")
     visited = [("fingerprint", "Fingerprint"), ("configuration", "Configuration files"),
                ("aliases", "NixOS Cheatsheet"), ("lazyvim", "LazyVim reference"),
                ("desktop-names", "Manage desktops"), ("audio", "Audio devices"),
@@ -720,15 +737,14 @@ elif sys.argv[1] == 'battery-info':
         key("Return")
         wait(lambda: inspect()["menu"] == menu)
         key("Escape")
-        key("Escape")
-    assert inspect()["recentItems"] == legacy_recent, "Browsing sections changed action history"
+        wait(lambda: inspect()["menu"] == "")
     actions = [("dnd", "Do Not Disturb"), ("power-profile", "Power profile"),
                ("presentation", "Presentation mode"), ("play", "Play / pause"),
                ("previous", "Previous track"), ("next", "Next track"),
                ("screenshot-region", "Screenshot region"), ("screenshot-window", "Screenshot window"),
                ("screenshot-screen", "Screenshot screen"), ("screen-text", "Copy text from screen"),
                ("screen-qr", "Decode QR code"), ("screen-color", "Pick screen color")]
-    for index, (action, title) in enumerate(actions):
+    for action, title in actions:
         qa("openControls")
         wait(lambda: inspect()["menu"] == "controls")
         query(title)
@@ -737,59 +753,55 @@ elif sys.argv[1] == 'battery-info':
         if inspect()["menu"] == "controls":
             key("Escape")
         wait(lambda: inspect()["menu"] == "")
-        if index == 0:
-            assert inspect()["recentItems"] == ["control:dnd", "control:screen-text"], "Saved sections were not pruned"
-    expected_recent = ["control:" + action for action, _ in reversed(actions[-10:])]
+    assert inspect()["favoriteItems"] == stale_favorites, "Browsing or activating changed favorites"
+    qa("openFavorites")
+    wait(lambda: inspect()["menu"] == "favorites")
+    key("Down")
+    assert inspect()["selected"] == "trigger"
+    key("d", "ctrl")
+    wait(lambda: [r["id"] for r in inspect()["rows"]] == ["screen-text"])
+    assert inspect()["favoriteItems"] == ["control:removed", "control:screen-text"]
+    key("Escape")
     qa("openControls")
-    key("Right")
-    wait(lambda: inspect()["menu"] == "recent")
-    assert inspect()["recentItems"] == expected_recent
-    assert [r["id"] for r in inspect()["rows"]] == [action for action, _ in reversed(actions[-10:])]
-    assert all(not r["submenu"] for r in inspect()["rows"])
-    capture("recent-full")
-    key("Return")
-    wait(lambda: inspect()["menu"] == "")
-    assert inspect()["recentItems"] == expected_recent
-    qa("openControls")
-    query("Shortcuts")
-    key("Return")
-    wait(lambda: inspect()["menu"] == "shortcuts")
-    presentation = next(r for r in inspect()["rows"] if r["id"] == "presentation")
+    wait(lambda: inspect()["menu"] == "controls")
+    query("Presentation mode")
+    assert inspect()["rows"][0]["id"] == "presentation"
+    key("d", "ctrl")
+    wait(lambda: inspect()["favoriteItems"] == ["control:removed", "control:screen-text", "control:presentation"])
+    key("Escape")
+    qa("openFavorites")
+    wait(lambda: [r["id"] for r in inspect()["rows"]] == ["screen-text", "presentation"])
+    presentation = inspect()["rows"][1]
     target = next(r for r in inspect()["menuRows"] if r["id"] == "presentation")
     qa("clickMenu", round(target["x"]), round(target["y"]))
-    wait(lambda: inspect()["recentItems"][0] == "control:presentation")
-    qa("openRecent")
-    wait(lambda: inspect()["rows"][0]["id"] == "presentation")
-    assert inspect()["rows"][0]["value"] != presentation["value"]
+    wait(lambda: inspect()["rows"][1]["value"] != presentation["value"])
     key("Return")
-    wait(lambda: inspect()["rows"][0]["value"] == presentation["value"])
-    expected_recent = inspect()["recentItems"]
-    assert len(expected_recent) == 10 and expected_recent.count("control:presentation") == 1
-    capture("recent-live-control")
-    wait(lambda: json.loads(saved_preferences.read_text()).get("recentItems") == expected_recent)
+    wait(lambda: inspect()["rows"][1]["value"] == presentation["value"])
+    capture("favorites-live-control")
+    expected_favorites = inspect()["favoriteItems"]
+    wait(lambda: json.loads(saved_preferences.read_text()).get("favoriteItems") == expected_favorites)
+    assert "recentItems" not in json.loads(saved_preferences.read_text())
     process.terminate()
     process.wait(timeout=5)
     process = subprocess.Popen(["quickshell", "--path", str(fixture), "--no-color"], env=env,
                                stdout=log_file, stderr=subprocess.STDOUT)
     processes.append(process)
     wait(lambda: "target qa" in run(["quickshell", "ipc", "--path", str(fixture), "show"], check=False).stdout)
-    wait(lambda: inspect()["recentItems"] == expected_recent)
-    qa("openRecent")
-    wait(lambda: len(inspect()["rows"]) == 10)
-    assert inspect()["rows"][0]["id"] == "presentation"
-    assert all(not r["submenu"] for r in inspect()["rows"])
+    wait(lambda: inspect()["favoriteItems"] == expected_favorites)
+    qa("openFavorites")
+    wait(lambda: [r["id"] for r in inspect()["rows"]] == ["screen-text", "presentation"])
     key("Escape")
-    print("Recent action-only history, legacy section filtering, ten-item limit, mouse/keyboard activation and restart persistence passed")
+    print("Favorites Ctrl+D toggling, stale-item filtering, page favorites, mouse/keyboard activation and restart persistence passed")
 
     qa("openControls")
     wait(lambda: inspect()["menu"] == "controls")
     time.sleep(0.2)
     capture("controls-home")
     state = inspect()
-    assert [r["title"] for r in state["rows"]] == ["Recent", "Shortcuts", "Trigger", "Style", "Setup", "Apps", "Learn", "About", "System"]
+    assert [r["title"] for r in state["rows"]] == ["Favorites", "Trigger", "Style", "Setup", "Apps", "Learn", "About", "System"]
     assert all(r["submenu"] for r in state["rows"])
     assert state["listContentHeight"] <= state["listHeight"]
-    assert state["selected"] == "recent"
+    assert state["selected"] == "favorites"
     # The headless seat has no physical mouse. Supply its initial position
     # before testing a movement, as a real seat does when the window maps.
     qa("pointMenu", round(state["card"]["x"] + 20), round(state["card"]["y"] + 20))
@@ -804,7 +816,7 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["menu"] == "controls")
     qa("pointMenu", round(target["x"]), round(target["y"]))
     time.sleep(.3)
-    assert inspect()["selected"] == "recent", "Opening beneath a stationary cursor stole selection"
+    assert inspect()["selected"] == "favorites", "Opening beneath a stationary cursor stole selection"
     capture("controls-stationary-pointer")
     run(["swaymsg", "output", "HEADLESS-1", "resolution", "1024x600"])
     time.sleep(.3)
@@ -1053,7 +1065,7 @@ elif sys.argv[1] == 'battery-info':
     query("wifi")
     key("Return")
     wait(lambda: inspect()["menu"] == "wifi")
-    key("Escape")
+    key("Left", "alt")
     wait(lambda: inspect()["menu"] == "controls")
     assert inspect()["query"] == "wifi" and inspect()["selected"] == "wifi"
 
@@ -1065,7 +1077,7 @@ elif sys.argv[1] == 'battery-info':
     wait(lambda: inspect()["calendarMonth"] == (month + 1) % 12)
     key("Home")
     wait(lambda: inspect()["calendarMonth"] == month)
-    key("Escape")
+    key("Left", "alt")
     wait(lambda: inspect()["menu"] == "controls")
 
     qa("addNotification")
@@ -1080,7 +1092,7 @@ elif sys.argv[1] == 'battery-info':
     key("Return")  # Clear history, via the actual focused button.
     wait(lambda: inspect()["notificationCount"] == 0)
     capture("controls-notification-keyboard")
-    key("Escape")
+    key("Left", "alt")
     wait(lambda: inspect()["menu"] == "controls")
 
     query("restart")
@@ -1270,7 +1282,7 @@ try:
         # Exercise the actual CLI grammar used by decrease-volume/brightness keys.
         result = ipc("call", target, method, "-5")
         assert "error" not in (result.stdout + result.stderr).lower()
-    menu_names = ["controls", "recent", "shortcuts", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "aliases", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
+    menu_names = ["controls", "favorites", "desktop-names", "learn", "trigger", "configuration", "style", "theme", "wallpaper", "display", "desktop", "capture", "settings", "workspaces", "tray", "apps", "clipboard", "files", "aliases", "lazyvim", "todos", "audio", "wifi", "bluetooth", "battery", "power", "powerProfiles", "notifications", "calendar", "status"]
     for menu in menu_names:
         ipc("call", "menus", "toggle", menu)
         time.sleep(0.3)
@@ -1283,7 +1295,7 @@ try:
     preview_state = output / "state/state.json"
     if preview_state.exists():
         assert not json.loads(preview_state.read_text()).get("appLaunchCounts"), "Preview launches changed application usage"
-        assert not json.loads(preview_state.read_text()).get("recentItems"), "Preview clicks changed recent items"
+        assert not json.loads(preview_state.read_text()).get("favoriteItems"), "Preview changed favorites"
     ipc("call", "menus", "toggle", "apps")
     run(["wtype", "-s", "150", "-d", "20", "zz-no-app-matches-zz"])
     run(["wtype", "-s", "150", "-k", "Return"])

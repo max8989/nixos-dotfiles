@@ -56,29 +56,29 @@ assert.deepEqual(plain(context.rankApplications(apps, context.restoreState({}).a
 assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({appLaunchCounts:appCounts}))).appLaunchCounts),
     plain(appCounts));
 for (const value of [undefined, null, {}, "broken", 42]) {
-    assert.deepEqual(plain(context.restoreState({recentItems:value}).recentItems), []);
+    assert.deepEqual(plain(context.restoreState({favoriteItems:value}).favoriteItems), []);
 }
-assert.deepEqual(plain(context.restoreState({recentItems:["control:presentation", null, "", 4,
-    "app:editor", "control:presentation"]}).recentItems), ["control:presentation", "app:editor"]);
-let recentItems = [];
-for (let id = 0; id < 12; id++) recentItems = context.rememberRecentItem(recentItems, "control:" + id);
-assert.deepEqual(plain(recentItems), Array.from({length:10}, (_, i) => "control:" + (11 - i)));
-const previousRecentItems = recentItems;
-recentItems = context.rememberRecentItem(recentItems, "control:5");
-assert.deepEqual(plain(recentItems), ["control:5", "control:11", "control:10", "control:9", "control:8",
-    "control:7", "control:6", "control:4", "control:3", "control:2"]);
-assert.deepEqual(plain(previousRecentItems), Array.from({length:10}, (_, i) => "control:" + (11 - i)));
-assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({recentItems}))).recentItems), plain(recentItems));
-const recentCatalog = [{recentKey:"control:5", title:"Live value", value:"On"},
-    {recentKey:"app:editor", title:"Editor"}];
-assert.deepEqual(plain(context.resolveRecentItems(["control:removed", "app:editor", "control:5"], recentCatalog)),
-    [recentCatalog[1], recentCatalog[0]]);
-assert.equal(context.resolveRecentItems(["control:5"], recentCatalog)[0], recentCatalog[0]);
-const legacyCatalog = [{recentKey:"control:trigger", title:"Trigger", submenu:true},
-    {recentKey:"control:shortcuts", title:"Shortcuts", submenu:true},
-    {recentKey:"control:screen-text", title:"Copy text from screen"}];
-assert.deepEqual(plain(context.resolveRecentItems(
-    ["control:screen-text", "control:trigger", "control:shortcuts"], legacyCatalog)), [legacyCatalog[2]]);
+assert.deepEqual(plain(context.restoreState({favoriteItems:["control:presentation", null, "", 4,
+    "app:editor", "control:presentation"]}).favoriteItems), ["control:presentation", "app:editor"]);
+assert.deepEqual(plain(context.restoreState({recentItems:["control:dnd"]}).favoriteItems), []);
+let favoriteItems = [];
+favoriteItems = context.toggleFavoriteItem(favoriteItems, "control:dnd");
+favoriteItems = context.toggleFavoriteItem(favoriteItems, "app:editor");
+favoriteItems = context.toggleFavoriteItem(favoriteItems, "control:presentation");
+assert.deepEqual(plain(favoriteItems), ["control:dnd", "app:editor", "control:presentation"]);
+const previousFavoriteItems = favoriteItems;
+favoriteItems = context.toggleFavoriteItem(favoriteItems, "app:editor");
+assert.deepEqual(plain(favoriteItems), ["control:dnd", "control:presentation"]);
+assert.deepEqual(plain(previousFavoriteItems), ["control:dnd", "app:editor", "control:presentation"]);
+let manyFavorites = [];
+for (let id = 0; id < 60; id++) manyFavorites = context.toggleFavoriteItem(manyFavorites, "control:" + id);
+assert.equal(manyFavorites.length, 50);
+assert.deepEqual(plain(context.restoreState(JSON.parse(JSON.stringify({favoriteItems}))).favoriteItems), plain(favoriteItems));
+const favoriteCatalog = [{favoriteKey:"control:5", title:"Live value", value:"On"},
+    {favoriteKey:"app:editor", title:"Editor"}, {favoriteKey:"control:trigger", title:"Trigger", submenu:true}];
+assert.deepEqual(plain(context.resolveFavoriteItems(["control:removed", "app:editor", "control:trigger", "control:5"], favoriteCatalog)),
+    [favoriteCatalog[1], favoriteCatalog[2], favoriteCatalog[0]]);
+assert.equal(context.resolveFavoriteItems(["control:5"], favoriteCatalog)[0], favoriteCatalog[0]);
 for (const value of [undefined, null, [], "broken", 42]) {
     assert.deepEqual(plain(context.restoreState({workspaceNames:value}).workspaceNames), {});
 }

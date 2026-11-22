@@ -9,6 +9,14 @@ let
         --replace-fail 'set -- $a2u__command' 'set -- $a2u__command$A2U__USEP' \
         --replace-fail 'set -- $A2U__EXEC_RSEP_USEP' 'set -- $A2U__EXEC_RSEP_USEP$A2U__USEP' \
         --replace-fail 'set -- $a2u__cmd' 'set -- $a2u__cmd$A2U__USEP'
+      # Accept `!` in Entry IDs (osu-lazer ships `osu!.desktop`). Unit names
+      # stay valid: app2unit systemd-escapes any non [a-zA-Z:_.] substring.
+      substituteInPlace "$out/bin/app2unit" \
+        --replace-fail \
+          '*[!a-zA-Z0-9_.-]* | *[!a-zA-Z0-9_.-] | [!a-zA-Z0-9_.-]* | [!a-zA-Z0-9_.-] |' \
+          '*[!a-zA-Z0-9_.!-]* | *[!a-zA-Z0-9_.!-] | [!a-zA-Z0-9_.!-]* | [!a-zA-Z0-9_.!-] |' \
+        --replace-fail "! -path \"\$a2u__fe_directory\"'./*[^a-zA-Z0-9_./-]*'" \
+          "! -path \"\$a2u__fe_directory\"'./*[^a-zA-Z0-9_./!-]*'"
     '';
   });
   launch = pkgs.writeShellApplication {

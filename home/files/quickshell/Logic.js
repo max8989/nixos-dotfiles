@@ -50,7 +50,7 @@ function restoreState(value) {
         panelTextSize: Math.max(12, Math.min(20, Math.round(Number(value.panelTextSize) || 12))),
         monitorScales: value.monitorScales && typeof value.monitorScales === "object" && !Array.isArray(value.monitorScales) ? value.monitorScales : {},
         appLaunchCounts: restoreAppLaunchCounts(value.appLaunchCounts),
-        recentItems: restoreRecentItems(value.recentItems),
+        favoriteItems: restoreFavoriteItems(value.favoriteItems),
         workspaceNames: restoreWorkspaceNames(value.workspaceNames),
         folder: typeof value.folder === "string" ? value.folder : "",
         wallpaperFolder: typeof value.wallpaperFolder === "string" && value.wallpaperFolder.startsWith("/") ? value.wallpaperFolder : "" };
@@ -93,19 +93,21 @@ function rankApplications(items, counts) {
             || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
 }
-function restoreRecentItems(value) {
+function restoreFavoriteItems(value) {
     if (!Array.isArray(value)) return [];
     return value.filter(function(id, index) {
         return typeof id === "string" && id.length > 0 && value.indexOf(id) === index;
-    }).slice(0, 10);
+    }).slice(0, 50);
 }
-function rememberRecentItem(items, id) {
-    return restoreRecentItems([id].concat(items.filter(function(item) { return item !== id; })));
+// Favorites keep the order they were added in; toggling again removes one.
+function toggleFavoriteItem(items, id) {
+    return items.indexOf(id) >= 0 ? items.filter(function(item) { return item !== id; })
+        : restoreFavoriteItems(items.concat([id]));
 }
-function resolveRecentItems(ids, catalog) {
+function resolveFavoriteItems(ids, catalog) {
     return ids.map(function(id) {
-        return catalog.find(function(item) { return item.recentKey === id; });
-    }).filter(function(item) { return item && !item.submenu; });
+        return catalog.find(function(item) { return item.favoriteKey === id; });
+    }).filter(Boolean);
 }
 function parseJson(text, fallback) { try { return JSON.parse(text); } catch (error) { return fallback; } }
 function clipboardEntries(text) {
