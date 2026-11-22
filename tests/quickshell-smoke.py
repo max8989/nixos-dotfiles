@@ -736,6 +736,28 @@ elif sys.argv[1] == 'battery-info':
         assert inspect()["rows"][0]["id"] == menu
         key("Return")
         wait(lambda: inspect()["menu"] == menu)
+        if menu == "aliases":
+            # Sections open collapsed; Enter/Right expand, Left collapses,
+            # and a query shows matches under expanded headers in file order.
+            wait(lambda: len(inspect()["rows"]) > 1)
+            collapsed = inspect()["rows"]
+            assert all(r["id"].startswith("section:") for r in collapsed), collapsed
+            key("Return")
+            wait(lambda: len(inspect()["rows"]) > len(collapsed))
+            assert inspect()["selected"] == collapsed[0]["id"]
+            assert not inspect()["rows"][1]["id"].startswith("section:")
+            capture("aliases-expanded")
+            key("Left")
+            wait(lambda: len(inspect()["rows"]) == len(collapsed))
+            key("Down")
+            key("Right")
+            wait(lambda: len(inspect()["rows"]) > len(collapsed))
+            assert inspect()["selected"] == collapsed[1]["id"]
+            query("prebuild")
+            wait(lambda: inspect()["query"] == "prebuild")
+            found = inspect()["rows"]
+            assert found and found[0]["id"].startswith("section:") and len(found) > 1, found
+            capture("aliases-search")
         key("Escape")
         wait(lambda: inspect()["menu"] == "")
     actions = [("dnd", "Do Not Disturb"), ("power-profile", "Power profile"),

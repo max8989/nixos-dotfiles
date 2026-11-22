@@ -112,6 +112,11 @@ assert.deepEqual(plain(context.clipboardEntries("17\t  keep spaces  \n16\t[[ bin
 ]);
 assert.deepEqual(plain(context.clipboardEntries("")), []);
 assert.deepEqual(plain(context.clipboardThumbs("16\t/run/user/1000/quickshell-clipboard-thumbs/16\nbad\n9\trelative\n")), {"16":"/run/user/1000/quickshell-clipboard-thumbs/16"});
+const sheet=[{title:"A",section:"A",id:"section:A"},{title:"a1",group:"A"},{title:"a2",group:"A"},{title:"B",section:"B",id:"section:B"},{title:"b1",group:"B"}];
+assert.deepEqual(plain(context.sectionRows(sheet,null,{})).map(r => [r.title,r.expanded,r.count]),[["A",false,2],["B",false,1]]);
+assert.deepEqual(plain(context.sectionRows(sheet,null,{B:true})).map(r => r.title),["A","B","b1"]);
+assert.deepEqual(plain(context.sectionRows(sheet,[sheet[4],sheet[2]],{})).map(r => [r.title,r.expanded,r.count]),[["A",true,1],["a2",undefined,undefined],["B",true,1],["b1",undefined,undefined]]);
+assert.deepEqual(plain(context.sectionRows(sheet,[],{A:true})),[]);
 const network=context.networkSample("wlan0: 100 0 0 0 0 0 0 0 200 0 0 0\nlo: 999 0 0 0 0 0 0 0 999");
 assert.deepEqual(plain(network),{wlan0:{rx:100,tx:200}});
 assert.equal(context.networkRate(network,{wlan0:{rx:300,tx:400}},2),"↓ 100 B/s  ↑ 100 B/s");

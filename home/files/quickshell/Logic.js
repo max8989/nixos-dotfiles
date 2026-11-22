@@ -138,6 +138,30 @@ function search(items, query) {
         .map(function(match) { return match.item; });
 }
 
+// Cheat sheets group entries under collapsible "section" header rows.
+// Without a query, entries show only under expanded headers. With one,
+// matching entries keep file order under their headers, all expanded.
+function sectionRows(rows, matched, expanded) {
+    var searching = matched !== null && matched !== undefined;
+    var counts = {};
+    rows.forEach(function(row) {
+        if (!row.section && row.group && (!searching || matched.indexOf(row) !== -1))
+            counts[row.group] = (counts[row.group] || 0) + 1;
+    });
+    var result = [];
+    rows.forEach(function(row) {
+        if (row.section) {
+            if (searching && !counts[row.section]) return;
+            var header = Object.assign({}, row);
+            header.expanded = searching || !!expanded[row.section];
+            header.count = counts[row.section] || 0;
+            result.push(header);
+        } else if (searching ? matched.indexOf(row) !== -1 : !row.group || !!expanded[row.group])
+            result.push(row);
+    });
+    return result;
+}
+
 function batteryAlert(previous, band) {
     var next={low:!!previous.low,critical:!!previous.critical,full:!!previous.full};
     var alert="";

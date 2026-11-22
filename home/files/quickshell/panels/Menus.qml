@@ -117,7 +117,12 @@ PanelWindow {
             return rows;
         }
     }
-    property var filtered: Logic.search(pageRows, search.text)
+    readonly property bool sectionedPage: Runtime.menu === "aliases" || Runtime.menu === "lazyvim"
+    readonly property bool clipboardPage: Runtime.menu === "clipboard"
+    readonly property bool listPage: !settingsPanel && !namingDesktop && Runtime.menu !== "wallpaper" && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
+    // Cheat-sheet sections start collapsed on every open; a query expands all.
+    property var expandedSections: ({})
+    property var filtered: sectionedPage ? Logic.sectionRows(pageRows, search.text.trim() ? Logic.search(pageRows.filter(item => !item.section), search.text) : null, expandedSections) : Logic.search(pageRows, search.text)
     readonly property var selectedRow: filtered[list.currentIndex] || null
     property string selectionKey: ""
     property var trayHandle: null
@@ -130,6 +135,9 @@ PanelWindow {
         folderPath = Preferences.folder
     property int requestSerial: 0
     property bool clipboardBusy: false
+    // Full text of the selected clipboard entry; `cliphist list` truncates.
+    property string clipboardPreviewId: ""
+    property string clipboardPreviewText: ""
     readonly property var wifiNetworks: Networking.devices.values.filter(d => d.type === DeviceType.Wifi).reduce((all, d) => all.concat(d.networks.values), [])
     readonly property var bluetoothDevices: Bluetooth.devices.values
     readonly property string heading: headingFor(Runtime.menu, trayTitle)
@@ -145,6 +153,10 @@ PanelWindow {
                 hints.push("Ctrl+−/+  Adjust");
             if (!search.text && Runtime.menuHistory.length)
                 hints.push("Backspace  Back");
+        } else if (sectionedPage) {
+            hints.push(selectedRow?.section ? (search.text.trim() ? "Enter  Toggle" : "Enter / ← →  " + (selectedRow.expanded ? "Collapse" : "Expand")) : "Enter  Copy");
+        } else if (clipboardPage) {
+            hints.push("Enter  Copy");
         } else {
             hints.push("Enter  Open / toggle");
             if (selectedRow?.adjust)
@@ -361,6 +373,10 @@ PanelWindow {
         // Modified arrows keep text selection/editing and Alt+Left navigation.
         if (event.modifiers !== Qt.NoModifier || confirmation || passwordPrompt)
             return false;
+        if (selectedRow?.section && !search.text.trim()) {
+            toggleSection(selectedRow.section, direction > 0);
+            return true;
+        }
         if (!controlsNavigation)
             return adjust(direction);
         if (direction < 0) {
@@ -412,8 +428,9 @@ PanelWindow {
                     return;
                 var entries = Logic.clipboardEntries(out);
                 root.rows = entries.map(entry => {
-                    var item = root.row(entry.title, () => root.restoreClipboard(entry.id), entry.image ? "Image · " + entry.title.replace(/^\[\[ binary data (.*) \]\]$/, "$1") + " · select to copy" : "Text · select to copy");
+                    var item = root.row(entry.image ? "Image" : entry.title.trim() || "(whitespace)", () => root.restoreClipboard(entry.id), entry.image ? entry.title.replace(/^\[\[ binary data (.*) \]\]$/, "$1") : "Text");
                     item.id = entry.id;
+                    item.image = entry.image;
                     return item;
                 });
                 if (code) {
@@ -460,8 +477,10 @@ PanelWindow {
                 const heading = /^##\s+(.+)$/.exec(line);
                 if (heading) {
                     group = heading[1].trim();
-                    const header = row(group, () => {});
-                    header.section = true;
+                    const name = group;
+                    const header = row(group, () => root.toggleSection(name));
+                    header.id = "section:" + group;
+                    header.section = group;
                     items.push(header);
                 } else if (line.trim() && !/^#\s/.test(line)) {
                     const parts = line.split(/\s+#\s+/);
@@ -475,6 +494,7 @@ PanelWindow {
                     if (description)
                         entry.value = commandFirst ? description : command;
                     entry.keywords = command + " " + description + " " + group;
+                    entry.group = group;
                     items.push(entry);
                 }
             });
@@ -567,6 +587,32 @@ PanelWindow {
             focusTimer.restart();
         }
     }
+    function toggleSection(name, open) {
+        var next = Object.assign({}, expandedSections);
+        next[name] = open === undefined ? !next[name] : open;
+        if (!!next[name] === !!expandedSections[name])
+            return;
+        selectionKey = "section:" + name;
+        expandedSections = next;
+        // Bring the opened group into view below its header.
+        if (next[name])
+            Qt.callLater(() => list.positionViewAtIndex(list.currentIndex, ListView.Beginning));
+    }
+    function loadClipboardPreview() {
+        var item = selectedRow;
+        if (!clipboardPage || !item || item.image || item.id === clipboardPreviewId)
+            return;
+        var id = item.id, serial = requestSerial;
+        clipboardPreviewId = id;
+        clipboardPreviewText = item.title;
+        Runtime.run([Config.bin.cliphist, "decode", id], function (code, out) {
+            if (serial !== root.requestSerial || root.clipboardPreviewId !== id || code)
+                return;
+            root.clipboardPreviewText = out.length > 20000 ? out.slice(0, 20000) + "\n…" : out;
+        });
+    }
+    onSelectedRowChanged: if (clipboardPage)
+        clipboardPreviewTimer.restart()
     function restoreClipboard(id) {
         if (Config.preview || clipboardBusy)
             return;
@@ -596,6 +642,8 @@ PanelWindow {
         confirmation = "";
         passwordPrompt = "";
         pendingWifi = null;
+        expandedSections = {};
+        clipboardPreviewId = "";
         refresh();
         focusTimer.restart();
     }
@@ -608,6 +656,8 @@ PanelWindow {
             root.confirmation = "";
             password.text = "";
             root.selectionKey = "";
+            root.expandedSections = {};
+            root.clipboardPreviewId = "";
             search.text = "";
             if (Runtime.menu === "controls" || Runtime.menu === "display")
                 Display.refreshBrightness();
@@ -783,6 +833,11 @@ PanelWindow {
         onTriggered: Display.refreshBrightness()
     }
     Timer {
+        id: clipboardPreviewTimer
+        interval: 60
+        onTriggered: root.loadClipboardPreview()
+    }
+    Timer {
         id: focusTimer
         interval: 40
         onTriggered: if (root.visible) {
@@ -840,7 +895,7 @@ PanelWindow {
     Glass {
         id: card
         surface: root.surfaceName
-        width: Math.min(root.settingsPanel ? 540 : Runtime.menu === "controls" || root.namingDesktop || root.fromBar ? 480 : 720, root.width - 32)
+        width: Math.min(root.settingsPanel ? 540 : Runtime.menu === "controls" || root.namingDesktop || root.fromBar ? 480 : root.clipboardPage ? 1080 : 720, root.width - 32)
         height: Math.min(root.namingDesktop ? desktopNameEditor.implicitHeight + 152 : root.settingsPanel ? Math.max(360, (root.settingsPanelItem?.bodyHeight || 0) + 184 + (root.passwordPrompt ? 125 : 0) + (Runtime.message ? 50 : 0) + (Config.preview ? 26 : 0)) : Runtime.menu === "controls" ? 520 : root.fromBar ? 560 : 650, root.height - 80)
         x: root.settingsPanel ? root.width - width - 16 : root.fromBar ? Math.max(16, Math.min(root.width - width - 16, Runtime.menuAnchorX - width / 2)) : (root.width - width) / 2
         y: root.fromBar || root.settingsPanel ? (Config.preview ? root.height - Config.bar.height - Config.bar.margin - height - 12 : Config.bar.height + Config.bar.margin + 12) : (root.height - height) / 2
@@ -1041,127 +1096,243 @@ PanelWindow {
                     onClicked: Notifications.clear()
                 }
             }
-            ListView {
-                id: list
-                objectName: "menuList"
-                visible: !root.settingsPanel && !root.namingDesktop && Runtime.menu !== "wallpaper" && Runtime.menu !== "notifications" && Runtime.menu !== "calendar"
-                enabled: !root.confirmation && !root.passwordPrompt
+            RowLayout {
+                visible: root.listPage
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                opacity: enabled ? 1 : 0.4
-                clip: true
-                keyNavigationEnabled: true
-                Keys.onReturnPressed: root.activate()
-                Keys.onEnterPressed: root.activate()
-                Keys.onLeftPressed: event => event.accepted = root.horizontalKey(event, -1)
-                Keys.onRightPressed: event => event.accepted = root.horizontalKey(event, 1)
-                Keys.onPressed: event => event.accepted = root.listKey(event)
-                model: root.filtered
-                // Assigning a new model resets currentIndex to 0, so restore the
-                // selection after the reset rather than on root.filteredChanged.
-                onModelChanged: currentIndex = Math.max(0, root.filtered.findIndex(item => (item.id || item.title) === root.selectionKey))
-                spacing: 4
-                ScrollBar.vertical: ScrollBar {}
-                delegate: ItemDelegate {
-                    id: rowDelegate
-                    required property var modelData
-                    required property int index
-                    readonly property bool commandEntry: Runtime.menu === "aliases" && !modelData.section
-                    width: list.width
-                    height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : rowDelegate.modelData?.thumbnail ? 104 : rowDelegate.modelData?.section ? 38 : commandEntry ? Math.max(44, implicitContentHeight + topPadding + bottomPadding) : subtitle.visible ? 65 : 44
-                    highlighted: ListView.isCurrentItem
-                    focusPolicy: Qt.NoFocus
-                    background: Rectangle {
-                        radius: 9
-                        color: rowDelegate.highlighted ? Qt.alpha(Config.theme.text, Config.controls.hoverFillAlpha) : "transparent"
-                        border.color: rowDelegate.highlighted ? Config.theme.accent : "transparent"
-                    }
-                    contentItem: RowLayout {
-                        spacing: 10
-                        Text {
-                            visible: !!rowDelegate.modelData.glyph
-                            text: rowDelegate.modelData.glyph || ""
-                            font.family: Config.theme.uiFont
-                            font.pixelSize: Config.fonts.heading
-                            color: Config.theme.accent
-                            horizontalAlignment: Text.AlignHCenter
-                            Layout.preferredWidth: visible ? 26 : 0
+                spacing: 14
+                ListView {
+                    id: list
+                    objectName: "menuList"
+                    visible: root.listPage
+                    enabled: !root.confirmation && !root.passwordPrompt
+                    Layout.fillWidth: !root.clipboardPage
+                    Layout.preferredWidth: root.clipboardPage ? Math.round(card.width * 0.42) : -1
+                    Layout.fillHeight: true
+                    opacity: enabled ? 1 : 0.4
+                    clip: true
+                    keyNavigationEnabled: true
+                    Keys.onReturnPressed: root.activate()
+                    Keys.onEnterPressed: root.activate()
+                    Keys.onLeftPressed: event => event.accepted = root.horizontalKey(event, -1)
+                    Keys.onRightPressed: event => event.accepted = root.horizontalKey(event, 1)
+                    Keys.onPressed: event => event.accepted = root.listKey(event)
+                    model: root.filtered
+                    // Assigning a new model resets currentIndex to 0, so restore the
+                    // selection after the reset rather than on root.filteredChanged.
+                    onModelChanged: currentIndex = Math.max(0, root.filtered.findIndex(item => (item.id || item.title) === root.selectionKey))
+                    spacing: 4
+                    ScrollBar.vertical: ScrollBar {}
+                    delegate: ItemDelegate {
+                        id: rowDelegate
+                        required property var modelData
+                        required property int index
+                        readonly property bool sectionHeader: !!modelData.section
+                        readonly property bool commandEntry: root.sectionedPage && !sectionHeader
+                        width: list.width
+                        height: root.categoryPage ? Math.min(48, Math.floor((list.height - list.spacing * (root.filtered.length - 1)) / Math.max(1, root.filtered.length))) : root.clipboardPage ? 58 : sectionHeader ? 46 : commandEntry ? Math.max(40, implicitContentHeight + topPadding + bottomPadding) : subtitle.visible ? 65 : 44
+                        // Entries sit indented under their section header.
+                        leftPadding: commandEntry && modelData.group ? 38 : horizontalPadding
+                        highlighted: ListView.isCurrentItem
+                        focusPolicy: Qt.NoFocus
+                        background: Rectangle {
+                            radius: 9
+                            color: rowDelegate.highlighted ? Qt.alpha(Config.theme.text, Config.controls.hoverFillAlpha) : rowDelegate.sectionHeader ? Qt.alpha(Config.theme.accent, rowDelegate.modelData.expanded ? 0.1 : 0.05) : "transparent"
+                            border.color: rowDelegate.highlighted ? Config.theme.accent : "transparent"
                         }
-                        Image {
-                            visible: modelData.icon !== ""
-                            source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
-                            Layout.preferredWidth: visible ? 26 : 0
-                            Layout.preferredHeight: 26
-                            fillMode: Image.PreserveAspectFit
-                        }
-                        ColumnLayout {
-                            spacing: 3
-                            Layout.fillWidth: true
+                        contentItem: RowLayout {
+                            spacing: 10
+                            Text {
+                                visible: !!rowDelegate.modelData.glyph || rowDelegate.sectionHeader
+                                text: rowDelegate.sectionHeader ? (rowDelegate.modelData.expanded ? "▾" : "▸") : rowDelegate.modelData.glyph || ""
+                                font.family: Config.theme.uiFont
+                                font.pixelSize: rowDelegate.sectionHeader ? Config.fonts.displayLarge * 0.7 : Config.fonts.heading
+                                color: Config.theme.accent
+                                horizontalAlignment: Text.AlignHCenter
+                                Layout.preferredWidth: visible ? (rowDelegate.sectionHeader ? 18 : 26) : 0
+                            }
                             Image {
-                                visible: !!modelData.thumbnail
-                                source: modelData.thumbnail || ""
-                                asynchronous: true
-                                cache: false
+                                visible: modelData.icon !== ""
+                                source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
+                                Layout.preferredWidth: visible ? 26 : 0
+                                Layout.preferredHeight: 26
                                 fillMode: Image.PreserveAspectFit
-                                horizontalAlignment: Image.AlignLeft
-                                sourceSize.height: 160
+                            }
+                            Rectangle {
+                                // Clipboard images get a small thumbnail; the
+                                // preview pane shows the full picture.
+                                visible: root.clipboardPage && !!rowDelegate.modelData.image
+                                color: Qt.alpha(Config.theme.text, 0.05)
+                                radius: 6
+                                clip: true
+                                Layout.preferredWidth: visible ? 56 : 0
+                                Layout.preferredHeight: 40
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    visible: !!rowDelegate.modelData.thumbnail
+                                    source: rowDelegate.modelData.thumbnail || ""
+                                    asynchronous: true
+                                    cache: false
+                                    fillMode: Image.PreserveAspectFit
+                                    sourceSize.height: 80
+                                }
+                            }
+                            ColumnLayout {
+                                spacing: 3
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: visible ? 80 : 0
+                                Text {
+                                    text: modelData.title
+                                    color: rowDelegate.sectionHeader ? Config.theme.accent : Config.theme.text
+                                    font.family: rowDelegate.commandEntry && Runtime.menu === "aliases" ? Config.theme.font : Config.theme.uiFont
+                                    font.pixelSize: rowDelegate.sectionHeader ? Config.fonts.body : root.clipboardPage ? Config.fonts.body : Config.fonts.heading
+                                    font.bold: rowDelegate.sectionHeader
+                                    font.capitalization: rowDelegate.sectionHeader ? Font.AllUppercase : Font.MixedCase
+                                    font.letterSpacing: rowDelegate.sectionHeader ? 1.2 : 0
+                                    textFormat: Text.PlainText
+                                    wrapMode: rowDelegate.commandEntry ? Text.Wrap : Text.NoWrap
+                                    elide: rowDelegate.commandEntry ? Text.ElideNone : Text.ElideRight
+                                    maximumLineCount: root.clipboardPage ? 1 : 1000
+                                    Layout.fillWidth: true
+                                }
+                                Text {
+                                    id: subtitle
+                                    visible: !root.categoryPage && !!rowDelegate.modelData?.subtitle
+                                    text: modelData.subtitle
+                                    color: Config.theme.dim
+                                    font.family: Config.theme.uiFont
+                                    font.pixelSize: Config.fonts.bodySmall
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
                             }
                             Text {
-                                visible: !modelData.thumbnail
-                                text: modelData.title
-                                color: modelData.section ? Config.theme.accent : Config.theme.text
+                                visible: !!rowDelegate.modelData.favoriteKey && Preferences.favoriteItems.indexOf(rowDelegate.modelData.favoriteKey) >= 0
+                                text: "★"
+                                color: Config.theme.accent
                                 font.family: Config.theme.uiFont
-                                font.pixelSize: modelData.section ? Config.fonts.bodySmall : Config.fonts.heading
-                                font.bold: !!modelData.section
-                                font.capitalization: modelData.section ? Font.AllUppercase : Font.MixedCase
-                                font.letterSpacing: modelData.section ? 1 : 0
+                                font.pixelSize: Config.fonts.body
+                            }
+                            Rectangle {
+                                // Entry count badge on cheat-sheet section headers.
+                                visible: rowDelegate.sectionHeader
+                                radius: height / 2
+                                color: Qt.alpha(Config.theme.accent, 0.16)
+                                Layout.preferredHeight: 22
+                                Layout.preferredWidth: Math.max(30, countLabel.implicitWidth + 16)
+                                Text {
+                                    id: countLabel
+                                    anchors.centerIn: parent
+                                    text: String(rowDelegate.modelData.count || 0)
+                                    color: Config.theme.accent
+                                    font.family: Config.theme.uiFont
+                                    font.pixelSize: Config.fonts.bodySmall
+                                    font.bold: true
+                                }
+                            }
+                            Text {
+                                visible: !rowDelegate.sectionHeader
+                                text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
+                                color: rowDelegate.commandEntry ? Config.theme.dim : Config.theme.accent
+                                font.family: Config.theme.uiFont
+                                font.pixelSize: Config.fonts.body
                                 textFormat: Text.PlainText
                                 wrapMode: rowDelegate.commandEntry ? Text.Wrap : Text.NoWrap
-                                elide: rowDelegate.commandEntry ? Text.ElideNone : Text.ElideRight
-                                Layout.fillWidth: true
-                            }
-                            Text {
-                                id: subtitle
-                                visible: !root.categoryPage && !!rowDelegate.modelData?.subtitle
-                                text: modelData.subtitle
-                                color: Config.theme.dim
-                                font.family: Config.theme.uiFont
-                                font.pixelSize: Config.fonts.bodySmall
-                                textFormat: Text.PlainText
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignRight
+                                Layout.maximumWidth: rowDelegate.commandEntry ? list.width * 0.42 : Number.POSITIVE_INFINITY
                             }
                         }
-                        Text {
-                            visible: !!rowDelegate.modelData.favoriteKey && Preferences.favoriteItems.indexOf(rowDelegate.modelData.favoriteKey) >= 0
-                            text: "★"
-                            color: Config.theme.accent
-                            font.family: Config.theme.uiFont
-                            font.pixelSize: Config.fonts.body
-                        }
-                        Text {
-                            text: rowDelegate.modelData.value || (rowDelegate.modelData.submenu ? "›" : "")
-                            color: rowDelegate.commandEntry ? Config.theme.dim : Config.theme.accent
-                            font.family: Config.theme.uiFont
-                            font.pixelSize: Config.fonts.body
-                            textFormat: Text.PlainText
-                            wrapMode: rowDelegate.commandEntry ? Text.Wrap : Text.NoWrap
-                            horizontalAlignment: Text.AlignRight
-                            Layout.maximumWidth: rowDelegate.commandEntry ? list.width * 0.38 : Number.POSITIVE_INFINITY
+                        onClicked: {
+                            root.selectIndex(index);
+                            root.activate();
                         }
                     }
-                    onClicked: {
-                        root.selectIndex(index);
-                        root.activate();
+                    Label {
+                        anchors.centerIn: parent
+                        visible: list.count === 0
+                        text: search.text ? "No matches" : Runtime.menu === "favorites" ? "No favorites yet · press Ctrl+D on any item to add it" : Runtime.menu === "tray" ? "No tray applications" : Runtime.menu === "clipboard" ? "Clipboard history is empty" : "Nothing here yet"
+                        color: Config.theme.dim
                     }
                 }
-                Label {
-                    anchors.centerIn: parent
-                    visible: list.count === 0
-                    text: search.text ? "No matches" : Runtime.menu === "favorites" ? "No favorites yet · press Ctrl+D on any item to add it" : Runtime.menu === "tray" ? "No tray applications" : "Nothing here yet"
-                    color: Config.theme.dim
+                Rectangle {
+                    id: preview
+                    // Omarchy-style preview: the selected entry at full size.
+                    objectName: "clipboardPreview"
+                    visible: root.clipboardPage
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 12
+                    color: Qt.alpha(Config.theme.surface, 0.6)
+                    border.color: Qt.alpha(Config.theme.text, 0.1)
+                    readonly property var entry: root.clipboardPage ? root.selectedRow : null
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 10
+                        Image {
+                            objectName: "clipboardPreviewImage"
+                            visible: !!preview.entry?.image
+                            source: preview.entry?.thumbnail || ""
+                            asynchronous: true
+                            cache: false
+                            smooth: true
+                            mipmap: true
+                            sourceSize.width: 1600
+                            fillMode: Image.PreserveAspectFit
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            Text {
+                                anchors.centerIn: parent
+                                visible: parent.status !== Image.Ready
+                                text: "Loading preview…"
+                                color: Config.theme.dim
+                                font.family: Config.theme.uiFont
+                            }
+                        }
+                        ScrollView {
+                            id: previewScroll
+                            visible: !!preview.entry && !preview.entry.image
+                            clip: true
+                            contentWidth: availableWidth
+                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            Text {
+                                width: previewScroll.availableWidth
+                                text: root.clipboardPreviewId === preview.entry?.id ? root.clipboardPreviewText : preview.entry?.title || ""
+                                textFormat: Text.PlainText
+                                wrapMode: Text.WrapAnywhere
+                                color: Config.theme.text
+                                font.family: Config.theme.font
+                                font.pixelSize: Config.fonts.body
+                                lineHeight: 1.15
+                            }
+                        }
+                        Text {
+                            visible: !preview.entry
+                            text: "No entry selected"
+                            color: Config.theme.dim
+                            font.family: Config.theme.uiFont
+                            Layout.alignment: Qt.AlignCenter
+                            Layout.fillHeight: true
+                        }
+                        Rectangle {
+                            visible: !!preview.entry
+                            color: Qt.alpha(Config.theme.text, 0.1)
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                        }
+                        Text {
+                            visible: !!preview.entry
+                            text: !preview.entry ? "" : preview.entry.image ? "Image · " + preview.entry.subtitle : "Text · " + (root.clipboardPreviewId === preview.entry.id ? root.clipboardPreviewText : preview.entry.title).length + " characters"
+                            color: Config.theme.dim
+                            font.family: Config.theme.uiFont
+                            font.pixelSize: Config.fonts.bodySmall
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
                 }
             }
             DesktopNameEditor {
